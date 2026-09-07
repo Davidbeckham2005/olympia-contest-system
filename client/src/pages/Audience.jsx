@@ -130,8 +130,8 @@ export default function Audience() {
       : state.teams;
 
   // Background đồng bộ với màn khán giả vòng 1/2 (nền tối #070b16 + ảnh mờ theo cài đặt).
-  // Áp dụng cho Vòng 2 (Vượt CNV) và MÀN ĐÁP ÁN Vòng 3 (Tăng tốc) cho thống nhất.
-  const cnvBg = g.round === "vuot_cnv" || (g.round === "tang_toc" && d.mode === "answers");
+  // Áp dụng cho Vòng 2 (Vượt CNV), MÀN ĐÁP ÁN Vòng 3 (Tăng tốc) và Vòng 4 (Về đích) cho thống nhất.
+  const cnvBg = g.round === "vuot_cnv" || (g.round === "tang_toc" && d.mode === "answers") || g.round === "ve_dich";
   const cnvAudienceBg = state.settings?.audienceBg || "dark";
   const cnvBgUrl = state.settings?.audienceBgUrl || "";
   const cnvUseBlur = cnvAudienceBg === "blur" && cnvBgUrl;
@@ -230,17 +230,6 @@ function TeamsRow({ teams, state, flash, currentTeam, ranked }) {
           );
         })}
       </div>
-      {!ranked && (
-        <div className="flex w-full border-t border-[rgba(255,214,10,0.1)]">
-          {displayTeams.map((t) => (
-            <div key={t.id} className="flex-1 py-1 px-2 border-r border-[rgba(255,214,10,0.1)] last:border-r-0">
-              <div className="text-[11px] text-mist text-center truncate">
-                {(t.members || []).map((m) => m.name).join(" • ") || "Chưa có thành viên"}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }

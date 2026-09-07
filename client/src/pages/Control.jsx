@@ -285,7 +285,9 @@ export default function Control() {
         <hr className="my-4 border-line" />
         <div className="text-xs tracking-[0.18em] text-mist uppercase mb-2">Đội đang thi</div>
         <div className="grid gap-2">
-          {state.teams.map((t) => {
+          {// Vòng 4: chỉ hiện các đội ĐANG THI (chưa bị khóa vĩnh viễn) — ẩn các đội đã block.
+            // Vòng 1 giữ nguyên: MC cần thấy mọi đội để dùng nút Khóa/Mở khóa.
+            state.teams.filter((t) => g.round !== "ve_dich" || activeTeamIds(g, state.teams).includes(t.id)).map((t) => {
             const active = g.currentTeam === t.id;
             const eliminated = g.round !== "khoi_dong" && !activeTeamIds(g, state.teams).includes(t.id);
             // Vòng 4: chỉ được chuyển đội khi đội đang ở màn soạn câu ("soan"); đang
