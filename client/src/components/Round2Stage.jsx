@@ -4,12 +4,14 @@ import { activeTeamIds } from "../lib/teams.js";
 
 // Khung ô chữ Vòng 2: bên trái các hàng ngang (ô chữ tròn), bên phải số mảnh ghép dọc.
 // Dùng chung cho màn hình Khán giả và Thí sinh.
+// Thiết kế chỉ HÌNH 4 câu hỏi đầu: hàng ngang thứ 5 (index 4) VẪN GIỮ trong dữ liệu/vòng
+// chơi nhưng KHÔNG hiển thị (slice 0..4) — MC vẫn thấy/điều khiển đủ 5 qua màn hình riêng.
 export function CnvRowsFrame({ state, g }) {
   const p = g.puzzle || {};
   const cnv = state.cnv;
   return (
     <div className="grid grid-cols-[auto_2.5rem] gap-x-4 gap-y-2.5 w-fit mx-auto">
-      {(cnv?.rows || []).map((row, i) => (
+      {(cnv?.rows || []).slice(0, 4).map((row, i) => (
         <Fragment key={i}>
           <div className="flex gap-1.5 self-center">
             {row.status === "open"
@@ -182,10 +184,12 @@ export function Round2Board({ state, g, minimal }) {
               </div>
             ))}
           </div>
+          {/* Mảnh trung tâm (hàng 5) — ĐỒNG BỘ với màn MC: MC mở/khóa mảnh nào thì
+              khán giả xem y hệt. Chỉ riêng khung ô CHỮ CÁI hàng 5 bị ẩn (không là câu hỏi). */}
           <div
             className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[52%] h-[60%] rounded-xl border-2 grid place-items-center font-display font-black text-[clamp(26px,3.4vw,52px)] tracking-tight drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)] ${
               solved[4]
-                ? (media?.url && media.type !== "video")
+                ? media?.url && media.type !== "video"
                   ? "pointer-events-none border-transparent"
                   : "bg-gold text-[#1a1400] border-gold shadow-[0_0_26px_rgba(255,214,10,0.45)]"
                 : locked[4]
