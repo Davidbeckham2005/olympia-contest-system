@@ -6,7 +6,9 @@
     "dev": "concurrently -n server,client -c cyan,magenta \"npm run server\" \"npm run client\"",
     "server": "node --watch server/index.js",
     "client": "node scripts/wait-for-server.mjs && npm run dev --prefix client",
-    "setup": "npm install && npm install --prefix client"
+    "setup": "npm install && npm install --prefix client",
+    "start": "node server/index.js",
+    "build": "npm run build --prefix client"
   },
   "dependencies": {
     "cors": "^2.8.5",
