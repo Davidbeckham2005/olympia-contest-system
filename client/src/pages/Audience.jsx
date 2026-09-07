@@ -41,21 +41,8 @@ export default function Audience() {
     return <div className="min-h-screen grid place-items-center text-mist">Đang kết nối màn hình…</div>;
   }
 
-  if (!audioOn) {
-    return (
-      <div
-        className="min-h-screen flex items-center justify-center bg-[#081021] text-white text-center px-5 select-none"
-        onClick={enableAudio}
-        style={{ cursor: "pointer", zIndex: 1000 }}
-      >
-        <div>
-          <div style={{ fontSize: 44, fontWeight: 700, marginBottom: 24 }}>🔊 Nhấn để mở âm thanh</div>
-          <div style={{ fontSize: 24 }}>Hệ thống yêu cầu bạn nhấp/tap chuột lên màn hình lần đầu để kích hoạt nhạc nền và hiệu ứng âm thanh.</div>
-          <div style={{ fontSize: 18, marginTop: 18, opacity: 0.6 }}>(Nếu mất âm thanh hãy tải lại trang và nhấn chuột/tap lần nữa)</div>
-        </div>
-      </div>
-    );
-  }
+  // Không còn chặn toàn màn hình để "mở âm thanh": màn khán giả hiển thị ngay, chỉ có
+  // nút nhỏ góc trái dưới để kích hoạt âm thanh lần đầu (trình duyệt bắt buộc 1 cử chỉ).
 
   const g = state.game || {};
   const d = g.display || {};
@@ -76,12 +63,18 @@ export default function Audience() {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center overflow-hidden">
         <Stage state={state} timer={timer} />
+        <AudioUnlock audioOn={audioOn} onEnable={enableAudio} />
       </div>
     );
   }
 
   if (g.round === "khoi_dong") {
-    return <KhoiDongAudience state={state} timer={timer} flash={flash} />;
+    return (
+      <>
+        <KhoiDongAudience state={state} timer={timer} flash={flash} />
+        <AudioUnlock audioOn={audioOn} onEnable={enableAudio} />
+      </>
+    );
   }
 
   if (g.round === "tie_break") {
@@ -117,6 +110,7 @@ export default function Audience() {
         )}
         <TeamsRow teams={tbTeams} state={state} flash={flash} currentTeam={g.buzzer?.winner} />
         <BuzzOverlay state={state} flash={flash} />
+        <AudioUnlock audioOn={audioOn} onEnable={enableAudio} />
       </div>
     );
   }
@@ -172,7 +166,23 @@ export default function Audience() {
         </TeamsRow>
       </div>
       <BuzzOverlay state={state} flash={flash} />
+      <AudioUnlock audioOn={audioOn} onEnable={enableAudio} />
     </div>
+  );
+}
+
+// Nút nhỏ bật âm thanh lần đầu (trình duyệt bắt buộc 1 cử chỉ người dùng) — hiển thị
+// ở góc, KHÔNG chặn màn hình. Ẩn đi ngay khi đã kích hoạt.
+function AudioUnlock({ audioOn, onEnable }) {
+  if (audioOn) return null;
+  return (
+    <button
+      type="button"
+      onClick={onEnable}
+      className="fixed bottom-4 left-4 z-[60] flex items-center gap-2 rounded-full border border-gold/50 bg-[#0b1120]/85 px-4 py-2 text-sm font-semibold text-gold shadow-[0_0_20px_rgba(255,214,10,0.25)] transition hover:bg-gold/15 cursor-pointer select-none"
+    >
+      🔇 Mở âm thanh
+    </button>
   );
 }
 
