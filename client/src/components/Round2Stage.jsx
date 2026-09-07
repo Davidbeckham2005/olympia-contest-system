@@ -184,16 +184,16 @@ export function Round2Board({ state, g, minimal }) {
               </div>
             ))}
           </div>
-          {/* Mảnh trung tâm (hàng 5) — ĐỒNG BỘ với màn MC: MC mở/khóa mảnh nào thì
-              khán giả xem y hệt. Chỉ riêng khung ô CHỮ CÁI hàng 5 bị ẩn (không là câu hỏi). */}
+          {/* Mảnh trung tâm (hàng 5) — thiết kế y hệt màn MC: ô đen bo viền, số 5 ở giữa.
+              Mở mảnh → lộ ảnh gốc (hoặc hiện vàng nếu vòng không có ảnh); khóa → ô đen. */}
           <div
-            className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[52%] h-[60%] rounded-xl border-2 grid place-items-center font-display font-black text-[clamp(26px,3.4vw,52px)] tracking-tight drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)] ${
+            className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[52%] h-[60%] rounded-xl border-2 grid place-items-center font-display font-black text-[clamp(26px,3.4vw,52px)] tracking-tight drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)] transition ${
               solved[4]
                 ? media?.url && media.type !== "video"
-                  ? "pointer-events-none border-transparent"
+                  ? "border-transparent"
                   : "bg-gold text-[#1a1400] border-gold shadow-[0_0_26px_rgba(255,214,10,0.45)]"
                 : locked[4]
-                  ? "bg-black pointer-events-none border-transparent"
+                  ? "bg-black border-transparent"
                   : "bg-[#0e1830] text-mist border-line"
             }`}
           >
