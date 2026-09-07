@@ -129,27 +129,22 @@ export default function Audience() {
       ? [...(state.teams || [])].sort((a, b) => b.score - a.score).slice(0, 4)
       : state.teams;
 
-  // Background đồng bộ với màn khán giả vòng 1/2 (nền tối #070b16 + ảnh mờ theo cài đặt).
-  // Áp dụng cho Vòng 2 (Vượt CNV), MÀN ĐÁP ÁN Vòng 3 (Tăng tốc) và Vòng 4 (Về đích) cho thống nhất.
-  const cnvBg = g.round === "vuot_cnv" || (g.round === "tang_toc" && d.mode === "answers") || g.round === "ve_dich";
+  // Background đồng bộ cho MỌI VÒNG trên màn khán giả (nền tối #070b16 + ảnh mờ blur theo
+  // cài đặt nếu có) — áp dụng luôn cho khung chính để màn khán giả không bao giờ trống nền.
   const cnvAudienceBg = state.settings?.audienceBg || "dark";
   const cnvBgUrl = state.settings?.audienceBgUrl || "";
   const cnvUseBlur = cnvAudienceBg === "blur" && cnvBgUrl;
 
   return (
     <div className="min-h-screen flex flex-col px-6 py-4 gap-3 relative isolate overflow-hidden">
-      {cnvBg && (
+      <div className="fixed inset-0 z-0 bg-[#070b16]" />
+      {cnvUseBlur && (
         <>
-          <div className="fixed inset-0 z-0 bg-[#070b16]" />
-          {cnvUseBlur && (
-            <>
-              <div
-                className="fixed inset-0 z-0 bg-cover bg-center scale-110"
-                style={{ backgroundImage: `url(${cnvBgUrl})`, filter: "blur(14px) brightness(0.5)" }}
-              />
-              <div className="fixed inset-0 z-0 bg-[#070b16]/45" />
-            </>
-          )}
+          <div
+            className="fixed inset-0 z-0 bg-cover bg-center scale-110"
+            style={{ backgroundImage: `url(${cnvBgUrl})`, filter: "blur(14px) brightness(0.5)" }}
+          />
+          <div className="fixed inset-0 z-0 bg-[#070b16]/45" />
         </>
       )}
       <div className="relative flex items-start justify-end gap-4 z-10">
@@ -172,7 +167,9 @@ export default function Audience() {
       </div>
 
       <div className="relative z-10">
-        <TeamsRow teams={outTeams} state={state} flash={flash} currentTeam={g.currentTeam} />
+        <TeamsRow teams={outTeams} state={state} flash={flash} currentTeam={g.currentTeam}>
+          {g.round === "ve_dich" && <Round4Footer state={state} g={g} />}
+        </TeamsRow>
       </div>
       <BuzzOverlay state={state} flash={flash} />
     </div>
@@ -197,10 +194,10 @@ function BuzzOverlay({ state, flash }) {
   );
 }
 
-function TeamsRow({ teams, state, flash, currentTeam, ranked }) {
+function TeamsRow({ teams, state, flash, currentTeam, ranked, children }) {
   const displayTeams = teams || ranked || (state && state.teams) || [];
   return (
-    <div className="w-[min(1200px,100%)] mx-auto rounded-2xl border border-[rgba(255,214,10,0.18)] bg-[#2a3d63] shadow-[0_10px_40px_rgba(0,0,0,0.45)]">
+    <div className="w-[min(1200px,100%)] mx-auto rounded-2xl border border-[rgba(255,214,10,0.18)] bg-[#2a3d63] shadow-[0_10px_40px_rgba(0,0,0,0.45)] overflow-hidden">
       {/* Thanh ngang 4 đội — đồng bộ với round 1 */}
       <div className="flex w-full">
         {displayTeams.map((t) => {
@@ -228,12 +225,12 @@ function TeamsRow({ teams, state, flash, currentTeam, ranked }) {
               </span>
             </div>
           );
-        })}
+})}
       </div>
+      {children}
     </div>
   );
 }
-
 
 function Stage({ state, timer }) {
   const g = state.game;
@@ -472,40 +469,75 @@ function Round4Stage({ state, g, timer }) {
     );
   }
 
-  // ĐANG TRẢ LỜI: chỉ giữ tên đội + ngôi sao + câu hỏi + options + đáp án.
+  // ĐANG TRẢ LỜI: trung tâm chỉ giữ tên đội + ngôi sao; phần câu hỏi + đáp án chuyển
+  // xuống khung dưới thanh bar đội (Round4Footer, bố cục tham khảo round 1).
   return (
-    <div className="text-center max-w-[1000px] mx-auto">
-      {d.mediaUrl ? (
-        d.mediaType === "video" ? (
-          <video src={d.mediaUrl} autoPlay controls className="max-h-[26vh] mx-auto rounded-2xl" />
-        ) : (
-          <img src={d.mediaUrl} alt="" className="max-h-[26vh] mx-auto rounded-2xl object-contain border border-line" />
-        )
-      ) : (
-        <NoMediaFallback className="w-[min(320px,54vw)] aspect-[4/3]" />
-      )}
-      <div className="flex items-center justify-center gap-3 mt-3">
-        <div className="font-display font-bold text-[clamp(24px,3.6vw,46px)]" style={{ color: activeTeam?.color }}>
+    <div className="text-center">
+      <div className="flex items-center justify-center gap-3">
+        <div className="font-display font-bold text-[clamp(30px,5vw,60px)]" style={{ color: activeTeam?.color }}>
           {teamName}
         </div>
         {isStar && (
-          <span className="font-display font-black text-[clamp(20px,3vw,38px)] text-ok">★ ×2</span>
+          <span className="font-display font-black text-[clamp(22px,3.4vw,42px)] text-ok">★ ×2</span>
         )}
       </div>
-      {d.question && <div className="stage-q mt-3">{d.question}</div>}
-      {d.options?.length > 0 && (
-        <div className="grid gap-2.5 mt-5 text-left w-[min(720px,90%)] mx-auto">
-          {d.options.map((o) => (
-            <div key={o} className="opt cursor-default">{o}</div>
-          ))}
+    </div>
+  );
+}
+
+// MÀN CÂU HỎI VÒNG 4 — nằm DƯỚI thanh bar đội: bên trái câu hỏi + đáp án, bên phải ô
+// ĐIỂM (phía trên là GÓI CÂU đội đã chọn). Bố cục tham khảo khung dưới round 1.
+function Round4Footer({ state, g }) {
+  const d = g.display || {};
+  const ved = g.veDich || {};
+  const activeTeam = state.teams.find((t) => t.id === g.currentTeam);
+  const pkg = ved.packagePoints;
+  const hasPackage = pkg === 60 || pkg === 80 || pkg === 100;
+  const phase = ved.phase || "soan";
+  const inQuestion = d.mode === "question" && !!d.question;
+  const phaseLabel =
+    phase === "countdown"
+      ? "Chuẩn bị thi (3 • 2 • 1)…"
+      : phase === "prep"
+        ? "Chuẩn bị câu hỏi kế tiếp…"
+        : phase === "ready"
+          ? "Sẵn sàng thi"
+          : phase === "answering"
+            ? "Chờ MC chiếu câu hỏi…"
+            : "MC đang soạn bộ câu…";
+  return (
+    <div className="flex items-stretch border-t border-[rgba(255,214,10,0.1)]">
+      <div className="flex-1 min-w-0 px-5 py-4 text-center flex items-center justify-center border-r border-[rgba(255,214,10,0.1)]">
+        {inQuestion ? (
+          <div className="w-full">
+            {d.question && <div className="stage-q text-[clamp(20px,2.6vw,32px)]">{d.question}</div>}
+            {d.options?.length > 0 && (
+              <div className="grid gap-2 mt-3 text-left w-[min(560px,100%)] mx-auto">
+                {d.options.map((o) => (
+                  <div key={o} className="opt cursor-default">{o}</div>
+                ))}
+              </div>
+            )}
+            {ved.stealOpen && (
+              <div className="font-display font-bold text-[clamp(15px,1.8vw,22px)] text-danger mt-2 animate-pulse">
+                Mở chuông giành quyền trả lời!
+              </div>
+            )}
+            {d.answerRevealed && <div className="stage-answer mt-2 text-[clamp(17px,2.2vw,26px)]">Đáp án: {d.answer}</div>}
+          </div>
+        ) : (
+          <div className="font-display text-white/70 text-[clamp(14px,2vw,20px)]">{phaseLabel}</div>
+        )}
+      </div>
+      <div className="shrink-0 flex flex-col items-center justify-center gap-0.5 px-6 py-2.5 bg-[#ffd60a]/15">
+        {hasPackage && (
+          <div className="kicker text-[10px] tracking-[0.2em] text-white/70">GÓI {pkg}Đ</div>
+        )}
+        <div className="font-display font-black text-[clamp(28px,3.4vw,44px)] leading-none text-[#ffd60a]">
+          {activeTeam?.score ?? 0}
         </div>
-      )}
-      {ved.stealOpen && (
-        <div className="font-display font-bold text-[clamp(18px,2.6vw,32px)] text-danger mt-6 animate-pulse">
-          Mở chuông giành quyền trả lời!
-        </div>
-      )}
-      {d.answerRevealed && <div className="stage-answer mt-6">Đáp án: {d.answer}</div>}
+        <div className="text-[10px] tracking-[0.2em] text-white/50">ĐIỂM</div>
+      </div>
     </div>
   );
 }
