@@ -28,6 +28,7 @@ const actions = {
     if (p.mode === "answers") emitEvent("sound:play", { slot: "answers" });
     return r;
   },
+  "screen.rules": (p) => (p.show ? game.showRules() : game.hideRules()),
   "question.jump": (p) => {
     const db = getDb();
     const gg = db.game;

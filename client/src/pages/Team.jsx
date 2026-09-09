@@ -4,6 +4,7 @@ import { socket, on } from "../lib/socket.js";
 import { loginTeam } from "../lib/api/team.js";
 import { formatTime } from "../lib/format.js";
 import { useGameState } from "../lib/useGame.js";
+import RulesBoard from "../components/RulesBoard.jsx";
 import { activeTeamIds } from "../lib/teams.js";
 import { Round2Board, Round2Question, RowResults, StaggeredRow } from "../components/Round2Stage.jsx";
 import { KhoiDongAudience } from "./Audience.jsx";
@@ -253,7 +254,10 @@ export default function Team() {
   }
 
   let body;
-  if (g.phase === "finished") {
+  if (d.mode === "rules") {
+    // Màn hình LUẬT THI (MC bật qua "screen.rules") — hiển thị cho thí sinh mọi vòng.
+    body = <RulesBoard state={state} g={g} />;
+  } else if (g.phase === "finished") {
     body = <FinalBoard teams={[...state.teams].sort((a, b) => b.score - a.score)} me={team.id} />;
   } else if (isKd) {
     // Round 1 — đồng bộ 100% với màn hình khán giả (cùng component, cùng dữ liệu server).

@@ -1099,6 +1099,31 @@ if (game.round === "khoi_dong") {
     emit();
   }
 
+  // Màn hình hiển thị LUẬT THI của vòng hiện tại trên màn hình khán giả/thí sinh.
+  // MC bật/tắt bằng nút; khi tắt trở về màn hình chính của vòng (bảng/phờ đúng theo vòng).
+  export function showRules() {
+    const game = g();
+    const round = ROUNDS.find((r) => r.id === game.round);
+    if (!round) {
+      const err = new Error("Chưa có vòng thi đang diễn ra.");
+      err.status = 400;
+      throw err;
+    }
+    game.display.mode = "rules";
+    game.display.title = round.name;
+    saveDb();
+    emit();
+  }
+
+  export function hideRules() {
+    const game = g();
+    if (game.display.mode !== "rules") return;
+    // Về đúng màn hình gốc của vòng: vòng 2/3 về "question" hoặc "puzzle" hiện tại.
+    game.display.mode = game.round === "vuot_cnv" ? "puzzle" : "idle";
+    saveDb();
+    emit();
+  }
+
   export function showMedia(url, type = "image") {
     const game = g();
     game.display.mode = "media";

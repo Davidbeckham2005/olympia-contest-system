@@ -5,6 +5,7 @@ import { on } from "../lib/socket.js";
 import { useGameState } from "../lib/useGame.js";
 import { activeTeamIds } from "../lib/teams.js";
 import { CnvRowsFrame, Round2Board, Round2Question, RowResults } from "../components/Round2Stage.jsx";
+import RulesBoard from "../components/RulesBoard.jsx";
 
 function playBuzz() {
   try {
@@ -48,6 +49,17 @@ export default function Audience() {
   const d = g.display || {};
   const remaining = timer?.remaining ?? g.timer?.remaining ?? 0;
   const running = timer?.running ?? g.timer?.running;
+
+  // Màn hình LUẬT THI (MC bật qua "screen.rules") — hiển thị trên mọi vòng.
+  if (d.mode === "rules") {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center px-5 py-8 relative isolate overflow-hidden">
+        <div className="fixed inset-0 z-0 bg-[#070b16]" />
+        <RulesBoard state={state} g={g} className="relative z-10" />
+        <AudioUnlock audioOn={audioOn} onEnable={enableAudio} />
+      </div>
+    );
+  }
   // Vòng 3: đang chiếu video → ƯU TIÊN giao diện CHỈ CÓ VIDEO, ẩn hết header/bảng điểm
   // (khi MC đã mở câu hỏi + có video để chiếu). Chuẩn bị/liệt kê đáp án vẫn dùng layout đủ.
   const ttVideoOnly =

@@ -11,11 +11,11 @@ export const TEAM_DEFS = [
 export const TEAM_ORDER = ["a", "b", "c", "d", "e", "f"];
 
 export const ROUNDS = [
-  { id: "khoi_dong", name: "Khởi động" },
-  { id: "vuot_cnv", name: "Vượt chướng ngại vật" },
-  { id: "tang_toc", name: "Tăng tốc" },
-  { id: "ve_dich", name: "Về đích" },
-  { id: "tie_break", name: "Phụ phuc" },
+  { id: "khoi_dong", name: "Khởi động", rules: [] },
+  { id: "vuot_cnv", name: "Vượt chướng ngại vật", rules: [] },
+  { id: "tang_toc", name: "Tăng tốc", rules: [] },
+  { id: "ve_dich", name: "Về đích", rules: [] },
+  { id: "tie_break", name: "Phụ phuc", rules: [] },
 ];
 
 export function emptyPuzzle() {
