@@ -4,12 +4,21 @@ Full-featured web platform for organizing and running a live quiz competition:
 an online preliminary exam, team management, a real-time MC control desk,
 buzzers, a knowledge-puzzle board, live scoreboards and final standings.
 
+## Production
+
+Live tại: **https://cuoc-thi.onrender.com/**
+
+Deployed với **Render** (Web Service + managed PostgreSQL qua Blueprint
+`render.yaml`); media & âm thanh lưu trên Cloudflare R2. Chi tiết triển khai
+xem [DEPLOYMENT.md](DEPLOYMENT.md).
+
 ## Tech stack
 
 - **Backend**: Node.js (ES modules) + Express, real-time over Socket.IO.
-- **Database**: SQLite via built-in `node:sqlite` by default; MySQL also
-  supported (switch with `DB_CLIENT=mysql` + `.env`). Data is cached in memory
-  and persisted with debounced writes.
+- **Database**: SQLite via built-in `node:sqlite` by default; MySQL or
+  PostgreSQL also supported (switch with `DB_CLIENT=mysql|postgres` + `.env`
+  hoặc `DATABASE_URL`). Data is cached in memory and persisted with debounced
+  writes.
 - **Frontend**: React 18 + Vite 6, React Router, Tailwind CSS 4, Socket.IO client.
   All screens update live from `game:state` / `game:timer` events.
 - **Other tools**: `multer` (media uploads), `xlsx` (contestant Excel import),
