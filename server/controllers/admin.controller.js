@@ -5,6 +5,7 @@
   import * as vedich from "../services/rounds/veDich.service.js";
   import * as game from "../services/game.service.js";
   import { emitEvent } from "../config/io.js";
+  import { uploadToCloudinary } from "../middleware/upload.js";
 
   export function login(req) {
     if (req.body.pin !== getDb().settings.pin) {
@@ -130,17 +131,24 @@
     return result;
   }
 
-  export function uploadMedia(req) {
+  export async function uploadMedia(req) {
     if (!req.file) {
       const err = new Error("Không có tệp.");
       err.status = 400;
       throw err;
     }
+    const isVideo = req.file.mimetype.startsWith("video");
+    const up = await uploadToCloudinary(req.file.buffer, {
+      folder: "cuoc-thi/media",
+      resourceType: isVideo ? "video" : "image",
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+    });
     const item = {
       id: crypto.randomUUID(),
       name: req.file.originalname,
-      url: `/uploads/${req.file.filename}`,
-      type: req.file.mimetype.startsWith("video") ? "video" : "image",
+      url: up.url,
+      type: isVideo ? "video" : "image",
       createdAt: Date.now(),
     };
     getDb().media.push(item);

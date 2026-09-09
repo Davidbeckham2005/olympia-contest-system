@@ -7,6 +7,11 @@ dotenv.config({ path: path.join(__dirname, "../../.env") });
 
 export const config = {
   port: Number(process.env.PORT) || 3001,
+  cloudinary: {
+    cloudName: process.env.CLOUDINARY_CLOUD_NAME || "",
+    apiKey: process.env.CLOUDINARY_API_KEY || "",
+    apiSecret: process.env.CLOUDINARY_API_SECRET || "",
+  },
   db: {
     client: (process.env.DB_CLIENT || "sqlite").toLowerCase(),
     // DATABASE_URL (vd mysql://user:pass@host:3306/dbname hoặc
