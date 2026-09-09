@@ -1,18 +1,16 @@
 # Render Blueprint — deploy Web Service bằng build command (không Docker).
 #
-# Yêu cầu triển khai:
-#   - Node >= 22.13 (node:sqlite ổn định, không cần flag)
-#   - Persistent Disk mount vào /app/data và trỏ DB_PATH vào đó để giữ file SQLite
-#     qua mỗi redeploy. Mount ở /app/data (KHÔNG phải /app/server/data) vì thư mục
-#     server/data còn chứa các file câu hỏi mặc định (questions-*.json); nếu mount
-#     disk rỗng đè lên đó, server sẽ không đọc được câu hỏi và crash.
-#   - Media sau này lưu ở Cloudflare R2 (không lưu trên server), nên không cần
-#     mount disk cho /app/server/uploads.
+# Phương án B: dùng database MySQL của Render (miễn phí, bền vững).
+# Render Free KHÔNG có Persistent Disk, nên ta dùng MySQL thay cho SQLite
+# để dữ liệu (điểm, câu hỏi, contestant, game state) không bị mất khi redeploy.
 #
-# Deploy:
-#   1. Đẩy repo lên GitHub.
-#   2. Trên Render: New -> Blueprint, chọn repo (Render đọc file render.yaml này).
-#   3. Render tạo Web Service tự động.
+# Cách dùng:
+#   1. Trên Render, tạo MySQL Database (New -> MySQL), lấy thông tin kết nối.
+#   2. Deploy repo này qua Blueprint (Render đọc render.yaml). Sau đó vào tab
+#      Environment của Web Service và điền giá trị thật cho:
+#        DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME, DB_SSL
+#      (Hoặc dùng 1 biến DATABASE_URL dạng mysql://user:pass@host:3306/dbname.)
+#   Các biến dưới có sync:false để Render không ghi đè giá trị bạn đã sửa.
 
 services:
   - type: web
@@ -21,14 +19,21 @@ services:
     plan: free
     buildCommand: npm install --prefix client && npm run build
     startCommand: npm start
+    healthCheckPath: /api/health
     envVars:
       - key: NODE_VERSION
         value: "22"
       - key: DB_CLIENT
-        value: sqlite
-      - key: DB_PATH
-        value: /app/data/cuoc_thi.sqlite
-    disk:
-      name: sqlite-data
-      mountPath: /app/data
-      sizeGB: 1
+        value: mysql
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: DB_SSL
+        value: "true"

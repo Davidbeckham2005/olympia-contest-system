@@ -170,6 +170,38 @@ dữ liệu SQLite mất sau mỗi deploy.
 Nhược điểm: có giới hạn tài nguyên, tốn phí khi nhiều traffic; phải cẩn thận
 configuration volume.
 
+> ⚠️ **Render gói Free KHÔNG hỗ trợ Persistent Disk.** Nếu vẫn muốn dùng Render
+> Free cho backend, không thể dùng SQLite (dữ liệu mất mỗi lần redeploy). Giải
+> pháp đã chọn ở dự án này: dùng **MySQL** làm database lưu dữ liệu bền vững.
+
+### Phương án B' (đã chọn) — Render Web Service Free + MySQL
+
+Phù hợp khi muốn backend chạy trên Render Free nhưng vẫn giữ dữ liệu qua các
+lần redeploy. Dùng **MySQL Database của Render** (miễn phí trong cùng account)
+thay cho SQLite local.
+
+Cách triển khai:
+
+1. **Tạo MySQL trên Render**: Dashboard → *New → MySQL*. Lấy thông tin kết nối:
+   `Hostname`, `Port`, `User`, `Password`, `Database`.
+2. **Deploy app**: repo đã có `render.yaml` (Web Service, build command, Node 22,
+   `DB_CLIENT=mysql`). Đẩy lên GitHub rồi *New → Blueprint*.
+3. **Điền biến môi trường** (tab *Environment* của Web Service, các biến đã khai
+   báo `sync: false` trong `render.yaml` để không bị override):
+   - Nên dùng **internal hostname** của MySQL Render nếu DB cùng region/account
+     để kết nối nhanh và không qua internet công cộng.
+   - `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`
+   - `DB_SSL=true` (MySQL của Render yêu cầu TLS).
+   - Hoặc dùng một biến `DATABASE_URL` dạng
+     `mysql://user:pass@host:3306/dbname` (server ưu tiên biến này).
+4. Server tự tạo bảng schema lần đầu chạy (file `server/db/schema.mysql.sql`
+   + migration) nên không cần import thủ công.
+
+> Lưu ý về giới hạn Render Free: instance bị **sleep sau ~15 phút** không có
+> request và **wake** khi có request → với app có **timer chạy liên tục**, game
+> có thể tạm dừng khi instance ngủ. Đã bật `healthCheckPath` để giảm tần suất
+> ngủ. Nếu tổ chức cuộc thi thật, nên nâng cấp gói trả phí hoặc dùng VPS/Docker.
+
 ---
 
 ### Phương án D — Máy chủ địa phương / Raspberry Pi (tổ chức offline)

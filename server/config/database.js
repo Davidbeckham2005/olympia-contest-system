@@ -20,6 +20,20 @@ const MYSQL_SCHEMA = path.join(__dirname, "../db/schema.mysql.sql");
 let sqliteDb = null;
 let mysqlPool = null;
 
+// Parse connection string dạng mysql://user:pass@host:port/dbname
+// (dùng khi nền tảng như Render chỉ cấp cho một chuỗi kết nối duy nhất).
+function parseDbUrl(url) {
+  const m = /^mysql:\/\/([^:]+):([^@]+)@([^:/]+)(?::(\d+))?\/([^/?#]+)/.exec(url.trim());
+  if (!m) throw new Error("DATABASE_URL không hợp lệ. Dùng dạng mysql://user:pass@host:3306/dbname");
+  return {
+    user: decodeURIComponent(m[1]),
+    password: decodeURIComponent(m[2]),
+    host: m[3],
+    port: Number(m[4] || 3306),
+    database: decodeURIComponent(m[5]),
+  };
+}
+
 function splitStatements(sql) {
   return sql
     .split(";")
@@ -69,22 +83,45 @@ function wrapMysql(conn) {
 export async function connectDb() {
   if (config.db.client === "mysql") {
     const mysql = await import("mysql2/promise");
-    const { host, port, user, password, database } = config.db;
+    // Ưu tiên connection string, nếu không dùng các biến rời.
+    const connInfo = config.db.url
+      ? parseDbUrl(config.db.url)
+      : {
+          host: config.db.host,
+          port: config.db.port,
+          user: config.db.user,
+          password: config.db.password,
+          database: config.db.database,
+        };
+    const { host, port, user, password } = connInfo;
+    const database = connInfo.database;
+    const ssl = config.db.ssl ? { rejectUnauthorized: false } : undefined;
     try {
-      const bootstrap = await mysql.createConnection({ host, port, user, password });
-      await bootstrap.query(
-        `CREATE DATABASE IF NOT EXISTS \`${database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`
-      );
-      await bootstrap.end();
-      mysqlPool = mysql.createPool({
+      // Một số user quản trị (local/XAMPP) có quyền tạo database; user của
+      // Render chỉ có quyền trên database đã cấp sẵn nên bỏ qua lỗi nếu không tạo được.
+      try {
+        const bootstrap = await mysql.createConnection({ host, port, user, password, ssl });
+        await bootstrap.query(
+          `CREATE DATABASE IF NOT EXISTS \`${database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`
+        );
+        await bootstrap.end();
+      } catch (e) {
+        console.warn("Không tự tạo database (bỏ qua):", e.message);
+      }
+      const pool = mysql.createPool({
         host,
         port,
         user,
         password,
         database,
+        ssl,
         waitForConnections: true,
         connectionLimit: 10,
       });
+      // Kiểm tra kết nối trước khi nạp schema, để báo lỗi sớm.
+      const test = await pool.query("SELECT 1");
+      if (!test) throw new Error("Kết nối MySQL không phản hồi");
+      mysqlPool = pool;
       const schema = fs.readFileSync(MYSQL_SCHEMA, "utf8");
       for (const sql of splitStatements(schema)) {
         await mysqlPool.query(sql);
@@ -94,7 +131,7 @@ export async function connectDb() {
       return;
     } catch (err) {
       throw new Error(
-        `Không kết nối được MySQL. Kiểm tra XAMPP đang chạy và .env. Chi tiết: ${err.message}`
+        `Không kết nối được MySQL. Kiểm tra thông tin kết nối (host/user/pass/SSL) và .env. Chi tiết: ${err.message}`
       );
     }
   }
