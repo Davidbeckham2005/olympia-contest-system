@@ -6,6 +6,7 @@ import { formatTime } from "../lib/format.js";
 import { useGameState } from "../lib/useGame.js";
 import { activeTeamIds } from "../lib/teams.js";
 import { Round2Board, Round2Question, RowResults, StaggeredRow } from "../components/Round2Stage.jsx";
+import { KhoiDongAudience } from "./Audience.jsx";
 
 const SESSION_KEY = "team_session";
 
@@ -255,7 +256,8 @@ export default function Team() {
   if (g.phase === "finished") {
     body = <FinalBoard teams={[...state.teams].sort((a, b) => b.score - a.score)} me={team.id} />;
   } else if (isKd) {
-    body = <KhoiDongBody g={g} d={d} team={team} />;
+    // Round 1 — đồng bộ 100% với màn hình khán giả (cùng component, cùng dữ liệu server).
+    body = <KhoiDongAudience state={state} timer={timer} flash={null} />;
   } else if (g.round === "vuot_cnv") {
     body = (
       <Round2Status
@@ -396,6 +398,21 @@ export default function Team() {
   }
 
   // === Khung bố cục thống nhất giữa các vòng (nội dung từng vòng thiết kế sau) ===
+  // Round 1: render TRỰC TIẾP màn khán giả (giống hệt — nền, thanh đội, vòng thời gian),
+  // chỉ thêm nút đăng xuất nhỏ góc để thí sinh không lẫn màn hình.
+  if (isKd) {
+    return (
+      <div className="relative min-h-screen">
+        <div className="absolute top-4 left-4 z-[70]">
+          <button type="button" className="btn btn-ghost py-2! px-3! text-sm" onClick={quit}>
+            ← Đăng xuất
+          </button>
+        </div>
+        <KhoiDongAudience state={state} timer={timer} flash={null} />
+      </div>
+    );
+  }
+
   // Vòng 2: giao diện riêng — KHÔNG header, đồng hồ đặt bên TRÁI + khung báo ấn CHUÔNG
   // để giành quyền trả lời chướng ngại vật (thay cho nút TỪ KHÓA).
   if (g.round === "vuot_cnv") {
@@ -756,63 +773,7 @@ function Header({ team, remaining, running }) {
   );
 }
 
-// Vòng Khởi động: chỉ hiển thị câu hỏi (thí sinh ghi đáp án trên giấy bên ngoài)
-function KhoiDongBody({ g, d, team }) {
-  const active = g.questionStatus === "showing" && d.mode === "question";
-  const myTurn = active && g.currentTeam === team.id;
-  const curName = g.currentTeam ? `đội ${String(g.currentTeam).toUpperCase()}` : "";
-
-  if (d.answerRevealed && d.mode === "question") {
-    return (
-      <div className="text-center">
-        {d.mediaUrl && (
-          <img src={d.mediaUrl} className="max-h-[26vh] max-w-[42vw] mx-auto rounded-xl mb-3" />
-        )}
-        <div className="kicker">ĐÁP ÁN</div>
-        <div className="stage-answer mt-2">{d.answer}</div>
-      </div>
-    );
-  }
-  if (!active) {
-    return (
-      <div className="text-center">
-        <div className="round-badge">Lượt {curName || "?"}</div>
-        <p className="text-mist mt-4 text-lg">
-          Đang chờ MC hiển thị câu hỏi…
-        </p>
-      </div>
-    );
-  }
-  if (!myTurn) {
-    return (
-      <div className="text-center w-full">
-        {d.mediaUrl && d.mediaType !== "video" ? (
-          <img src={d.mediaUrl} className="max-h-[40vh] mx-auto rounded-xl mb-4 opacity-50" />
-        ) : (
-          <div className="mx-auto w-[min(400px,80vw)] aspect-[4/3] rounded-xl bg-panel-solid border border-line grid place-items-center opacity-50 mb-4">
-            <div className="text-5xl text-mist/40">?</div>
-          </div>
-        )}
-        {d.question && <div className="stage-q mt-1 opacity-50">{d.question}</div>}
-        <div className="badge badge-no mt-3">Chưa đến lượt — đang là lượt {curName}</div>
-      </div>
-    );
-  }
-  return (
-    <div className="text-center w-full">
-      {d.mediaUrl && d.mediaType !== "video" ? (
-        <img src={d.mediaUrl} className="max-h-[45vh] mx-auto rounded-xl mb-4" />
-      ) : (
-        <div className="mx-auto w-[min(400px,80vw)] aspect-[4/3] rounded-xl bg-panel-solid border border-line grid place-items-center mb-4">
-          <div className="text-5xl text-mist/40">?</div>
-        </div>
-      )}
-      {d.question && <div className="stage-q mt-1">{d.question}</div>}
-    </div>
-  );
-}
-
-// Vòng 2 (Vượt CNV): trả lời HÀNG NGANG dạng TỰ LUẬN — mọi đội cùng gõ đáp án gửi
+// Header thống nhất giữa các vòng: tên đội • điểm • đồng hồ
 // về MC trong thời gian cho phép (ghi nhận thời gian nộp). Chuông cướp, giành quyền
 // cho hàng ngang đã bỏ. Đoán TỪ KHÓA vẫn dùng nút vàng TỪ KHÓA + MC chấm như cũ.
 // Giao diện đồng bộ với màn hình Khán giả — 3 màn hình riêng biệt do MC điều khiển

@@ -562,7 +562,7 @@ function NoMediaFallback({ className = "w-[min(380px,60vw)] aspect-[4/3]" }) {
   );
 }
 
-function KhoiDongAudience({ state, timer, flash }) {
+export function KhoiDongAudience({ state, timer, flash }) {
   const g = state.game || {};
   const d = g.display || {};
   const activeTeam = state.teams.find((t) => t.id === g.currentTeam);
