@@ -3,6 +3,12 @@ client/node_modules
 server/data/db.json
 server/data/cuoc_thi.sqlite
 server/data/*.sqlite
+server/uploads/*
+!server/uploads/.gitkeep
+!server/uploads/*.mp3
+!server/uploads/*.ogg
+!server/uploads/*.mpeg
+!server/uploads/*.wav
 .DS_Store
 dist
 client/dist
