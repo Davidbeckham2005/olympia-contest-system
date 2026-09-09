@@ -20,7 +20,8 @@ timers; it runs one shared timer loop and broadcasts to every screen.
 
 ## Run locally
 
-Requires [Node.js](https://nodejs.org/) 18+.
+Requires [Node.js](https://nodejs.org/) **22.5+** (the server uses the built-in
+`node:sqlite` module, which is only available from Node 22.5 onward).
 
 ```bash
 cd cuoc-thi
@@ -31,6 +32,23 @@ npm run dev
 - MC / Contestant web UI: http://localhost:5173
 - API / Socket.IO server: http://localhost:3001
 - Organizer PIN (default): `2026`
+
+## Run with Docker
+
+Requires [Docker](https://www.docker.com/) (with Docker Compose).
+
+```bash
+docker compose up -d --build
+```
+
+- App / API / Socket.IO: http://localhost:3001
+- Data (SQLite) is persisted on the host at `server/data/`; uploaded media at
+  `server/uploads/`. Both are bind-mounted into the container, so nothing is
+  lost on restart or redeploy.
+
+```bash
+docker compose down   # stop (data is kept on the host)
+```
 
 ## Screens & access
 

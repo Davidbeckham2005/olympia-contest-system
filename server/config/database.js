@@ -8,7 +8,12 @@ import { TEAM_DEFS } from "./constants.js";
 
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const SQLITE_PATH = path.join(__dirname, "../data/cuoc_thi.sqlite");
+// Đường dẫn file SQLite mặc định nằm trong server/data (cùng chỗ với questions JSON).
+// Có thể ghi đè bằng env DB_PATH (vd khi mount Persistent Disk ở thư mục riêng để
+// tránh che khuất các file câu hỏi trong server/data). DB_PATH phải là đường dẫn tuyệt đối.
+const SQLITE_PATH = process.env.DB_PATH
+  ? process.env.DB_PATH
+  : path.join(__dirname, "../data/cuoc_thi.sqlite");
 const SQLITE_SCHEMA = path.join(__dirname, "../db/schema.sql");
 const MYSQL_SCHEMA = path.join(__dirname, "../db/schema.mysql.sql");
 

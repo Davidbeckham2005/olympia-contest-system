@@ -1,0 +1,16 @@
+services:
+  app:
+    build: .
+    image: cuoc-thi:latest
+    container_name: cuoc-thi
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - DB_CLIENT=sqlite
+    volumes:
+      # Giữ dữ liệu (SQLite) bền vững giữa các lần restart/redeploy
+      - ./server/data:/app/server/data
+      # Giữ media upload (hình/video hint) bền vững
+      - ./server/uploads:/app/server/uploads
