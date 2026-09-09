@@ -1,10 +1,11 @@
 node_modules
 client/node_modules
 server/data/db.json
-server/uploads/*
-!server/uploads/.gitkeep
+server/data/cuoc_thi.sqlite
+server/data/*.sqlite
 .DS_Store
 dist
 client/dist
 .env
-server/data/cuoc_thi.sqlite
+# Bản sao data cũ ở thư mục gốc (server chỉ đọc server/data/)
+data/
