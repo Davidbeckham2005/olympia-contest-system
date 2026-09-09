@@ -170,32 +170,29 @@ dữ liệu SQLite mất sau mỗi deploy.
 Nhược điểm: có giới hạn tài nguyên, tốn phí khi nhiều traffic; phải cẩn thận
 configuration volume.
 
-> ⚠️ **Render gói Free KHÔNG hỗ trợ Persistent Disk.** Nếu vẫn muốn dùng Render
-> Free cho backend, không thể dùng SQLite (dữ liệu mất mỗi lần redeploy). Giải
-> pháp đã chọn ở dự án này: dùng **MySQL** làm database lưu dữ liệu bền vững.
+> ⚠️ **Render gói Free KHÔNG hỗ trợ Persistent Disk và KHÔNG có managed MySQL.**
+> Nếu vẫn muốn dùng Render Free cho backend, giải pháp đã chọn ở dự án này:
+> dùng **PostgreSQL managed của Render** (free tier có sẵn) làm database lưu dữ
+> liệu bền vững.
 
-### Phương án B' (đã chọn) — Render Web Service Free + MySQL
+### Phương án C' (đã chọn) — Render Web Service Free + Render Postgres
 
-Phù hợp khi muốn backend chạy trên Render Free nhưng vẫn giữ dữ liệu qua các
-lần redeploy. Dùng **MySQL Database của Render** (miễn phí trong cùng account)
-thay cho SQLite local.
+Render offer managed **PostgreSQL** miễn phí → dữ liệu (điểm, câu hỏi, contestant,
+game state) không mất khi redeploy, không cần Persistent Disk (thứ không có trên
+gói Free), và không phải tự chạy MySQL.
 
 Cách triển khai:
 
-1. **Tạo MySQL trên Render**: Dashboard → *New → MySQL*. Lấy thông tin kết nối:
-   `Hostname`, `Port`, `User`, `Password`, `Database`.
-2. **Deploy app**: repo đã có `render.yaml` (Web Service, build command, Node 22,
-   `DB_CLIENT=mysql`). Đẩy lên GitHub rồi *New → Blueprint*.
-3. **Điền biến môi trường** (tab *Environment* của Web Service, các biến đã khai
-   báo `sync: false` trong `render.yaml` để không bị override):
-   - Nên dùng **internal hostname** của MySQL Render nếu DB cùng region/account
-     để kết nối nhanh và không qua internet công cộng.
-   - `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`
-   - `DB_SSL=true` (MySQL của Render yêu cầu TLS).
-   - Hoặc dùng một biến `DATABASE_URL` dạng
-     `mysql://user:pass@host:3306/dbname` (server ưu tiên biến này).
-4. Server tự tạo bảng schema lần đầu chạy (file `server/db/schema.mysql.sql`
-   + migration) nên không cần import thủ công.
+1. **Đẩy repo GitHub**, vào Render *New → Blueprint*, chọn repo.
+   `render.yaml` đã khai báo:
+   - `databases.cuoc-thi-db` → Render tự tạo **Postgres miễn phí**.
+   - `services.web` → Web Service Node 22, build command, `DB_CLIENT=postgres`,
+     tự nhận `DATABASE_URL` (connection string) từ database block.
+2. Không cần điền thêm gì: server tự tạo schema lần đầu chạy
+   (`server/db/schema.postgres.sql` + migration) và seed câu hỏi mặc định.
+
+> Nếu muốn dùng database Postgres có sẵn (không tạo mới), chỉ cần set:
+> `DATABASE_URL` (hoặc `DB_HOST/DB_PORT/DB_USER/DB_PASSWORD/DB_NAME`) + `DB_SSL=true`.
 
 > Lưu ý về giới hạn Render Free: instance bị **sleep sau ~15 phút** không có
 > request và **wake** khi có request → với app có **timer chạy liên tục**, game

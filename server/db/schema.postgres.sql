@@ -1,0 +1,75 @@
+CREATE TABLE IF NOT EXISTS settings (
+  id INTEGER PRIMARY KEY,
+  title TEXT NOT NULL,
+  subtitle TEXT NOT NULL DEFAULT '',
+  pin TEXT NOT NULL,
+  prelim_duration INTEGER NOT NULL DEFAULT 900,
+  prelim_question_count INTEGER NOT NULL DEFAULT 30,
+  top_n INTEGER NOT NULL DEFAULT 16,
+  prelim_open INTEGER NOT NULL DEFAULT 0,
+  show_live_ranking INTEGER NOT NULL DEFAULT 0,
+  audience_bg TEXT NOT NULL DEFAULT 'dark',
+  audience_bg_url TEXT NOT NULL DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS teams (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  color TEXT NOT NULL,
+  accent TEXT NOT NULL,
+  score INTEGER NOT NULL DEFAULT 0,
+  member_ids TEXT NOT NULL,
+  pass TEXT NOT NULL DEFAULT '',
+  eliminated INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS contestants (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  student_id TEXT NOT NULL UNIQUE,
+  school TEXT NOT NULL DEFAULT '',
+  class_name TEXT NOT NULL DEFAULT '',
+  started_at BIGINT,
+  submitted_at BIGINT,
+  question_order TEXT NOT NULL,
+  answers TEXT NOT NULL,
+  score INTEGER NOT NULL DEFAULT 0,
+  correct_count INTEGER NOT NULL DEFAULT 0,
+  time_spent INTEGER NOT NULL DEFAULT 0,
+  rank_num INTEGER,
+  qualified INTEGER NOT NULL DEFAULT 0,
+  team_id TEXT
+);
+
+CREATE TABLE IF NOT EXISTS questions_so_khao (
+  id TEXT PRIMARY KEY,
+  question TEXT NOT NULL,
+  options TEXT NOT NULL,
+  answer TEXT NOT NULL,
+  topic TEXT NOT NULL DEFAULT '',
+  sort_order INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS questions_main (
+  id INTEGER PRIMARY KEY,
+  data TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS media (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  url TEXT NOT NULL,
+  type TEXT NOT NULL,
+  created_at BIGINT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS sounds (
+  slot TEXT PRIMARY KEY,
+  name TEXT NOT NULL DEFAULT '',
+  url TEXT NOT NULL DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS game_state (
+  id INTEGER PRIMARY KEY,
+  data TEXT NOT NULL
+);

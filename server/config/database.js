@@ -16,22 +16,51 @@ const SQLITE_PATH = process.env.DB_PATH
   : path.join(__dirname, "../data/cuoc_thi.sqlite");
 const SQLITE_SCHEMA = path.join(__dirname, "../db/schema.sql");
 const MYSQL_SCHEMA = path.join(__dirname, "../db/schema.mysql.sql");
+const POSTGRES_SCHEMA = path.join(__dirname, "../db/schema.postgres.sql");
 
 let sqliteDb = null;
 let mysqlPool = null;
+let pgPool = null;
 
-// Parse connection string dạng mysql://user:pass@host:port/dbname
-// (dùng khi nền tảng như Render chỉ cấp cho một chuỗi kết nối duy nhất).
+// Parse connection string dạng mysql://user:pass@host:port/dbname,
+// postgres:// hoặc postgresql://. Dùng khi nền tảng (Render...) cấp một chuỗi duy nhất.
 function parseDbUrl(url) {
-  const m = /^mysql:\/\/([^:]+):([^@]+)@([^:/]+)(?::(\d+))?\/([^/?#]+)/.exec(url.trim());
-  if (!m) throw new Error("DATABASE_URL không hợp lệ. Dùng dạng mysql://user:pass@host:3306/dbname");
+  const m = /^(?:mysql|postgres|postgresql):\/\/([^:]+):([^@]+)@([^:/]+)(?::(\d+))?\/([^/?#]+)/.exec(url.trim());
+  if (!m) throw new Error("DATABASE_URL không hợp lệ. Dạng: mysql://user:pass@host:3306/dbname hoặc postgres://user:pass@host:5432/dbname");
   return {
     user: decodeURIComponent(m[1]),
     password: decodeURIComponent(m[2]),
     host: m[3],
-    port: Number(m[4] || 3306),
+    port: Number(m[4] || (url.startsWith("mysql") ? 3306 : 5432)),
     database: decodeURIComponent(m[5]),
   };
+}
+
+// Postgres dùng placeholder $1, $2..., khác với SQLite/MySQL (?) — chuyển tự động.
+function convertToPgPlaceholders(sql) {
+  let i = 0;
+  let out = "";
+  let inString = null;
+  for (let k = 0; k < sql.length; k++) {
+    const ch = sql[k];
+    if (inString) {
+      out += ch;
+      if (ch === inString && sql[k - 1] !== "\\") inString = null;
+      continue;
+    }
+    if (ch === "'" || ch === '"' || ch === "`") {
+      inString = ch;
+      out += ch;
+      continue;
+    }
+    if (ch === "?") {
+      i += 1;
+      out += `$${i}`;
+      continue;
+    }
+    out += ch;
+  }
+  return out;
 }
 
 function splitStatements(sql) {
@@ -76,6 +105,21 @@ function wrapMysql(conn) {
     beginTransaction: () => conn.beginTransaction(),
     commit: () => conn.commit(),
     rollback: () => conn.rollback(),
+    release: () => conn.release(),
+  };
+}
+
+function wrapPg(conn) {
+  return {
+    async query(sql, params = []) {
+      const text = convertToPgPlaceholders(sql);
+      const values = params.map((p) => (p === undefined ? null : p));
+      const { rows } = await conn.query(text, values);
+      return rows;
+    },
+    beginTransaction: () => conn.query("BEGIN"),
+    commit: () => conn.query("COMMIT"),
+    rollback: () => conn.query("ROLLBACK"),
     release: () => conn.release(),
   };
 }
@@ -132,6 +176,41 @@ export async function connectDb() {
     } catch (err) {
       throw new Error(
         `Không kết nối được MySQL. Kiểm tra thông tin kết nối (host/user/pass/SSL) và .env. Chi tiết: ${err.message}`
+      );
+    }
+  }
+
+  if (config.db.client === "postgres" || config.db.client === "postgresql") {
+    const { default: pg } = await import("pg");
+    // Postgres trả BIGINT (int8) dạng string; các trường timestamp/created_at của app
+    // là số nguyên ms → ép về Number để giữ hành vi giống SQLite/MySQL.
+    pg.types.setTypeParser(20, (v) => (v === null ? null : Number(v)));
+    const connInfo = config.db.url
+      ? parseDbUrl(config.db.url)
+      : {
+          host: config.db.host,
+          port: config.db.port,
+          user: config.db.user,
+          password: config.db.password,
+          database: config.db.database,
+        };
+    const { host, port, user, password, database } = connInfo;
+    const ssl = config.db.ssl ? { rejectUnauthorized: false } : undefined;
+    try {
+      const pool = new pg.Pool({ host, port, user, password, database, ssl, max: 10 });
+      const test = await pool.query("SELECT 1");
+      if (!test) throw new Error("Kết nối Postgres không phản hồi");
+      pgPool = pool;
+      const schema = fs.readFileSync(POSTGRES_SCHEMA, "utf8");
+      for (const sql of splitStatements(schema)) {
+        await pgPool.query(sql);
+      }
+      await migrate();
+      console.log(`Đã kết nối Postgres: ${user}@${host}:${port}/${database}`);
+      return;
+    } catch (err) {
+      throw new Error(
+        `Không kết nối được Postgres. Kiểm tra thông tin kết nối (host/user/pass/SSL) và .env. Chi tiết: ${err.message}`
       );
     }
   }
@@ -195,6 +274,11 @@ export async function getConnection() {
     if (!mysqlPool) throw new Error("CSDL chưa được kết nối.");
     const conn = await mysqlPool.getConnection();
     return wrapMysql(conn);
+  }
+  if (config.db.client === "postgres" || config.db.client === "postgresql") {
+    if (!pgPool) throw new Error("CSDL chưa được kết nối.");
+    const conn = await pgPool.connect();
+    return wrapPg(conn);
   }
   if (!sqliteDb) throw new Error("CSDL chưa được kết nối.");
   return wrapSqlite(sqliteDb);

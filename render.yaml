@@ -1,16 +1,24 @@
 # Render Blueprint — deploy Web Service bằng build command (không Docker).
 #
-# Phương án B: dùng database MySQL của Render (miễn phí, bền vững).
-# Render Free KHÔNG có Persistent Disk, nên ta dùng MySQL thay cho SQLite
-# để dữ liệu (điểm, câu hỏi, contestant, game state) không bị mất khi redeploy.
+# Phương án C (đã chọn): dùng database PostgreSQL của Render (miễn phí, bền vững).
+# Render Free KHÔNG có Persistent Disk và KHÔNG có MySQL managed -> dùng Postgres
+# managed (free tier) để dữ liệu không bị mất khi redeploy.
 #
-# Cách dùng:
-#   1. Trên Render, tạo MySQL Database (New -> MySQL), lấy thông tin kết nối.
-#   2. Deploy repo này qua Blueprint (Render đọc render.yaml). Sau đó vào tab
-#      Environment của Web Service và điền giá trị thật cho:
-#        DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME, DB_SSL
-#      (Hoặc dùng 1 biến DATABASE_URL dạng mysql://user:pass@host:3306/dbname.)
-#   Các biến dưới có sync:false để Render không ghi đè giá trị bạn đã sửa.
+# Blueprint này:
+#   - Tạo 1 PostgreSQL miễn phí (databases.cuoc-thi-db)
+#   - Tạo Web Service, tự đưa DATABASE_URL (connection string) vào env
+#   - DB_CLIENT=postgres để server dùng driver pg
+#
+# Deploy:
+#   1. Đẩy repo lên GitHub.
+#   2. Trên Render: New -> Blueprint, chọn repo (Render đọc render.yaml này).
+#   3. Render tạo luôn cả Postgres lẫn Web Service.
+
+databases:
+  - name: cuoc-thi-db
+    databaseName: cuoc_thi
+    user: cuoc_thi
+    plan: free
 
 services:
   - type: web
@@ -24,16 +32,10 @@ services:
       - key: NODE_VERSION
         value: "22"
       - key: DB_CLIENT
-        value: mysql
-      - key: DB_HOST
-        sync: false
-      - key: DB_PORT
-        sync: false
-      - key: DB_USER
-        sync: false
-      - key: DB_PASSWORD
-        sync: false
-      - key: DB_NAME
-        sync: false
+        value: postgres
       - key: DB_SSL
         value: "true"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: cuoc-thi-db
+          property: connectionString
