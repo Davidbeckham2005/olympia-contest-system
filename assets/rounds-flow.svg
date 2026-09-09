@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 170" width="900" height="170" role="img" aria-label="Quiz contest round flow">
+  <defs>
+    <style>
+      .bg { fill: #0b1120; }
+      .box { fill: #13203a; stroke: #2a3d63; stroke-width: 1.5; }
+      .arrow { stroke: #ffd60a; stroke-width: 3; fill: none; marker-end: url(#head); }
+      .rlabel { font: 800 16px system-ui, sans-serif; fill: #ffd60a; text-anchor: middle; }
+      .rsub { font: 500 11px system-ui, sans-serif; fill: #8aa0c9; text-anchor: middle; }
+      .tlabel { font: 700 12px system-ui, sans-serif; fill: #c9d6f2; text-anchor: middle; }
+    </style>
+    <marker id="head" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="none" stroke="#ffd60a" stroke-width="2" />
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="900" height="170" rx="18" />
+  <text x="450" y="28" text-anchor="middle" class="tlabel" font-size="15" fill="#ffffff">Contest flow — 4 main rounds + tie-break</text>
+
+  <!-- Round 1 -->
+  <rect x="16" y="55" width="190" height="74" rx="13" class="box">
+    <animate attributeName="stroke" values="#2a3d63;#ffd60a;#2a3d63" dur="4s" repeatCount="indefinite" />
+  </rect>
+  <text x="111" y="88" class="rlabel">1 · KHỞI ĐỘNG</text>
+  <text x="111" y="108" class="rsub">5 hình / thành viên · 60s</text>
+  <text x="111" y="122" class="rsub">+10 / câu đúng</text>
+
+  <!-- Round 2 -->
+  <rect x="242" y="55" width="190" height="74" rx="13" class="box">
+    <animate attributeName="stroke" values="#2a3d63;#ffd60a;#2a3d63" dur="4s" begin="1s" repeatCount="indefinite" />
+  </rect>
+  <text x="337" y="88" class="rlabel">2 · CHƯỚNG NGẠI VẬT</text>
+  <text x="337" y="108" class="rsub">5 mảnh ghép · từ khóa</text>
+  <text x="337" y="122" class="rsub">40·30·20·10 theo tốc độ</text>
+
+  <!-- Round 3 -->
+  <rect x="468" y="55" width="190" height="74" rx="13" class="box">
+    <animate attributeName="stroke" values="#2a3d63;#ffd60a;#2a3d63" dur="4s" begin="2s" repeatCount="indefinite" />
+  </rect>
+  <text x="563" y="88" class="rlabel">3 · TĂNG TỐC</text>
+  <text x="563" y="108" class="rsub">video · trả lời trong lúc chiếu</text>
+  <text x="563" y="122" class="rsub">40·30·20·10 theo tốc độ</text>
+
+  <!-- Round 4 -->
+  <rect x="694" y="55" width="190" height="74" rx="13" class="box">
+    <animate attributeName="stroke" values="#2a3d63;#ffd60a;#2a3d63" dur="4s" begin="3s" repeatCount="indefinite" />
+  </rect>
+  <text x="789" y="88" class="rlabel">4 · VỀ ĐÍCH</text>
+  <text x="789" y="108" class="rsub">gói 60/80/100 · ngôi sao ×2</text>
+  <text x="789" y="122" class="rsub">chuông cướp quyền</text>
+
+  <!-- Arrows -->
+  <line x1="206" y1="92" x2="242" y2="92" class="arrow">
+    <animate attributeName="opacity" values="1;0.3;1" dur="0.9s" repeatCount="indefinite" />
+  </line>
+  <line x1="432" y1="92" x2="468" y2="92" class="arrow">
+    <animate attributeName="opacity" values="0.3;1;0.3" dur="0.9s" begin="0.3s" repeatCount="indefinite" />
+  </line>
+  <line x1="658" y1="92" x2="694" y2="92" class="arrow">
+    <animate attributeName="opacity" values="1;0.3;1" dur="0.9s" begin="0.6s" repeatCount="indefinite" />
+  </line>
+</svg>

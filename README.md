@@ -1,5 +1,7 @@
 # Quiz Contest (Cuộc thi tri thức)
 
+![Realtime architecture](assets/realtime-architecture.svg)
+
 Full-featured web platform for organizing and running a live quiz competition:
 an online preliminary exam, team management, a real-time MC control desk,
 buzzers, a knowledge-puzzle board, live scoreboards and final standings.
@@ -83,6 +85,8 @@ The contestant page switches its content automatically according to the
 current round (controlled by the MC).
 
 ## Contest flow
+
+![Contest round flow](assets/rounds-flow.svg)
 
 ### 1. Preliminary round (contestants)
 
