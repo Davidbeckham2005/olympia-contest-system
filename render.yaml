@@ -25,7 +25,7 @@ services:
     name: cuoc-thi
     runtime: node
     plan: free
-    buildCommand: npm install --prefix client && npm run build
+    buildCommand: npm install && npm install --prefix client && npm run build
     startCommand: npm start
     healthCheckPath: /api/health
     envVars:
