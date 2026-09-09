@@ -11,10 +11,59 @@ export const TEAM_DEFS = [
 export const TEAM_ORDER = ["a", "b", "c", "d", "e", "f"];
 
 export const ROUNDS = [
-  { id: "khoi_dong", name: "Khởi động", rules: [] },
-  { id: "vuot_cnv", name: "Vượt chướng ngại vật", rules: [] },
-  { id: "tang_toc", name: "Tăng tốc", rules: [] },
-  { id: "ve_dich", name: "Về đích", rules: [] },
+  {
+    id: "khoi_dong",
+    name: "Khởi động",
+    rules: [
+      "Mỗi đội 4 thành viên, từng thành viên trả lời trực tiếp 5 hình ảnh Mô phôi, mỗi hình 12 giây.",
+      "Trả lời đúng tế bào / cấu trúc / cơ quan trong học phần Mô phôi.",
+      "Thí sinh được quyền bỏ qua câu hỏi nhưng không quay lại câu đã bỏ qua.",
+      "Điểm số: 10 điểm/câu đúng — tối đa 200 điểm/đội (120 hình cho 6 đội).",
+      "Đội bằng điểm: trả lời câu hỏi phụ, tính thành tích trả lời đúng + thời gian.",
+      "Sau vòng 1, 2 đội có số điểm thấp nhất bị loại.",
+    ],
+  },
+  {
+    id: "vuot_cnv",
+    name: "Vượt chướng ngại vật",
+    rules: [
+      "Hình ảnh chướng ngại vật bị che bởi 5 mảnh ghép (4 ô góc + 1 ô trung tâm).",
+      "Thứ tự chọn mảnh ghép theo điểm vòng 1 — đội cao nhất chọn trước.",
+      "Giải đáp 4 câu hỏi tương ứng 4 mảnh ghép, 30 giây/câu.",
+      "Mở đủ 4 góc mà chưa có đáp án → BTC cung cấp 1 câu hỏi để mở ô trung tâm.",
+      "Điểm theo trả lời đúng và nhanh nhất: 40 · 30 · 20 · 10 — sai không điểm.",
+      "Tất cả trả lời sai → mảnh ghép bị khóa vĩnh viễn.",
+      "Các đội bấm chuông bất kỳ lúc nào để đoán từ khóa; trả lời sai sẽ mất quyền tiếp tục vòng thi.",
+      "Điểm giải đáp từ khóa: mở 1 mảnh = 60 · mở 2 mảnh = 50 · mở 3 mảnh = 40 · mở 4 mảnh = 30 · mở ô trung tâm = 20.",
+    ],
+  },
+  {
+    id: "tang_toc",
+    name: "Tăng tốc",
+    rules: [
+      "Các đội xem 4 clip, mỗi clip 30 giây.",
+      "Trả lời các gợi ý từ tổng quát (hình ảnh, dữ liệu bao quát) đến trực tiếp (đáp án); tấm ảnh cuối là đáp án.",
+      "Điểm theo tốc độ trả lời đúng: đội sớm nhất 40 · thứ hai 30 · thứ ba 20 · thứ tư 10.",
+      "Đội trả lời bằng thời gian sẽ bằng điểm.",
+      "Trả lời sai không bị trừ điểm.",
+    ],
+  },
+  {
+    id: "ve_dich",
+    name: "Về đích",
+    rules: [
+      "Mỗi đội chọn 1 gói từ ngân hàng: 60 (10+10+20+20), 80 (10+20+20+30) hoặc 100 (20+20+30+30) — mỗi gói 4 câu.",
+      "Các thành viên tự sắp xếp, mỗi người trả lời 1 câu trong gói 4 câu.",
+      "Vừa đọc câu hỏi vừa trả lời: câu 10đ = 30s · 20đ = 45s · 30đ = 60s.",
+      "Mỗi đội có 1 ngôi sao hy vọng, đặt ở bất kỳ câu hỏi nào trước khi câu hỏi đưa ra.",
+      "Đội chọn gói — Đúng: hưởng điểm câu hỏi. Sai: không ai trả lời được thì không trừ điểm.",
+      "Sai mà đội khác trả lời đúng: đội đang thi trừ đúng số điểm, đội trả lời đúng nhận số điểm đó.",
+      "Ngôi sao hy vọng — Đúng: x2 điểm.",
+      "Sao sai, không ai trả lời: trừ phân nửa số điểm.",
+      "Sao sai mà đội khác trả lời đúng: đội đang thi trừ gấp đôi, đội đúng nhận x2 số điểm.",
+      "Đội giành quyền trả lời sai: trừ đúng số điểm câu hỏi, đội chọn ngôi sao trừ phân nửa số điểm.",
+    ],
+  },
   { id: "tie_break", name: "Phụ phuc", rules: [] },
 ];
 
