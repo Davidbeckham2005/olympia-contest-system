@@ -200,11 +200,7 @@ export default function RoundTieBreak({ ctx }) {
               type="button"
               className="px-2.5 py-1 text-xs font-semibold border border-line bg-panel hover:bg-danger/20 hover:text-danger transition"
               style={{ borderColor: t.color, color: t.color }}
-              onClick={() => {
-                if (window.confirm(`KHÓA VĨNH VIỄN đội ${t.name} — đội sẽ bị loại khỏi cuộc thi?`)) {
-                  act("tiebreak.eliminate", { teamId: t.id });
-                }
-              }}
+              onClick={() => act("tiebreak.eliminate", { teamId: t.id })}
             >
               Khoa {t.name}
             </button>

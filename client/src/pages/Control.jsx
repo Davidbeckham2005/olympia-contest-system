@@ -338,12 +338,7 @@ export default function Control() {
                   ? "border-gold/50 bg-gold/10 hover:bg-gold/20"
                   : "border-danger/40 bg-danger/10 hover:bg-danger/20"
               }`}
-              onClick={() => {
-                const msg = t.eliminated
-                  ? `Mở khóa đội ${t.name} — đội sẽ quay lại thi tiếp?`
-                  : `KHÓA VĨNH VIỄN đội ${t.name} — đội sẽ bị loại khỏi cuộc thi?`;
-                if (window.confirm(msg)) act(t.eliminated ? "tiebreak.restore" : "tiebreak.eliminate", { teamId: t.id });
-              }}
+              onClick={() => act(t.eliminated ? "tiebreak.restore" : "tiebreak.eliminate", { teamId: t.id })}
             >
               <span className={`flex-1 min-w-0 font-semibold text-sm truncate ${t.eliminated ? "text-gold" : "text-danger"}`}>
                 {t.name}
