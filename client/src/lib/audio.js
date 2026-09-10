@@ -90,9 +90,10 @@ export function bedKindFromGame(g) {
   }
   if (g.round === "khoi_dong") {
     const p = g.khoiDong?.phase || "play";
-    // Khi MC mở màn hình KHỞI ĐỘNG (đang chơi / chờ giữa câu): ưu tiên nhạc nền riêng
-    // slot "khoi_dong"; chưa có file thì dùng nhạc nền chung "bg".
-    if (p === "break" || p === "done" || g.questionStatus === "idle") return pack["khoi_dong"]?.url ? "khoi_dong" : "wait";
+    // Nhạc hiệu Khởi động (slot "khoi_dong") CHỈ phát khi thí sinh đang trả lời (đang thi).
+    // Lúc vừa mở vòng / khoảng nghỉ / kết thúc dùng nhạc chờ "wait" (nếu có), còn không
+    // thì dùng nhạc nền chung "bg" — tránh nhạc hiệu khởi động bị lặp trên màn chờ.
+    if (p === "break" || p === "done" || g.questionStatus === "idle") return pack["wait"]?.url ? "wait" : "bg";
     return pack["khoi_dong"]?.url ? "khoi_dong" : "bg";
   }
   if (!g.round || g.phase === "setup" || g.phase === "finished" || g.questionStatus === "idle") return "wait";
