@@ -164,6 +164,52 @@
     0% { transform: translateY(18px); opacity: 0; }
     100% { transform: translateY(0); opacity: 1; }
   }
+  .kd-stamp {
+    font-family: var(--font-display);
+    font-weight: 900;
+    text-align: center;
+    text-transform: uppercase;
+    line-height: 1;
+    padding: 0.1em 0.7em 0.25em;
+    border-radius: 0.75rem;
+    border-width: 6px;
+    border-style: solid;
+    transform: rotate(-6deg);
+    opacity: 0;
+    animation: kdStampIn 0.16s cubic-bezier(0.22, 1, 0.36, 1) 0.02s forwards,
+      kdStampOut 0.28s ease 0.82s forwards;
+  }
+  .kd-stamp-ok {
+    color: #0b2b12;
+    background: var(--color-ok);
+    border-color: color-mix(in srgb, var(--color-ok) 55%, #fff);
+    box-shadow: 0 0 44px rgba(128, 237, 153, 0.55);
+  }
+  .kd-stamp-no {
+    color: #33070f;
+    background: var(--color-danger);
+    border-color: color-mix(in srgb, var(--color-danger) 55%, #fff);
+    box-shadow: 0 0 44px rgba(255, 77, 109, 0.55);
+  }
+  .kd-stamp-mark {
+    font-size: clamp(84px, 15vw, 150px);
+  }
+  .kd-stamp-word {
+    font-size: clamp(46px, 8vw, 88px);
+    letter-spacing: 0.06em;
+  }
+  .kd-stamp-plus {
+    font-size: clamp(26px, 4vw, 46px);
+    margin-top: 0.15em;
+  }
+  @keyframes kdStampIn {
+    from { transform: rotate(-6deg) scale(0.35); opacity: 0; }
+    to { transform: rotate(-6deg) scale(1); opacity: 1; }
+  }
+  @keyframes kdStampOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+  }
   .round-badge {
     display: inline-block;
     font-weight: 800;

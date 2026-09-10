@@ -615,6 +615,21 @@ export function KhoiDongAudience({ state, timer, flash }) {
   const rawProgress = Math.max(0, Math.min(1, (kdDur - kdRem) / kdDur));
   const [smoothProgress, setSmoothProgress] = useState(rawProgress);
   const [anchor, setAnchor] = useState(null);
+  const [stamp, setStamp] = useState(null);
+  const stampTimer = useRef(null);
+  useEffect(() => {
+    return on("khoi_dong:mark", (p) => {
+      if (stampTimer.current) clearTimeout(stampTimer.current);
+      setStamp({ correct: p?.correct === true, ts: Date.now() });
+      stampTimer.current = setTimeout(() => setStamp(null), 1100);
+    });
+  }, []);
+  useEffect(
+    () => () => {
+      if (stampTimer.current) clearTimeout(stampTimer.current);
+    },
+    []
+  );
   const lastRunning = useRef(false);
   const lastEndsAtRef = useRef(timer?.endsAt);
   useEffect(() => {
@@ -840,6 +855,16 @@ export function KhoiDongAudience({ state, timer, flash }) {
           </div>
         </div>
       </div>
+
+      {stamp && (
+        <div key={stamp.ts} className="pointer-events-none absolute inset-0 z-40 grid place-items-center">
+          <div className={`kd-stamp ${stamp.correct ? "kd-stamp-ok" : "kd-stamp-no"}`}>
+            <div className="kd-stamp-mark">{stamp.correct ? "✓" : "✗"}</div>
+            <div className="kd-stamp-word">{stamp.correct ? "ĐÚNG" : "SAI"}</div>
+            {stamp.correct && <div className="kd-stamp-plus">+10</div>}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

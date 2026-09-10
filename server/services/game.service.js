@@ -640,6 +640,8 @@ export function resetKhoiDong(teamId = null) {
       const mi = game.khoiDong.memberIndex ?? 0;
       game.khoiDong.history[tid][mi] = game.khoiDong.history[tid][mi] || {};
       game.khoiDong.history[tid][mi][game.questionIndex] = !!correct;
+      // Báo màn hình Khán giả: hiệu ứng stamp ĐÚNG/SAI ngay khi MC vừa chấm điểm.
+      broadcast("khoi_dong:mark", { teamId: tid, correct: !!correct });
       // Vòng 1: câu ĐÚNG được cộng điểm (10 điểm/ảnh); câu SAI không trừ.
       // Guard chống cộng trùng đã xử lý ở đầu branch, nên mỗi ảnh chỉ cộng đúng 1 lần.
       if (correct) addScore(tid, points);
