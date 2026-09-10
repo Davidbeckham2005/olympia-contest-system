@@ -28,6 +28,12 @@ export default function Control() {
   const [sortScore, setSortScore] = useState(false);
   const [resetRound, setResetRound] = useState(null);
   const [resetPin, setResetPin] = useState("");
+  // Thanh bật/tắt từng nhóm nút trên sidebar (mặc định: mở; nhóm NGUY HIỂM đóng sẵn
+  // để tránh vô tình bấm Khóa đội).
+  const [groups, setGroups] = useState({ vong: true, manhinh: true, doi: true, nguyhiem: false });
+  function toggleGroup(key) {
+    setGroups((s) => ({ ...s, [key]: !s[key] }));
+  }
 
   async function refreshQ() {
     try {
@@ -212,10 +218,10 @@ export default function Control() {
     <div
       className="grid gap-4 px-4 py-5 mx-auto max-w-[1600px] lg:grid-cols-[var(--col-l,240px)_minmax(0,1fr)_var(--col-r,280px)] items-start"
     >
-      {/* CỘT TRÁI — Vòng thi / đội */}
+      {/* CỘT TRÁI — Vòng thi / đội, nhóm theo loại nút (mỗi nhóm có thanh bật/tắt) */}
       <aside className="aside-col panel">
-        <div className="text-xs tracking-[0.18em] text-mist uppercase mb-2">Vòng thi</div>
-        <div className="grid gap-2">
+        {/* NHÓM 1 · ĐIỀU HƯỚNG — chuyển vòng thi */}
+        <SideGroup title="Vòng thi" open={groups.vong} onToggle={() => toggleGroup("vong")}>
           {[
             ["khoi_dong", "Khởi động"],
             ["vuot_cnv", "Vượt CNV"],
@@ -239,32 +245,29 @@ export default function Control() {
               )}
             </button>
           ))}
-          {/* TẠM ẨN theo yêu cầu: nút "Hiện bảng điểm" (scores.show) đã được ẩn tạm thời.
-              Khôi phục bằng cách bỏ comment dòng dưới.
-          <button type="button" className="border border-[rgba(255,255,255,0.25)] bg-[#7d90b8] px-3 py-2.5 font-semibold text-sm text-black/90 hover:bg-white/20 transition" onClick={() => act("scores.show")}>Hiện bảng điểm</button>
-          */}
-          <div className="text-xs tracking-[0.18em] text-mist uppercase mt-4 mb-1">Màn hình</div>
+        </SideGroup>
+
+        {/* NHÓM 2 · THAO TÁC PHỤ — hiển thị luật/kết quả trên màn hình lớn */}
+        {/* TẠM ẨN theo yêu cầu: nút "Hiện bảng điểm" (scores.show) và "Kết quả cuối"
+            (contest.finish) — khôi phục bằng cách bỏ comment 2 dòng button bên dưới. */}
+        <SideGroup title="Màn hình" open={groups.manhinh} onToggle={() => toggleGroup("manhinh")}>
+          {/*<button type="button" className="border border-[rgba(255,255,255,0.25)] bg-[#7d90b8] px-3 py-2.5 font-semibold text-sm text-black/90 hover:bg-white/20 transition" onClick={() => act("scores.show")}>Hiện bảng điểm</button>*/}
+          {/*<button type="button" className="border border-[rgba(255,255,255,0.25)] bg-[#7d90b8] px-3 py-2.5 font-semibold text-sm text-black/90 hover:bg-white/20 transition" onClick={() => act("contest.finish")}>Kết quả cuối</button>*/}
           <button type="button" className={`border px-3 py-2.5 font-semibold text-sm transition ${d.mode === "rules" ? "bg-gold/20 text-white ring-1 ring-gold/50" : "border-[rgba(255,255,255,0.25)] bg-[#7d90b8] text-black/90 hover:bg-white/20"}`} onClick={() => act("screen.rules", { show: d.mode !== "rules" })}>
             {d.mode === "rules" ? "Ẩn luật chơi" : "Chiếu luật chơi"}
           </button>
           <button type="button" className={`border px-3 py-2.5 font-semibold text-sm transition ${d.mode === "roundResult" ? "bg-gold/20 text-white ring-1 ring-gold/50" : "border-[rgba(255,255,255,0.25)] bg-[#7d90b8] text-black/90 hover:bg-white/20"}`} onClick={() => act("screen.roundResult", { show: d.mode !== "roundResult" })}>
             {d.mode === "roundResult" ? "Ẩn kết quả vòng" : "Chiếu kết quả vòng"}
           </button>
-          {/* TẠM ẨN theo yêu cầu: nút "Kết quả cuối" (contest.finish) đã được ẩn tạm thời.
-              Khôi phục bằng cách bỏ comment dòng dưới.
-          <button type="button" className="border border-[rgba(255,255,255,0.25)] bg-[#7d90b8] px-3 py-2.5 font-semibold text-sm text-black/90 hover:bg-white/20 transition" onClick={() => act("contest.finish")}>Kết quả cuối</button>
-          */}
-        </div>
+        </SideGroup>
 {
           // "Đội đang thi" chỉ có nghĩa ở vòng có lượt đội riêng: Vòng 1 (jump câu đội)
           // và Vòng 4 (chuyển lượt trả lời). Vòng 2 / Tăng tốc / Vòng phụ là vòng chung
           // — ẩn hẳn danh sách nút để tránh bấm nhầm đổi currentTeam.
-          (isKd || g.round === "ve_dich") && (<>
-        <hr className="my-4 border-line" />
-        <div className="text-xs tracking-[0.18em] text-mist uppercase mb-2">Đội đang thi</div>
-        <div className="grid gap-2">
+          (isKd || g.round === "ve_dich") && (
+        <SideGroup title="Đội đang thi" open={groups.doi} onToggle={() => toggleGroup("doi")}>
           {// Vòng 4: chỉ hiện các đội ĐANG THI (chưa bị khóa vĩnh viễn) — ẩn các đội đã block.
-            // Vòng 1 giữ nguyên: MC cần thấy mọi đội để dùng nút Khóa/Mở khóa.
+            // Vòng 1 giữ nguyên: MC cần thấy mọi đội trong bảng "Đội đang thi".
             state.teams.filter((t) => g.round !== "ve_dich" || activeTeamIds(g, state.teams).includes(t.id)).map((t) => {
             const active = g.currentTeam === t.id;
             const eliminated = g.round !== "khoi_dong" && !activeTeamIds(g, state.teams).includes(t.id);
@@ -314,15 +317,19 @@ export default function Control() {
               </button>
             );
           })}
-        </div>
-        {/* KHU VỰC NGUY HIỂM — Khóa/Mở khóa đội (LOẠI VĨNH VIỄN), tách khỏi nút chọn đội
-            để tránh bấm nhầm; mọi thao tác đều có hộp xác nhận trước khi gửi. */}
+        </SideGroup>
+          )}
+
+        {/* NHÓM 4 · NGUY HIỂM — Khóa/Mở khóa đội (LOẠI VĨNH VIỄN), tách khỏi nút chọn
+            đội để tránh bấm nhầm. Mặc định ĐÓNG sẵn + mọi thao tác có hộp xác nhận. */}
         {isKd && (
-          <>
-        <hr className="my-4 border-danger/40" />
-        <div className="text-xs tracking-[0.18em] text-danger uppercase mb-2">Quản lý loại đội — vĩnh viễn</div>
-        <p className="text-[10px] text-mist mb-2">Bấm Khóa = loại đội khỏi cuộc thi ngay (có xác nhận). Mở khóa để đưa đội trở lại.</p>
-        <div className="grid gap-1.5">
+          <SideGroup
+            title="Quản lý loại đội — vĩnh viễn"
+            danger
+            open={groups.nguyhiem}
+            onToggle={() => toggleGroup("nguyhiem")}
+            hint="Bấm Khóa = loại đội khỏi cuộc thi ngay (có xác nhận). Mở khóa để đưa đội trở lại."
+          >
           {state.teams.map((t) => (
             <button
               key={t.id}
@@ -349,10 +356,8 @@ export default function Control() {
               </span>
             </button>
           ))}
-        </div>
-          </>
+        </SideGroup>
         )}
-        </>)}
       <p className="mt-5">
         <Link to="/admin" className="text-gold underline">Mở trang quản trị</Link>
       </p>
@@ -534,5 +539,27 @@ export default function Control() {
 
     </div>
     </>
+  );
+}
+
+// Thanh bật/tắt (accordion) cho từng nhóm nút trên sidebar — phân loại rõ: điều hướng
+// (vòng thi), hiển thị (màn hình), thao tác chính (đội đang thi) và nguy hiểm (loại đội).
+function SideGroup({ title, open, onToggle, danger = false, hint, children }) {
+  return (
+    <section className={danger ? "rounded-sm border border-danger/40 px-2 pt-1.5 pb-2" : "border-b border-line/70 pb-3"}>
+      <button
+        type="button"
+        onClick={onToggle}
+        className={`flex w-full items-center justify-between gap-2 py-1 text-left transition ${
+          danger ? "text-danger hover:text-red-200" : "text-mist hover:text-white"
+        }`}
+        title={open ? "Thu gọn nhóm" : "Mở rộng nhóm"}
+      >
+        <span className="text-xs tracking-[0.18em] uppercase font-semibold">{title}</span>
+        <span className={`shrink-0 text-[10px] transition-transform ${open ? "rotate-90" : ""}`}>▸</span>
+      </button>
+      {open && hint && <p className="text-[10px] text-mist mb-2">{hint}</p>}
+      {open && <div className="grid gap-2">{children}</div>}
+    </section>
   );
 }
