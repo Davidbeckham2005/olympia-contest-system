@@ -856,46 +856,29 @@ export function KhoiDongAudience({ state, timer, flash }) {
         </div>
       </div>
 
-      {/* Giữa — hình ảnh chiếm to nhất (zachowany margines od viển) */}
+      {/* Giữa — khung ảnh KÍCH THƯỚC CỐ ĐỊNH (tỷ lệ 4:3) chiếm trọn chiều cao trống:
+          mọi ảnh (tỉ lệ khác nhau) cùng vào MỘT ô, object-contain căn giữa bên trong, đổi
+          ảnh không làm xê dịch/đổi cỡ bố cục hay làm lệch vòng đúng-sai quanh ảnh. */}
       <div className="relative flex flex-col items-center justify-center px-8 min-h-0 flex-1 z-10">
-        {d.answerRevealed ? (
-          <div className="text-center">
-            <div className="relative inline-block">
-              {(d.mediaUrl || fallbackImg) && (
-                <img
-                  src={d.mediaUrl || fallbackImg}
-                  alt=""
-                  className="max-h-full max-w-[80vw] mx-auto rounded-2xl object-contain"
-                />
-              )}
-              <KdRing fx={markFx} />
-            </div>
-            <div className="kicker mt-4">ĐÁP ÁN</div>
-            <div className="stage-answer mt-3">{d.answer}</div>
-            <div className="text-mist mt-2 text-sm">
-              {activeTeam?.name || ""} • Thí sinh {memberNo}/{memberTotal} • Ảnh {(g.questionIndex || 0) + 1}/5
-            </div>
+        <div className="relative w-full h-full grid place-items-center">
+          <div className="relative h-full aspect-[4/3] max-w-full min-w-[260px]" style={{ aspectRatio: "4 / 3", height: "100%" }}>
+            <img
+              src={d.mediaUrl || fallbackImg}
+              alt=""
+              className="absolute inset-0 w-full h-full object-contain rounded-2xl"
+            />
+            <KdRing fx={markFx} />
+            {d.answerRevealed && (
+              <div className="absolute inset-x-0 bottom-0 rounded-b-2xl bg-gradient-to-t from-black/80 via-black/55 to-transparent px-4 pb-3 pt-12">
+                <div className="kicker text-[#ffd60a]">ĐÁP ÁN</div>
+                <div className="stage-answer mt-1">{d.answer}</div>
+                <div className="text-mist mt-1.5 text-sm">
+                  {activeTeam?.name || ""} • Thí sinh {memberNo}/{memberTotal} • Ảnh {(g.questionIndex || 0) + 1}/5
+                </div>
+              </div>
+            )}
           </div>
-        ) : (
-          <div className="text-center">
-            <div className="relative inline-block">
-              {d.mediaUrl ? (
-                <img
-                  src={d.mediaUrl}
-                  alt=""
-                  className="max-h-full max-w-[85vw] mx-auto rounded-2xl object-contain"
-                />
-              ) : (
-                <img
-                  src={fallbackImg}
-                  alt=""
-                  className="max-h-full max-w-[85vw] mx-auto rounded-2xl object-contain"
-                />
-              )}
-              <KdRing fx={markFx} />
-            </div>
-          </div>
-        )}
+        </div>
       </div>
 
       {/* Dưới — khối tách riêng: thanh bar tên đội + câu hỏi (tách rõ so với ảnh phía trên).
