@@ -51,10 +51,27 @@ export default function Audience() {
   const running = timer?.running ?? g.timer?.running;
 
   // Màn hình LUẬT THI (MC bật qua "screen.rules") — hiển thị trên mọi vòng.
+  // Nền đồng bộ với màn khán giả (audienceBg / audienceBgUrl) để không bị lệch giao diện.
   if (d.mode === "rules") {
+    const bg = state.settings?.audienceBg || "dark";
+    const bgUrl = state.settings?.audienceBgUrl || "";
+    const bgLayer = (
+      <>
+        <div className="fixed inset-0 z-0 bg-[#070b16]" />
+        {bg === "blur" && bgUrl && (
+          <>
+            <div
+              className="fixed inset-0 z-0 bg-cover bg-center scale-110"
+              style={{ backgroundImage: `url(${bgUrl})`, filter: "blur(14px) brightness(0.5)" }}
+            />
+            <div className="fixed inset-0 z-0 bg-[#070b16]/45" />
+          </>
+        )}
+      </>
+    );
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-5 py-8 relative isolate overflow-hidden">
-        <div className="fixed inset-0 z-0 bg-[#070b16]" />
+        {bgLayer}
         <RulesBoard state={state} g={g} className="relative z-10" />
         <AudioUnlock audioOn={audioOn} onEnable={enableAudio} />
       </div>
@@ -590,27 +607,47 @@ export function KhoiDongAudience({ state, timer, flash }) {
   const kdDur = t.duration || g.khoiDong?.timerSeconds || 60;
   const kdRem = t.remaining ?? kdDur;
   // Progress mượt: gộp dữ liệu server (đếm theo giây) với đồng hồ real-time (rAF) để
-  // viền conic chạy liên tục, không giật theo nấc 1 giây. Dựa vào endsAt (mốc tuyệt đối
-  // từ server) nên mọi màn hình cùng vị trí; kdRem giữ role dự phòng khi endsAt chưa có.
+  // viền conic chạy liên tục, không giật theo nấc 1 giây. Chốt MỘT LẦN mốc kết thúc
+  // (endsAt tuyệt đối từ server, hoặc tính từ remaining) khi đồng hồ vừa chạy; sau đó
+  // chỉ đọc Date.now() trong rAF — không re-anchor lại theo từng broadcast game:timer
+  // (mỗi 250ms/1s) nên tốc độ luôn đều chứ không bị "nhảy/nghẹt" do khởi động lại.
   const running = !!timer?.running;
   const rawProgress = Math.max(0, Math.min(1, (kdDur - kdRem) / kdDur));
   const [smoothProgress, setSmoothProgress] = useState(rawProgress);
+  const [anchor, setAnchor] = useState(null);
+  const lastRunning = useRef(false);
+  const lastEndsAtRef = useRef(timer?.endsAt);
   useEffect(() => {
+    // Không chạy (pause/break/done): dừng rAF, đứng yên theo giá trị server.
     if (phase !== "play" || !running) {
+      lastRunning.current = running;
+      setAnchor(null);
       setSmoothProgress(rawProgress);
       return;
     }
-    const endsAt = timer?.endsAt ?? Date.now() + kdRem * 1000;
+    // Chỉ chốt lại mốc kết thúc khi đồng hồ VỪA chạy (running false→true) hoặc bắt đầu
+    // đồng hồ mới (endsAt mới) — KHÔNG chốt lại mỗi lần broadcast game:timer, nên vòng
+    // rAF bên dưới chạy liền mạch cả 60s với tốc độ đều.
+    const started = running && (!lastRunning.current || timer?.endsAt !== lastEndsAtRef.current);
+    lastRunning.current = running;
+    if (started) {
+      setAnchor(timer?.endsAt ?? Date.now() + kdRem * 1000);
+      lastEndsAtRef.current = timer?.endsAt;
+    }
+  }, [phase, running, timer?.endsAt, kdRem, rawProgress]);
+  useEffect(() => {
+    if (!anchor) return;
     let raf = 0;
+    const durMs = kdDur * 1000;
     const loop = () => {
-      const remMs = Math.max(0, endsAt - Date.now());
-      const p = Math.max(0, Math.min(1, (kdDur * 1000 - remMs) / (kdDur * 1000)));
+      const remMs = Math.max(0, anchor - Date.now());
+      const p = Math.max(0, Math.min(1, (durMs - remMs) / durMs));
       setSmoothProgress(p);
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, [phase, running, kdDur, timer?.endsAt, kdRem]);
+  }, [anchor, kdDur]);
   // Hiển thị theo real-time nhưng vẫn bám giá trị server nếu nó nhảy (MC đổi ảnh).
   const timeProgress = phase === "play" ? smoothProgress : 0;
 

@@ -13,6 +13,10 @@ export function saveSettings(body) {
   return request("/api/admin/settings", { method: "POST", body });
 }
 
+export function saveRoundRules(rules) {
+  return request("/api/admin/round-rules", { method: "POST", body: { rules } });
+}
+
 export function setKhoiDongAnswerSeconds(seconds) {
   return request("/api/admin/khoi-dong-answer-seconds", { method: "POST", body: { seconds } });
 }

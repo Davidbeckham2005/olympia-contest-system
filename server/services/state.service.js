@@ -1,4 +1,4 @@
-import { getDb, ROUNDS } from "../models/store.js";
+import { getDb, roundsView } from "../models/store.js";
 import { cnvView } from "./game.service.js";
 
 export function publicState() {
@@ -46,9 +46,9 @@ export function publicState() {
     // sự kiện game:state. (Cùng dữ liệu socket game:state đã gửi từ trước.)
     questions: d.questions,
     media: d.media,
-    sounds: d.sounds || { correct: { url: "" }, wrong: { url: "" }, bg: { url: "" }, wait: { url: "" }, buzz: { url: "" }, answers: { url: "" } },
-    // định nghĩa cấu trúc vòng thi
-    rounds: ROUNDS,
+    sounds: d.sounds || { correct: { url: "" }, wrong: { url: "" }, bg: { url: "" }, wait: { url: "" }, buzz: { url: "" }, answers: { url: "" }, khoi_dong: { url: "" } },
+    // định nghĩa cấu trúc vòng thi — luật do admin chỉnh trong DB (ưu tiên hơn mặc định)
+    rounds: roundsView(d.rules),
   };
   if (d.game.round === "vuot_cnv") {
     state.cnv = cnvView(d);

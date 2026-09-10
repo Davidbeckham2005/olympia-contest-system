@@ -15,6 +15,7 @@ import {
   uploadSound,
   deleteSound,
   saveSettings,
+  saveRoundRules,
   setKhoiDongAnswerSeconds,
   setKhoiDongTimerSeconds,
   resetContest,
@@ -77,6 +78,7 @@ export default function Admin() {
           ["thi-sinh", "Thí sinh"],
           ["doi", "4 đội"],
           ["cau-hoi", "Câu hỏi"],
+          ["luat", "Luật thi"],
           ["am-thanh", "Âm thanh"],
           ["media", "Hình ảnh / Video"],
           ["dieu-khien", "Hẹn giờ & chuông"],
@@ -99,6 +101,7 @@ export default function Admin() {
       {tab === "thi-sinh" && <ContestantsTab state={state} reload={load} setMsg={setMsg} />}
       {tab === "doi" && <TeamsTab state={state} reload={load} setMsg={setMsg} />}
       {tab === "cau-hoi" && <QuestionsTab state={state} reload={load} setMsg={setMsg} />}
+      {tab === "luat" && <RulesTab state={state} reload={load} setMsg={setMsg} />}
       {tab === "am-thanh" && <SoundsTab state={state} reload={load} setMsg={setMsg} />}
       {tab === "media" && <MediaTab state={state} reload={load} setMsg={setMsg} />}
       {tab === "dieu-khien" && <TimerBuzzerTab state={state} timer={timer} setMsg={setMsg} />}
@@ -1056,6 +1059,67 @@ function JsonEditor({ draft, setDraft, setMsg }) {
   );
 }
 
+function RulesTab({ state, reload, setMsg }) {
+  const rounds = state.rounds || [];
+  const [drafts, setDrafts] = useState(() => {
+    const init = {};
+    rounds.forEach((r) => {
+      init[r.id] = (Array.isArray(r.rules) ? r.rules : []).join("\n");
+    });
+    return init;
+  });
+  const [saving, setSaving] = useState(false);
+
+  async function save() {
+    const rules = {};
+    rounds.forEach((r) => {
+      const lines = (drafts[r.id] || "")
+        .split("\n")
+        .map((x) => x.trim())
+        .filter(Boolean);
+      if (lines.length) rules[r.id] = lines;
+    });
+    setSaving(true);
+    try {
+      await saveRoundRules(rules);
+      setMsg("Đã lưu luật thi từng vòng");
+      reload();
+    } catch (err) {
+      setMsg(err.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="panel">
+      <p className="text-mist text-sm mb-4">
+        Mỗi dòng là một ý luật (hiện theo số thứ tự trên màn hình lớn). Lưu xong là màn hình khán giả / thí sinh / MC cập nhật ngay.
+      </p>
+      <div className="grid gap-3 lg:grid-cols-2">
+        {rounds.map((r) => (
+          <div key={r.id} className="rounded-xl border border-line bg-night/40 p-4">
+            <div className="font-bold flex items-center justify-between gap-2">
+              <span>{r.name}</span>
+              <span className="text-mist text-xs">{drafts[r.id]?.split("\n").filter((x) => x.trim()).length || 0} dòng</span>
+            </div>
+            <textarea
+              rows={10}
+              className="w-full font-mono text-sm mt-2"
+              value={drafts[r.id] || ""}
+              placeholder="Mỗi dòng là một luật…"
+              onChange={(e) => setDrafts({ ...drafts, [r.id]: e.target.value })}
+            />
+          </div>
+        ))}
+      </div>
+      <button type="button" className="btn mt-4" onClick={save} disabled={saving}>
+        {saving ? "Đang lưu…" : "Lưu luật thi"}
+      </button>
+    </div>
+  );
+}
+
 function SoundsTab({ state, reload, setMsg }) {
   const slots = [
     ["correct", "Đúng", "Phát khi MC chấm đúng"],
@@ -1064,6 +1128,7 @@ function SoundsTab({ state, reload, setMsg }) {
     ["wait", "Nhạc chờ", "Lặp khi màn hình chờ"],
     ["buzz", "Chuông giành quyền CNV", "Phát khi thí sinh ấn phím trả lời chướng ngại vật"],
     ["answers", "Chuyển màn Đáp án", "Phát khi MC chuyển khán giả sang màn Đáp án vòng 2"],
+    ["khoi_dong", "Nhạc nền Khởi động", "Lặp khi mở màn hình vòng Khởi động"],
   ];
   const sounds = state.sounds || {};
 

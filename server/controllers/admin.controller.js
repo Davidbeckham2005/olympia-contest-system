@@ -29,6 +29,23 @@
     return getDb().settings;
   }
 
+  // BTC chỉnh sửa luật chơi từng vòng (danh sách dòng luật theo round id)
+  export function saveRoundRules(req) {
+    const db = getDb();
+    const incoming = (req.body && req.body.rules) || {};
+    for (const [round, lines] of Object.entries(incoming)) {
+      if (!Array.isArray(lines) || typeof round !== "string") continue;
+      const cleaned = lines.map((x) => String(x).trim()).filter(Boolean);
+      // Rỗng → trả về luật mặc định của vòng (xoá override trong DB)
+      if (cleaned.length) db.rules[round] = cleaned;
+      else delete db.rules[round];
+    }
+    saveDb();
+    game.emit();
+    emitEvent("prelim:update", publicState());
+    return db.rules;
+  }
+
   // BTC nhập trực tiếp thí sinh vào cuộc thi
   export function createContestant(req) {
     const c = exam.registerContestant(req.body || {});

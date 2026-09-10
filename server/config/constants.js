@@ -15,12 +15,7 @@ export const ROUNDS = [
     id: "khoi_dong",
     name: "Khởi động",
     rules: [
-      "Mỗi đội 4 thành viên, từng thành viên trả lời trực tiếp 5 hình ảnh Mô phôi, mỗi hình 12 giây.",
-      "Trả lời đúng tế bào / cấu trúc / cơ quan trong học phần Mô phôi.",
-      "Thí sinh được quyền bỏ qua câu hỏi nhưng không quay lại câu đã bỏ qua.",
-      "Điểm số: 10 điểm/câu đúng — tối đa 200 điểm/đội (120 hình cho 6 đội).",
-      "Đội bằng điểm: trả lời câu hỏi phụ, tính thành tích trả lời đúng + thời gian.",
-      "Sau vòng 1, 2 đội có số điểm thấp nhất bị loại.",
+      "Trong vòng 60 giây, mỗi học sinh khởi động với tối đa 12 câu hỏi thuộc các lĩnh vực Toán, Lý, Hóa, Sinh, Văn, Sử, Địa, Tiếng Anh, Thể thao, Nghệ thuật, Hiểu biết chung và các lĩnh vực khác. Mỗi câu trả lời đúng được 10 điểm. Trả lời sai không bị trừ điểm.",
     ],
   },
   {

@@ -17,6 +17,7 @@ import * as Contestant from "./Contestant.js";
 import * as Question from "./Question.js";
 import * as Media from "./Media.js";
 import * as Sound from "./Sound.js";
+import * as RoundRules from "./RoundRules.js";
 import * as GameState from "./GameState.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -38,6 +39,7 @@ export function defaultDb() {
     questions: { soKhao, main },
     media: [],
     sounds: Sound.emptySounds(),
+    rules: {},
     game: defaultGame(),
   };
 }
@@ -120,6 +122,16 @@ export function normalizeMainVeDich(main) {
 
 export { normalizeMainKhoiDong };
 
+// roundsView(): danh sách vòng thi HOÀN CHỈNH dùng để gửi client. Luật của từng vòng
+// ưu tiên bản admin đã chỉnh (db.rules), không có thì lấy mặc định từ ROUNDS.
+export function roundsView(rules = null) {
+  const overrides = rules || getDb().rules || {};
+  return ROUNDS.map((r) => ({
+    ...r,
+    rules: Array.isArray(overrides[r.id]) && overrides[r.id].length ? overrides[r.id] : r.rules,
+  }));
+}
+
 async function persist(data) {
   const conn = await getConnection();
   try {
@@ -131,6 +143,7 @@ async function persist(data) {
     await Question.saveMain(conn, data.questions.main);
     await Media.saveAll(conn, data.media || []);
     await Sound.saveAll(conn, data.sounds || Sound.emptySounds());
+    await RoundRules.saveAll(conn, data.rules || {});
     await GameState.save(conn, data.game);
     await conn.commit();
   } catch (err) {
@@ -153,6 +166,7 @@ async function assemble() {
     const main = await Question.loadMain(conn);
     const media = await Media.loadAll(conn);
     const sounds = await Sound.loadAll(conn);
+    const rules = await RoundRules.loadAll(conn);
     const game = await GameState.load(conn);
     const fallback = defaultDb();
     // Hợp nhất đội: giữ dữ liệu đội đã có trong DB, tự bổ sung đội mới (e/f) từ TEAM_DEFS.
@@ -182,6 +196,7 @@ async function assemble() {
       },
       media,
       sounds,
+      rules,
       game: game || defaultGame(),
     };
   } finally {
@@ -202,6 +217,7 @@ export async function loadDb() {
       ...json,
       settings: { ...defaultDb().settings, ...(json.settings || {}) },
       sounds: { ...Sound.emptySounds(), ...(json.sounds || {}) },
+      rules: { ...(json.rules || {}) },
       questions: {
         soKhao: json.questions?.soKhao || defaultDb().questions.soKhao,
         main: normalizeMainKhoiDong(normalizeMainVeDich(json.questions?.main || defaultDb().questions.main)),
@@ -237,6 +253,7 @@ export async function resetContest(keepQuestions = true) {
   if (keepQuestions) next.questions = prev.questions;
     next.media = prev.media || [];
     next.sounds = prev.sounds || Sound.emptySounds();
+    next.rules = prev.rules || {};
     next.settings = { ...next.settings, ...prev.settings, prelimOpen: false };
   db = next;
   await persist(db);

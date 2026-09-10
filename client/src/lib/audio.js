@@ -1,4 +1,4 @@
-let pack = { correct: { url: "" }, wrong: { url: "" }, bg: { url: "" }, wait: { url: "" }, buzz: { url: "" }, answers: { url: "" } };
+let pack = { correct: { url: "" }, wrong: { url: "" }, bg: { url: "" }, wait: { url: "" }, buzz: { url: "" }, answers: { url: "" }, khoi_dong: { url: "" } };
 let unlocked = false;
 let bedKind = null;
 let sfxEl = null;
@@ -78,6 +78,8 @@ function applyBed() {
 
 export function bedKindFromGame(g) {
   if (!g) return "wait";
+  // Màn hình LUẬT THI: phát nhạc nền (slot "bg") tương tự khi đang thi để không lặng im.
+  if (g.display?.mode === "rules") return "bg";
   if (
     g.round === "tang_toc" &&
     (g.tangToc?.phase === "preparing" || g.tangToc?.phase === "video") &&
@@ -88,8 +90,10 @@ export function bedKindFromGame(g) {
   }
   if (g.round === "khoi_dong") {
     const p = g.khoiDong?.phase || "play";
-    if (p === "break" || p === "done" || g.questionStatus === "idle") return "wait";
-    return "bg";
+    // Khi MC mở màn hình KHỞI ĐỘNG (đang chơi / chờ giữa câu): ưu tiên nhạc nền riêng
+    // slot "khoi_dong"; chưa có file thì dùng nhạc nền chung "bg".
+    if (p === "break" || p === "done" || g.questionStatus === "idle") return pack["khoi_dong"]?.url ? "khoi_dong" : "wait";
+    return pack["khoi_dong"]?.url ? "khoi_dong" : "bg";
   }
   if (!g.round || g.phase === "setup" || g.phase === "finished" || g.questionStatus === "idle") return "wait";
   if (g.round === "vuot_cnv") {

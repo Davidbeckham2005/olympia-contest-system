@@ -255,8 +255,20 @@ export default function Team() {
 
   let body;
   if (d.mode === "rules") {
-    // Màn hình LUẬT THI (MC bật qua "screen.rules") — hiển thị cho thí sinh mọi vòng.
-    body = <RulesBoard state={state} g={g} />;
+    // Màn hình LUẬT THI (MC bật qua "screen.rules") — HIỆN FULL-SCREEN giống màn hình
+    // MC: RulesBoard giữa màn + nền đồng bộ khán giả + ONLY nút đăng xuất (không header,
+    // không sidebar). Khớp 100% giao diện MC để thí sinh xem luật đúng như khán giả.
+    return (
+      <div className="relative min-h-screen flex flex-col items-center justify-center px-5 py-8 text-center isolate overflow-hidden">
+        <TeamBackground settings={state?.settings} />
+        <div className="absolute top-4 left-4 z-40">
+          <button type="button" className="btn btn-ghost py-2! px-3! text-sm" onClick={quit}>
+            ← Đăng xuất
+          </button>
+        </div>
+        <RulesBoard state={state} g={g} className="relative z-10" />
+      </div>
+    );
   } else if (g.phase === "finished") {
     body = <FinalBoard teams={[...state.teams].sort((a, b) => b.score - a.score)} me={team.id} />;
   } else if (isKd) {

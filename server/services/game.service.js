@@ -1,4 +1,4 @@
-  import { getDb, saveDb, defaultGame, emptyPuzzle, ROUNDS } from "../models/store.js";
+  import { getDb, saveDb, defaultGame, emptyPuzzle, ROUNDS, roundsView } from "../models/store.js";
   import { TEAM_ORDER } from "../config/constants.js";
   import * as cnv from "./rounds/vuotCnv.service.js";
   import * as vedich from "./rounds/veDich.service.js";
@@ -74,7 +74,8 @@
         audienceBgUrl: db.settings.audienceBgUrl || "",
       },
       sounds: db.sounds || { buzz: { url: "", name: "" } },
-      rounds: ROUNDS,
+      // Luật thi từng vòng — ưu tiên bản admin đã chỉnh trong DB (roundsView)
+      rounds: roundsView(db.rules),
     };
     if (db.game.round === "vuot_cnv") {
       state.cnv = cnv.cnvView(db);

@@ -9,6 +9,7 @@ const router = Router();
     router.post("/login", asyncHandler(admin.login));
 router.get("/state", requirePin, asyncHandler(admin.getState));
 router.post("/settings", requirePin, asyncHandler(admin.saveSettings));
+router.post("/round-rules", requirePin, asyncHandler(admin.saveRoundRules));
 router.post("/contestants", requirePin, asyncHandler(admin.createContestant));
 router.post("/contestants/import", requirePin, uploadImport.single("file"), asyncHandler(admin.importContestants));
 router.post("/contestants/bulk-delete", requirePin, asyncHandler(admin.deleteContestants));
