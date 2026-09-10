@@ -6,6 +6,7 @@ import { formatTime } from "../lib/format.js";
 import { useGameState } from "../lib/useGame.js";
 import { optimizeVideoUrl } from "../lib/media.js";
 import RulesBoard from "../components/RulesBoard.jsx";
+import RoundResultBoard from "../components/RoundResultBoard.jsx";
 import { activeTeamIds } from "../lib/teams.js";
 import { Round2Board, Round2Question, RowResults, StaggeredRow } from "../components/Round2Stage.jsx";
 import { KhoiDongAudience } from "./Audience.jsx";
@@ -268,6 +269,20 @@ export default function Team() {
           </button>
         </div>
         <RulesBoard state={state} g={g} className="relative z-10" />
+      </div>
+    );
+  } else if (d.mode === "roundResult") {
+    // Màn KẾT QUẢ CUỐI VÒNG (MC bật/tắt thủ công qua "screen.roundResult") — full-screen
+    // giống màn luật, đồng bộ khán giả.
+    return (
+      <div className="relative min-h-screen flex flex-col items-center justify-center px-5 py-8 text-center isolate overflow-hidden">
+        <TeamBackground settings={state?.settings} />
+        <div className="absolute top-4 left-4 z-40">
+          <button type="button" className="btn btn-ghost py-2! px-3! text-sm" onClick={quit}>
+            ← Đăng xuất
+          </button>
+        </div>
+        <RoundResultBoard state={state} g={g} className="relative z-10" />
       </div>
     );
   } else if (g.phase === "finished") {

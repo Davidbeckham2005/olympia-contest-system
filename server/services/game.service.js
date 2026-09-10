@@ -1182,6 +1182,35 @@ if (game.round === "khoi_dong") {
     emit();
   }
 
+  // Màn hình KẾT QUẢ CUỐI VÒNG — MC bật/tắt THỦ CÔNG bằng nút (giống "screen.rules").
+  // Hiển thị trên khán giả + thí sinh ở MỌI vòng; nội dung lấy theo round đang diễn ra.
+  // Thiết kế cụ thể đang chờ user gửi — component phía client (RoundResultBoard.jsx)
+  // chỉ là bảng xếp hạng tạm để chạy cơ chế, sẽ được thay bằng design chính thức sau.
+  export function showRoundResult() {
+    const game = g();
+    const round = ROUNDS.find((r) => r.id === game.round);
+    if (!round) {
+      const err = new Error("Chưa có vòng thi đang diễn ra.");
+      err.status = 400;
+      throw err;
+    }
+    game.display.mode = "roundResult";
+    game.display.title = round.name;
+    game.display.roundResult = game.round;
+    saveDb();
+    emit();
+  }
+
+  export function hideRoundResult() {
+    const game = g();
+    if (game.display.mode !== "roundResult") return;
+    // Tắt → về màn chính của vòng (giống hideRules).
+    game.display.mode = game.round === "vuot_cnv" ? "puzzle" : "idle";
+    game.display.roundResult = null;
+    saveDb();
+    emit();
+  }
+
   export function showMedia(url, type = "image") {
     const game = g();
     game.display.mode = "media";
