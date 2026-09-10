@@ -243,6 +243,7 @@ export default function Control() {
               Khôi phục bằng cách bỏ comment dòng dưới.
           <button type="button" className="border border-[rgba(255,255,255,0.25)] bg-[#7d90b8] px-3 py-2.5 font-semibold text-sm text-black/90 hover:bg-white/20 transition" onClick={() => act("scores.show")}>Hiện bảng điểm</button>
           */}
+          <div className="text-xs tracking-[0.18em] text-mist uppercase mt-4 mb-1">Màn hình</div>
           <button type="button" className={`border px-3 py-2.5 font-semibold text-sm transition ${d.mode === "rules" ? "bg-gold/20 text-white ring-1 ring-gold/50" : "border-[rgba(255,255,255,0.25)] bg-[#7d90b8] text-black/90 hover:bg-white/20"}`} onClick={() => act("screen.rules", { show: d.mode !== "rules" })}>
             {d.mode === "rules" ? "Ẩn luật chơi" : "Chiếu luật chơi"}
           </button>
@@ -302,29 +303,6 @@ export default function Control() {
                     Bị loại
                   </span>
                 )}
-                {isKd && (
-                  <span
-                    role="button"
-                    tabIndex={0}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      act(t.eliminated ? "tiebreak.restore" : "tiebreak.eliminate", { teamId: t.id });
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.stopPropagation();
-                        act(t.eliminated ? "tiebreak.restore" : "tiebreak.eliminate", { teamId: t.id });
-                      }
-                    }}
-                    className={`rounded border px-1.5 py-0.5 text-[10px] font-bold tracking-wide uppercase cursor-pointer select-none transition ${
-                      t.eliminated
-                        ? "border-gold/50 bg-gold/15 text-gold hover:bg-gold/30"
-                        : "border-red-400/50 bg-red-500/20 text-red-200 hover:bg-red-500/40"
-                    }`}
-                  >
-                    {t.eliminated ? "Mở khóa" : "Khóa"}
-                  </span>
-                )}
                 {lockedSwitch && !eliminated && (
                   <span className="rounded border border-amber-400/40 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-amber-100 uppercase">
                     Đang trả lời
@@ -337,6 +315,43 @@ export default function Control() {
             );
           })}
         </div>
+        {/* KHU VỰC NGUY HIỂM — Khóa/Mở khóa đội (LOẠI VĨNH VIỄN), tách khỏi nút chọn đội
+            để tránh bấm nhầm; mọi thao tác đều có hộp xác nhận trước khi gửi. */}
+        {isKd && (
+          <>
+        <hr className="my-4 border-danger/40" />
+        <div className="text-xs tracking-[0.18em] text-danger uppercase mb-2">Quản lý loại đội — vĩnh viễn</div>
+        <p className="text-[10px] text-mist mb-2">Bấm Khóa = loại đội khỏi cuộc thi ngay (có xác nhận). Mở khóa để đưa đội trở lại.</p>
+        <div className="grid gap-1.5">
+          {state.teams.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              className={`flex items-center gap-2 border px-3 py-2 text-left transition ${
+                t.eliminated
+                  ? "border-gold/50 bg-gold/10 hover:bg-gold/20"
+                  : "border-danger/40 bg-danger/10 hover:bg-danger/20"
+              }`}
+              onClick={() => {
+                const msg = t.eliminated
+                  ? `Mở khóa đội ${t.name} — đội sẽ quay lại thi tiếp?`
+                  : `KHÓA VĨNH VIỄN đội ${t.name} — đội sẽ bị loại khỏi cuộc thi?`;
+                if (window.confirm(msg)) act(t.eliminated ? "tiebreak.restore" : "tiebreak.eliminate", { teamId: t.id });
+              }}
+            >
+              <span className={`flex-1 min-w-0 font-semibold text-sm truncate ${t.eliminated ? "text-gold" : "text-danger"}`}>
+                {t.name}
+              </span>
+              <span className={`rounded border px-1.5 py-0.5 text-[10px] font-bold tracking-wide uppercase ${
+                t.eliminated ? "border-gold/50 bg-gold/15 text-gold" : "border-danger/50 bg-danger/20 text-red-200"
+              }`}>
+                {t.eliminated ? "Bị loại" : "Khóa"}
+              </span>
+            </button>
+          ))}
+        </div>
+          </>
+        )}
         </>)}
       <p className="mt-5">
         <Link to="/admin" className="text-gold underline">Mở trang quản trị</Link>
@@ -424,6 +439,7 @@ export default function Control() {
             Sort
           </button>
         </div>
+        <p className="text-[10px] text-danger/90 mb-1.5">Chấm tay — ± điểm áp dụng NGAY khi bấm (không xác nhận)</p>
         <div className="grid gap-1.5">
           {state.teams
             .filter((t) => (isKd ? true : activeTeamIds(g, state.teams).includes(t.id)))
