@@ -1128,7 +1128,7 @@ function SoundsTab({ state, reload, setMsg }) {
     ["wait", "Nhạc chờ", "Lặp khi màn hình chờ"],
     ["buzz", "Chuông giành quyền CNV", "Phát khi thí sinh ấn phím trả lời chướng ngại vật"],
     ["answers", "Chuyển màn Đáp án", "Phát khi MC chuyển khán giả sang màn Đáp án vòng 2"],
-    ["khoi_dong", "Nhạc nền Khởi động", "Lặp khi mở màn hình vòng Khởi động"],
+    ["khoi_dong", "Nhạc luật chơi Khởi động", "Phát trên màn hình Khán giả khi chiếu luật chơi vòng Khởi động"],
   ];
   const sounds = state.sounds || {};
 

@@ -78,8 +78,9 @@ function applyBed() {
 
 export function bedKindFromGame(g) {
   if (!g) return "wait";
-  // Màn hình LUẬT THI: phát nhạc nền (slot "bg") tương tự khi đang thi để không lặng im.
-  if (g.display?.mode === "rules") return "bg";
+  // Màn hình LUẬT THI: vòng Khởi động phát nhạc hiệu riêng (slot "khoi_dong" — nhạc luật
+  // chơi), các vòng khác phát nhạc nền chung "bg" để không lặng im.
+  if (g.display?.mode === "rules") return g.round === "khoi_dong" && pack["khoi_dong"]?.url ? "khoi_dong" : "bg";
   if (
     g.round === "tang_toc" &&
     (g.tangToc?.phase === "preparing" || g.tangToc?.phase === "video") &&
@@ -89,12 +90,9 @@ export function bedKindFromGame(g) {
     return null;
   }
   if (g.round === "khoi_dong") {
-    const p = g.khoiDong?.phase || "play";
-    // Nhạc hiệu Khởi động (slot "khoi_dong") CHỈ phát khi thí sinh đang trả lời (đang thi).
-    // Lúc vừa mở vòng / khoảng nghỉ / kết thúc dùng nhạc chờ "wait" (nếu có), còn không
-    // thì dùng nhạc nền chung "bg" — tránh nhạc hiệu khởi động bị lặp trên màn chờ.
-    if (p === "break" || p === "done" || g.questionStatus === "idle") return pack["wait"]?.url ? "wait" : "bg";
-    return pack["khoi_dong"]?.url ? "khoi_dong" : "bg";
+    // Khi thí sinh thi (mở vòng / trả lời / nghỉ / kết thúc) → dùng nhạc nền chung "bg",
+    // nhạc hiệu khoi_dong chỉ phát trên màn hình Luật chơi (đã xử lý ở trên).
+    return "bg";
   }
   if (!g.round || g.phase === "setup" || g.phase === "finished" || g.questionStatus === "idle") return "wait";
   if (g.round === "vuot_cnv") {
