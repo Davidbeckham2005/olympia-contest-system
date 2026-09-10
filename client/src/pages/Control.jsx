@@ -269,7 +269,6 @@ export default function Control() {
                   if (isKd) {
                     // Vòng 1: click đội chỉ CHỌN + chuẩn bị; nút "Bắt đầu" mới show
                     // câu hỏi đầu tiên và chạy đồng hồ.
-                    setKdStartTeam(t.id);
                     act("team.set", { teamId: t.id });
                   } else {
                     act("team.set", { teamId: t.id });
