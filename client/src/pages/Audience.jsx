@@ -591,6 +591,13 @@ function NoMediaFallback({ className = "w-[min(380px,60vw)] aspect-[4/3]" }) {
   );
 }
 
+// Hiệu ứng ring quanh ảnh câu hỏi khi MC chấm điểm vòng 1: xanh khi ĐÚNG, đỏ khi SAI.
+// Chỉ là lớp bo viền + glow lan tỏa (pointer-events-none) phủ đúng kích thước ảnh.
+function KdRing({ fx }) {
+  if (!fx) return null;
+  return <div key={fx.ts} className={`kd-ring ${fx.correct ? "kd-ring-ok" : "kd-ring-no"}`} />;
+}
+
 export function KhoiDongAudience({ state, timer, flash }) {
   const g = state.game || {};
   const d = g.display || {};
@@ -606,64 +613,51 @@ export function KhoiDongAudience({ state, timer, flash }) {
   const t = timer || {};
   const kdDur = t.duration || g.khoiDong?.timerSeconds || 60;
   const kdRem = t.remaining ?? kdDur;
-  // Progress mượt: gộp dữ liệu server (đếm theo giây) với đồng hồ real-time (rAF) để
-  // viền conic chạy liên tục, không giật theo nấc 1 giây. Chốt MỘT LẦN mốc kết thúc
-  // (endsAt tuyệt đối từ server, hoặc tính từ remaining) khi đồng hồ vừa chạy; sau đó
-  // chỉ đọc Date.now() trong rAF — không re-anchor lại theo từng broadcast game:timer
-  // (mỗi 250ms/1s) nên tốc độ luôn đều chứ không bị "nhảy/nghẹt" do khởi động lại.
   const running = !!timer?.running;
   const rawProgress = Math.max(0, Math.min(1, (kdDur - kdRem) / kdDur));
   const [smoothProgress, setSmoothProgress] = useState(rawProgress);
-  const [anchor, setAnchor] = useState(null);
-  const [stamp, setStamp] = useState(null);
-  const stampTimer = useRef(null);
+  // Hiệu ứng ring quanh ảnh câu hỏi khi MC chấm điểm vòng 1 — tự tắt sau 1.1s.
+  const [markFx, setMarkFx] = useState(null);
+  const markTimer = useRef(null);
   useEffect(() => {
     return on("khoi_dong:mark", (p) => {
-      if (stampTimer.current) clearTimeout(stampTimer.current);
-      setStamp({ correct: p?.correct === true, ts: Date.now() });
-      stampTimer.current = setTimeout(() => setStamp(null), 1100);
+      if (markTimer.current) clearTimeout(markTimer.current);
+      setMarkFx({ correct: p?.correct === true, ts: Date.now() });
+      markTimer.current = setTimeout(() => setMarkFx(null), 1100);
     });
   }, []);
   useEffect(
     () => () => {
-      if (stampTimer.current) clearTimeout(stampTimer.current);
+      if (markTimer.current) clearTimeout(markTimer.current);
     },
     []
   );
-  const lastRunning = useRef(false);
-  const lastEndsAtRef = useRef(timer?.endsAt);
+  // Progress mượt: đọc endsAt tuyệt đối từ server trực tiếp trong rAF mỗi frame, không
+  // chốt "anchor" / so sánh endsAt thủ công — nên đồng hồ khởi động lại (đổi thí sinh,
+  // pause/resume) áp dụng tức thì, viền conic luôn đều chứ không giật/đứng theo nấc giây.
+  const kdDurMs = kdDur * 1000;
+  const endsAtRef = useRef(timer?.endsAt);
   useEffect(() => {
-    // Không chạy (pause/break/done): dừng rAF, đứng yên theo giá trị server.
-    if (phase !== "play" || !running) {
-      lastRunning.current = running;
-      setAnchor(null);
+    endsAtRef.current = timer?.endsAt;
+  }, [timer?.endsAt]);
+  const runningPlay = phase === "play" && running;
+  useEffect(() => {
+    if (!runningPlay) {
       setSmoothProgress(rawProgress);
       return;
     }
-    // Chỉ chốt lại mốc kết thúc khi đồng hồ VỪA chạy (running false→true) hoặc bắt đầu
-    // đồng hồ mới (endsAt mới) — KHÔNG chốt lại mỗi lần broadcast game:timer, nên vòng
-    // rAF bên dưới chạy liền mạch cả 60s với tốc độ đều.
-    const started = running && (!lastRunning.current || timer?.endsAt !== lastEndsAtRef.current);
-    lastRunning.current = running;
-    if (started) {
-      setAnchor(timer?.endsAt ?? Date.now() + kdRem * 1000);
-      lastEndsAtRef.current = timer?.endsAt;
-    }
-  }, [phase, running, timer?.endsAt, kdRem, rawProgress]);
-  useEffect(() => {
-    if (!anchor) return;
     let raf = 0;
-    const durMs = kdDur * 1000;
     const loop = () => {
-      const remMs = Math.max(0, anchor - Date.now());
-      const p = Math.max(0, Math.min(1, (durMs - remMs) / durMs));
+      const end = endsAtRef.current;
+      const p = end
+        ? Math.max(0, Math.min(1, (kdDurMs - Math.max(0, end - Date.now())) / kdDurMs))
+        : rawProgress;
       setSmoothProgress(p);
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, [anchor, kdDur]);
-  // Hiển thị theo real-time nhưng vẫn bám giá trị server nếu nó nhảy (MC đổi ảnh).
+  }, [runningPlay, kdDurMs, rawProgress]);
   const timeProgress = phase === "play" ? smoothProgress : 0;
 
   // Lớp nền dùng CHUNG cho mọi phase — fixed phủ toàn viewport, nằm dưới mọi nội dung
@@ -769,13 +763,16 @@ export function KhoiDongAudience({ state, timer, flash }) {
       <div className="relative flex flex-col items-center justify-center px-8 min-h-0 flex-1 z-10">
         {d.answerRevealed ? (
           <div className="text-center">
-            {(d.mediaUrl || fallbackImg) && (
-              <img
-                src={d.mediaUrl || fallbackImg}
-                alt=""
-                className="max-h-full max-w-[80vw] mx-auto rounded-2xl object-contain"
-              />
-            )}
+            <div className="relative inline-block">
+              {(d.mediaUrl || fallbackImg) && (
+                <img
+                  src={d.mediaUrl || fallbackImg}
+                  alt=""
+                  className="max-h-full max-w-[80vw] mx-auto rounded-2xl object-contain"
+                />
+              )}
+              <KdRing fx={markFx} />
+            </div>
             <div className="kicker mt-4">ĐÁP ÁN</div>
             <div className="stage-answer mt-3">{d.answer}</div>
             <div className="text-mist mt-2 text-sm">
@@ -784,19 +781,22 @@ export function KhoiDongAudience({ state, timer, flash }) {
           </div>
         ) : (
           <div className="text-center">
-            {d.mediaUrl ? (
-              <img
-                src={d.mediaUrl}
-                alt=""
-                className="max-h-full max-w-[85vw] mx-auto rounded-2xl object-contain"
-              />
-            ) : (
-              <img
-                src={fallbackImg}
-                alt=""
-                className="max-h-full max-w-[85vw] mx-auto rounded-2xl object-contain"
-              />
-            )}
+            <div className="relative inline-block">
+              {d.mediaUrl ? (
+                <img
+                  src={d.mediaUrl}
+                  alt=""
+                  className="max-h-full max-w-[85vw] mx-auto rounded-2xl object-contain"
+                />
+              ) : (
+                <img
+                  src={fallbackImg}
+                  alt=""
+                  className="max-h-full max-w-[85vw] mx-auto rounded-2xl object-contain"
+                />
+              )}
+              <KdRing fx={markFx} />
+            </div>
           </div>
         )}
       </div>
@@ -856,15 +856,6 @@ export function KhoiDongAudience({ state, timer, flash }) {
         </div>
       </div>
 
-      {stamp && (
-        <div key={stamp.ts} className="pointer-events-none absolute inset-0 z-40 grid place-items-center">
-          <div className={`kd-stamp ${stamp.correct ? "kd-stamp-ok" : "kd-stamp-no"}`}>
-            <div className="kd-stamp-mark">{stamp.correct ? "✓" : "✗"}</div>
-            <div className="kd-stamp-word">{stamp.correct ? "ĐÚNG" : "SAI"}</div>
-            {stamp.correct && <div className="kd-stamp-plus">+10</div>}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
