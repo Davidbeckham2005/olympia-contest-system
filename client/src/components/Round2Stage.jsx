@@ -1,6 +1,7 @@
 import { Fragment } from "react";
 import { isOpen, isLocked } from "../lib/cnv.js";
 import { activeTeamIds } from "../lib/teams.js";
+import { optimizeVideoUrl } from "../lib/media.js";
 
 // Khung ô chữ Vòng 2: bên trái các hàng ngang (ô chữ tròn), bên phải số mảnh ghép dọc.
 // Dùng chung cho màn hình Khán giả và Thí sinh.
@@ -125,7 +126,7 @@ export function Round2Question({ state, d, g, children }) {
         <img src={d.mediaUrl} alt="" className="max-h-[30vh] mx-auto rounded-2xl object-contain border border-line shadow-[0_10px_40px_rgba(0,0,0,0.4)]" />
       )}
       {d.mediaUrl && d.mediaType === "video" && (
-        <video src={d.mediaUrl} autoPlay controls className="max-h-[30vh] mx-auto rounded-2xl" />
+        <video src={optimizeVideoUrl(d.mediaUrl)} autoPlay controls className="max-h-[30vh] mx-auto rounded-2xl" />
       )}
       {question && <div className="stage-q mt-4">{question}</div>}
       {d.note && <div className="stage-note">{d.note}</div>}

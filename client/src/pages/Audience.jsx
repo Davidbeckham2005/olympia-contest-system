@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAudienceAudio } from "../lib/useAudio.js";
 import { formatTime } from "../lib/format.js";
+import { optimizeVideoUrl } from "../lib/media.js";
 import { on } from "../lib/socket.js";
 import { useGameState } from "../lib/useGame.js";
 import { activeTeamIds } from "../lib/teams.js";
@@ -293,7 +294,7 @@ function Stage({ state, timer }) {
 
   if (d.mode === "media" && d.mediaUrl) {
     return d.mediaType === "video" ? (
-      <video src={d.mediaUrl} autoPlay controls className="max-w-[90%] max-h-[50vh]" />
+      <video src={optimizeVideoUrl(d.mediaUrl)} autoPlay controls className="max-w-[90%] max-h-[50vh]" />
     ) : (
       <img src={d.mediaUrl} alt="" className="max-w-[90%] max-h-[50vh] rounded-2xl" />
     );
@@ -363,7 +364,7 @@ function Stage({ state, timer }) {
           <>
             {d.mediaUrl ? (
               d.mediaType === "video" ? (
-                <video src={d.mediaUrl} autoPlay controls className="max-h-[260px] mb-4" />
+                <video src={optimizeVideoUrl(d.mediaUrl)} autoPlay controls className="max-h-[260px] mb-4" />
               ) : (
                 <img src={d.mediaUrl} alt="" className="max-h-[220px] rounded-xl mb-4 inline-block" />
               )
@@ -1115,7 +1116,7 @@ function TangTocStage({ state, g, timer }) {
       {hasVideo ? (
         <video
           ref={vidRef}
-          src={d.mediaUrl}
+          src={optimizeVideoUrl(d.mediaUrl)}
           muted
           playsInline
           preload="auto"

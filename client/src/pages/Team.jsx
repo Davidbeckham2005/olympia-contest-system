@@ -4,6 +4,7 @@ import { socket, on } from "../lib/socket.js";
 import { loginTeam } from "../lib/api/team.js";
 import { formatTime } from "../lib/format.js";
 import { useGameState } from "../lib/useGame.js";
+import { optimizeVideoUrl } from "../lib/media.js";
 import RulesBoard from "../components/RulesBoard.jsx";
 import { activeTeamIds } from "../lib/teams.js";
 import { Round2Board, Round2Question, RowResults, StaggeredRow } from "../components/Round2Stage.jsx";
@@ -935,7 +936,7 @@ function TeamVideo({ d, g, timer }) {
   const running = !!timer?.running;
   const duration = timer?.duration || 0;
   const remaining = timer?.remaining ?? 0;
-  const src = d.mediaUrl;
+  const src = optimizeVideoUrl(d.mediaUrl);
 
   useEffect(() => {
     const v = ref.current;

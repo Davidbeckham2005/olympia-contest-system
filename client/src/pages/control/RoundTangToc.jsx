@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { activeTeamIds } from "../../lib/teams.js";
+import { optimizeVideoUrl } from "../../lib/media.js";
 import RulesToggle from "../../components/RulesToggle.jsx";
 
 // Giao diện bàn MC Vòng 3 (Tăng tốc) — kế thừa TƯ TƯỞNG Vòng 2:
@@ -248,7 +249,7 @@ export default function RoundTangToc({ ctx }) {
         </div>
         <video
           ref={vidRef}
-          src={g.display?.mediaUrl || undefined}
+          src={optimizeVideoUrl(g.display?.mediaUrl) || undefined}
           controls
           muted
           playsInline
