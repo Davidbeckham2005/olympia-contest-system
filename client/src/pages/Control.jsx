@@ -239,14 +239,20 @@ export default function Control() {
               )}
             </button>
           ))}
+          {/* TẠM ẨN theo yêu cầu: nút "Hiện bảng điểm" (scores.show) đã được ẩn tạm thời.
+              Khôi phục bằng cách bỏ comment dòng dưới.
           <button type="button" className="border border-[rgba(255,255,255,0.25)] bg-[#7d90b8] px-3 py-2.5 font-semibold text-sm text-black/90 hover:bg-white/20 transition" onClick={() => act("scores.show")}>Hiện bảng điểm</button>
+          */}
           <button type="button" className={`border px-3 py-2.5 font-semibold text-sm transition ${d.mode === "rules" ? "bg-gold/20 text-white ring-1 ring-gold/50" : "border-[rgba(255,255,255,0.25)] bg-[#7d90b8] text-black/90 hover:bg-white/20"}`} onClick={() => act("screen.rules", { show: d.mode !== "rules" })}>
             {d.mode === "rules" ? "Ẩn luật chơi" : "Chiếu luật chơi"}
           </button>
           <button type="button" className={`border px-3 py-2.5 font-semibold text-sm transition ${d.mode === "roundResult" ? "bg-gold/20 text-white ring-1 ring-gold/50" : "border-[rgba(255,255,255,0.25)] bg-[#7d90b8] text-black/90 hover:bg-white/20"}`} onClick={() => act("screen.roundResult", { show: d.mode !== "roundResult" })}>
             {d.mode === "roundResult" ? "Ẩn kết quả vòng" : "Chiếu kết quả vòng"}
           </button>
+          {/* TẠM ẨN theo yêu cầu: nút "Kết quả cuối" (contest.finish) đã được ẩn tạm thời.
+              Khôi phục bằng cách bỏ comment dòng dưới.
           <button type="button" className="border border-[rgba(255,255,255,0.25)] bg-[#7d90b8] px-3 py-2.5 font-semibold text-sm text-black/90 hover:bg-white/20 transition" onClick={() => act("contest.finish")}>Kết quả cuối</button>
+          */}
         </div>
 {
           // "Đội đang thi" chỉ có nghĩa ở vòng có lượt đội riêng: Vòng 1 (jump câu đội)

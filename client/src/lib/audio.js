@@ -1,4 +1,4 @@
-let pack = { correct: { url: "" }, wrong: { url: "" }, bg: { url: "" }, wait: { url: "" }, buzz: { url: "" }, answers: { url: "" }, khoi_dong: { url: "" } };
+let pack = { correct: { url: "" }, wrong: { url: "" }, bg: { url: "" }, wait: { url: "" }, buzz: { url: "" }, answers: { url: "" }, khoi_dong: { url: "" }, result: { url: "" } };
 let unlocked = false;
 let bedKind = null;
 let sfxEl = null;
@@ -43,7 +43,14 @@ export function unlockAudio() {
 export function playSfx(slot) {
   const url = pack[slot]?.url;
   const { sfx, bed } = els();
-  if (!url || !sfx || !unlocked) return;
+  if (!unlocked) return;
+  // Slot "result" chưa upload file → tự tổng hợp tiếng "lộ bảng tổng kết" để MC luôn
+  // có âm hiệu khi bật màn Tổng kết điểm (upload file trong Admin sẽ thay thế).
+  if (!url) {
+    if (slot === "result") playResultSting();
+    return;
+  }
+  if (!sfx) return;
   sfx.src = url;
   sfx.currentTime = 0;
   if (bed && !bed.paused) {
@@ -53,6 +60,37 @@ export function playSfx(slot) {
     };
   }
   sfx.play().catch(() => {});
+}
+
+// Tiếng hiệu "lộ kết quả" tổng hợp bằng Web Audio (hợp âm rải đi lên, kiểu chương
+// trình truyền hình) — dùng làm âm thanh mặc định cho màn TỔNG KẾT ĐIỂM.
+function playResultSting() {
+  try {
+    const ctx = new AudioContext();
+    const master = ctx.createGain();
+    master.gain.setValueAtTime(0.0001, ctx.currentTime);
+    master.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + 0.1);
+    master.gain.exponentialRampToValueAtTime(0.16, ctx.currentTime + 0.7);
+    master.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 1.4);
+    master.connect(ctx.destination);
+    const notes = [261.63, 329.63, 392.0, 523.25, 659.25, 783.99];
+    notes.forEach((freq, i) => {
+      const t = ctx.currentTime + i * 0.14;
+      const osc = ctx.createOscillator();
+      osc.type = "triangle";
+      osc.frequency.value = freq;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.16, t + 0.04);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.8);
+      osc.connect(g);
+      g.connect(master);
+      osc.start(t);
+      osc.stop(t + 0.85);
+    });
+  } catch {
+    /* ignore */
+  }
 }
 
 export function setBed(kind) {

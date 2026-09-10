@@ -46,7 +46,7 @@ export function publicState() {
     // sự kiện game:state. (Cùng dữ liệu socket game:state đã gửi từ trước.)
     questions: d.questions,
     media: d.media,
-    sounds: d.sounds || { correct: { url: "" }, wrong: { url: "" }, bg: { url: "" }, wait: { url: "" }, buzz: { url: "" }, answers: { url: "" }, khoi_dong: { url: "" } },
+    sounds: d.sounds || { correct: { url: "" }, wrong: { url: "" }, bg: { url: "" }, wait: { url: "" }, buzz: { url: "" }, answers: { url: "" }, khoi_dong: { url: "" }, result: { url: "" } },
     // định nghĩa cấu trúc vòng thi — luật do admin chỉnh trong DB (ưu tiên hơn mặc định)
     rounds: roundsView(d.rules),
   };

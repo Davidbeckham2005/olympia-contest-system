@@ -31,7 +31,11 @@ const actions = {
     return r;
   },
   "screen.rules": (p) => (p.show ? game.showRules() : game.hideRules()),
-  "screen.roundResult": (p) => (p.show ? game.showRoundResult() : game.hideRoundResult()),
+  "screen.roundResult": (p) => {
+    const r = p.show ? game.showRoundResult() : game.hideRoundResult();
+    if (p.show) emitEvent("sound:play", { slot: "result" });
+    return r;
+  },
   "question.jump": (p) => {
     const db = getDb();
     const gg = db.game;
