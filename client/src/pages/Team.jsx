@@ -427,6 +427,9 @@ export default function Team() {
         </div>
         <KhoiDongAudience state={state} timer={timer} flash={null} />
         <TeamsSidebar teams={state.teams || []} currentTeamId={team.id} />
+        <div className={`absolute top-4 right-4 z-[80] inline-flex items-center justify-center rounded-xl border border-[rgba(255,214,10,0.45)] bg-[#0e1830]/70 px-5 py-1.5 timer-xl text-4xl ${remaining <= 5 && running ? "timer-danger" : "text-gold"}`}>
+          {formatTime(remaining)}
+        </div>
       </div>
     );
   }
