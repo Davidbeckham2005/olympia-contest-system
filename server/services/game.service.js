@@ -817,8 +817,14 @@ if (game.round === "khoi_dong") {
       return;
     }
     if (b?.kind === "team" && b.nextTeamId) {
-      // Đội kế tiếp bắt đầu lượt → đếm ngược 3-2-1 rồi mới hiện ảnh + chạy 60s.
-      kdCountdown(b.nextTeamId);
+      // Hết lượt đội này → sang đội kế như một lượt MỚI: quay về trạng thái "SẴN SÀNG"
+      // (giống lúc MC chọn đội đầu tiên) để hiện lại nút "▶ Bắt đầu". Bấm Bắt đầu rồi mới
+      // chạy đếm ngược 3-2-1 → hiện ảnh + chạy 60s.
+      setCurrentTeam(b.nextTeamId);
+    } else if (b?.kind === "done") {
+      // Đội CUỐI CÙNG đã xong — màn khán giả đã ở tổng kết điểm; chỉ refresh trạng thái.
+      saveDb();
+      emit();
     }
   }
 

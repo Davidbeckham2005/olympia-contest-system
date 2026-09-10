@@ -28,11 +28,6 @@ export default function Control() {
   const [confirmStart, setConfirmStart] = useState(null);
   const [roundPin, setRoundPin] = useState("");
   const [sortScore, setSortScore] = useState(false);
-  const [kdStartTeam, setKdStartTeam] = useState(null);
-  // Đổi vòng → quên đội đang chờ bắt đầu.
-  useEffect(() => {
-    setKdStartTeam(null);
-  }, [state?.game?.round]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function refreshQ() {
     try {
@@ -401,7 +396,7 @@ export default function Control() {
         )}
 
         {/* 1 · HIỂN THỊ CÂU HỎI — thời gian · đáp án · ảnh (Round 1) — trên đầu trang */}
-        {isKd && g.questionStatus === "idle" && kdStartTeam === g.currentTeam && kdPhase !== "countdown" && (
+        {isKd && g.questionStatus === "idle" && !!g.khoiDong?.ready && kdPhase !== "countdown" && (
           <div className="panel border-gold/40 bg-gold/10">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="text-sm font-semibold text-white">
@@ -412,7 +407,6 @@ export default function Control() {
                 className="btn btn-ok"
                 onClick={() => {
                   act("khoi_dong.start", { teamId: g.currentTeam });
-                  setKdStartTeam(null);
                 }}
               >
                 ▶ Bắt đầu câu hỏi đầu tiên

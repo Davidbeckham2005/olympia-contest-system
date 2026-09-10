@@ -23,7 +23,7 @@ export default function RoundKhoiDong({ ctx }) {
     }
     return (
       <div className="panel">
-        <div className="text-xs text-mist">Chưa bắt đầu — chọn đội ở cột trái rồi bấm “▶ Bắt đầu” để show câu hỏi đầu tiên.</div>
+        <div className="text-xs text-mist">Chưa bắt đầu lượt — bấm “▶ Bắt đầu” để show câu hỏi đầu tiên.</div>
       </div>
     );
   }
