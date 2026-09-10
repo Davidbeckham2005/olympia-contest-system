@@ -16,7 +16,7 @@ export default function RoundKhoiDong({ ctx }) {
   if (g.questionStatus === "idle") {
     return (
       <div className="panel">
-        <div className="text-xs text-mist">Chưa bắt đầu — hãy chọn đội để bắt đầu lượt.</div>
+        <div className="text-xs text-mist">Chưa bắt đầu — chọn đội ở cột trái rồi bấm “▶ Bắt đầu” để show câu hỏi đầu tiên.</div>
       </div>
     );
   }

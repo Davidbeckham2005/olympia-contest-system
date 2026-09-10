@@ -28,6 +28,11 @@ export default function Control() {
   const [confirmStart, setConfirmStart] = useState(null);
   const [roundPin, setRoundPin] = useState("");
   const [sortScore, setSortScore] = useState(false);
+  const [kdStartTeam, setKdStartTeam] = useState(null);
+  // Đổi vòng → quên đội đang chờ bắt đầu.
+  useEffect(() => {
+    setKdStartTeam(null);
+  }, [state?.game?.round]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function refreshQ() {
     try {
@@ -301,11 +306,16 @@ export default function Control() {
                 key={t.id}
                 type="button"
                 disabled={eliminated || lockedSwitch}
-                onClick={() =>
-                  isKd
-                    ? act("question.jump", { teamId: t.id, questionIndex: firstValidIndex(t.id).questionIndex, memberIndex: 0 })
-                    : act("team.set", { teamId: t.id })
-                }
+                onClick={() => {
+                  if (isKd) {
+                    // Vòng 1: click đội chỉ CHỌN + chuẩn bị; nút "Bắt đầu" mới show
+                    // câu hỏi đầu tiên và chạy đồng hồ.
+                    setKdStartTeam(t.id);
+                    act("team.set", { teamId: t.id });
+                  } else {
+                    act("team.set", { teamId: t.id });
+                  }
+                }}
                 className={`flex items-center gap-3 border border-[rgba(255,255,255,0.15)] px-3 py-2.5 text-left transition ${
                   eliminated
                     ? "bg-[#3a4356] opacity-55 cursor-not-allowed"
@@ -388,6 +398,26 @@ export default function Control() {
         )}
 
         {/* 1 · HIỂN THỊ CÂU HỎI — thời gian · đáp án · ảnh (Round 1) — trên đầu trang */}
+        {isKd && g.questionStatus === "idle" && kdStartTeam === g.currentTeam && (
+          <div className="panel border-gold/40 bg-gold/10">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="text-sm font-semibold text-white">
+                Đội {state.teams.find((x) => x.id === g.currentTeam)?.name || "…"} đã sẵn sàng.
+              </div>
+              <button
+                type="button"
+                className="btn btn-ok"
+                onClick={() => {
+                  const fid = firstValidIndex(g.currentTeam);
+                  act("question.jump", { teamId: g.currentTeam, memberIndex: fid.memberIndex, questionIndex: fid.questionIndex });
+                  setKdStartTeam(null);
+                }}
+              >
+                ▶ Bắt đầu câu hỏi đầu tiên
+              </button>
+            </div>
+          </div>
+        )}
         {g.round === "khoi_dong" && <QuestionScorePanel ctx={ctx} />}
 
         {/* 2 · TRẠNG THÁI (không phải Round 1 — Round 1 gộp đồng hồ vào ô Câu hỏi & đáp án).

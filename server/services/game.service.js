@@ -417,12 +417,14 @@ export function resetKhoiDong(teamId = null) {
       setTimer(ttDur, false);
     }
     if (game.round === "khoi_dong") {
-      const timerSec = game.khoiDong?.timerSeconds || 60;
+      // Bắt đầu show câu hỏi (nút "Bắt đầu" hoặc jump) → hết trạng thái "chờ bắt đầu".
       game.khoiDong = game.khoiDong || {};
+      game.khoiDong.ready = false;
       game.khoiDong.submissions = {};
       game.khoiDong.memberIndex = game.khoiDong.memberIndex ?? 0;
       // Mỗi thí sinh có TỔNG 1 phút cho cả 5 ảnh: chỉ reset đồng hồ khi bắt đầu
       // thí sinh mới (timerStarted !== memberIndex), không reset khi đổi ảnh 2–5.
+      const timerSec = game.khoiDong?.timerSeconds || 60;
       const mi = game.khoiDong.memberIndex ?? 0;
       if (game.khoiDong.timerStarted !== mi || !game.timer.running) {
         game.khoiDong.timerStarted = mi;
@@ -850,11 +852,18 @@ if (game.round === "khoi_dong") {
     game.currentTeam = teamId;
     game.questionIndex = 0;
     if (game.round === "khoi_dong") {
+      // Chọn đội = CHUẨN BỊ lượt (chưa hiện câu hỏi): MC bấm nút "Bắt đầu" để show
+      // câu hỏi đầu tiên + chạy đồng hồ 60s (question.jump → showQuestion).
       const timerSec = game.khoiDong?.timerSeconds || 60;
       const history = game.khoiDong?.history || {};
       game.khoiDong = { submissions: {}, timerSeconds: timerSec, answerSeconds: game.khoiDong?.answerSeconds, history, memberIndex: 0, timerStarted: -1 };
+      game.khoiDong.ready = true;
+      game.khoiDong.phase = "play";
+      game.khoiDong.breakInfo = null;
       setTimer(timerSec, false);
-      if (currentQuestion()) showQuestion();
+      resetDisplayToBoard();
+      saveDb();
+      emit();
       return;
     }
     if (game.round === "ve_dich") {

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAudienceAudio } from "../lib/useAudio.js";
 import { formatTime } from "../lib/format.js";
 import { on } from "../lib/socket.js";
@@ -598,6 +598,45 @@ function KdRing({ fx }) {
   return <div key={fx.ts} className={`kd-ring ${fx.correct ? "kd-ring-ok" : "kd-ring-no"}`} />;
 }
 
+// Viền tốc độ Vòng 1: SVG stroke đi theo ĐỘ DÀI CHU VI của mép bo tròn (stroke-dash),
+// không theo góc như conic-gradient — nên mũi sáng tiến đều với tốc độ pixel/giây giống
+// nhau tại MỌI điểm của vòng và đi trọn chu vi trong đúng 1 phút (60s).
+function KdTimerRing({ box, progress }) {
+  if (!box) return null;
+  const { w, h } = box;
+  const r = 16;
+  const x = Math.max(0, w - 2 * r);
+  const y = Math.max(0, h - 2 * r);
+  const d = `M ${w / 2} 0 H ${w - r} A ${r} ${r} 0 0 1 ${w} ${r} V ${h - r} A ${r} ${r} 0 0 1 ${w - r} ${h} H ${r} A ${r} ${r} 0 0 1 0 ${h - r} V ${r} A ${r} ${r} 0 0 1 ${r} 0 Z`;
+  const perimeter = 2 * x + 2 * y + 2 * Math.PI * r;
+  const p = Math.max(0, Math.min(1, progress));
+  return (
+    <svg
+      className="absolute inset-0 w-full h-full pointer-events-none"
+      viewBox={`0 0 ${w} ${h}`}
+      preserveAspectRatio="none"
+    >
+      <path
+        d={d}
+        fill="none"
+        stroke="#ffd60a"
+        strokeOpacity={0.12}
+        strokeWidth={8}
+        strokeLinecap="round"
+      />
+      <path
+        d={d}
+        fill="none"
+        stroke="#ffd60a"
+        strokeWidth={8}
+        strokeLinecap="round"
+        strokeDasharray={perimeter}
+        strokeDashoffset={perimeter * (1 - p)}
+      />
+    </svg>
+  );
+}
+
 export function KhoiDongAudience({ state, timer, flash }) {
   const g = state.game || {};
   const d = g.display || {};
@@ -632,18 +671,23 @@ export function KhoiDongAudience({ state, timer, flash }) {
     },
     []
   );
-  // Progress mượt: đọc endsAt tuyệt đối từ server trực tiếp trong rAF mỗi frame, không
-  // chốt "anchor" / so sánh endsAt thủ công — nên đồng hồ khởi động lại (đổi thí sinh,
-  // pause/resume) áp dụng tức thì, viền conic luôn đều chứ không giật/đứng theo nấc giây.
+  // Progress mượt: đọc endsAt tuyệt đối từ server trực tiếp trong rAF mỗi frame. Không
+  // đưa rawProgress vào deps (chỉ đọc qua ref) nên vòng rAF chạy LIÊN TỤC cả 60s, không
+  // bị hủy/khởi động lại theo từng broadcast game:timer (250ms) → không rớt frame giữa
+  // chừng, mũi vòng đi tuyến tính theo thời gian ở MỌI điểm của chu vi.
   const kdDurMs = kdDur * 1000;
   const endsAtRef = useRef(timer?.endsAt);
   useEffect(() => {
     endsAtRef.current = timer?.endsAt;
   }, [timer?.endsAt]);
+  const rawProgressRef = useRef(rawProgress);
+  useEffect(() => {
+    rawProgressRef.current = rawProgress;
+  }, [rawProgress]);
   const runningPlay = phase === "play" && running;
   useEffect(() => {
     if (!runningPlay) {
-      setSmoothProgress(rawProgress);
+      setSmoothProgress(rawProgressRef.current);
       return;
     }
     let raf = 0;
@@ -651,14 +695,33 @@ export function KhoiDongAudience({ state, timer, flash }) {
       const end = endsAtRef.current;
       const p = end
         ? Math.max(0, Math.min(1, (kdDurMs - Math.max(0, end - Date.now())) / kdDurMs))
-        : rawProgress;
+        : rawProgressRef.current;
       setSmoothProgress(p);
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, [runningPlay, kdDurMs, rawProgress]);
+  }, [runningPlay, kdDurMs]);
   const timeProgress = phase === "play" ? smoothProgress : 0;
+  const [ringBox, setRingBox] = useState(null);
+  const ringObsRef = useRef(null);
+  // Callback ref: đo lại box MỖI khi khối thanh được mount (idle/break/play chuyển nhánh →
+  // element tháo/mắc lại). Effect deps [] trước đây chỉ đo 1 lần lúc mount — nếu lúc đó
+  // đang ở nhánh idle/break (không có element) thì ringBox mãi null → vòng tốc độ không
+  // bao giờ hiện/kết thúc giữa "chờ bắt đầu" (chỉ refresh mới hoạt động).
+  const ringRef = useCallback((el) => {
+    if (ringObsRef.current) {
+      ringObsRef.current.disconnect();
+      ringObsRef.current = null;
+    }
+    setRingBox(null);
+    if (!el) return;
+    const update = () => setRingBox({ w: el.clientWidth, h: el.clientHeight });
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    ringObsRef.current = ro;
+  }, []);
 
   // Lớp nền dùng CHUNG cho mọi phase — fixed phủ toàn viewport, nằm dưới mọi nội dung
   // (container dùng isolate để tạo stacking context riêng) nên không bao giờ bị mất.
@@ -677,9 +740,26 @@ export function KhoiDongAudience({ state, timer, flash }) {
     </>
   );
 
-  // Chưa bắt đầu lượt (MC chưa chọn đội): khán giả chỉ giữ nền, không hiển thị đội/ảnh mặc định
-  if (g.questionStatus === "idle") {
+  // Chưa chọn đội → chỉ giữ nền (không lộ đội/ảnh mặc định).
+  const kdWaiting = phase === "play" && !!g.khoiDong?.ready;
+  if (g.questionStatus === "idle" && !kdWaiting) {
     return <div className="relative isolate min-h-screen overflow-hidden">{bgLayer}</div>;
+  }
+  // Đã chọn đội, CHỜ bấm "Bắt đầu": hiện tên đội + SẴN SÀNG, KHÔNG hiện thanh thời gian
+  // (đồng hồ 60s đứng yên; chỉ khi MC bấm Bắt đầu mới show câu hỏi + ring chạy).
+  if (kdWaiting) {
+    return (
+      <div className="relative isolate h-screen flex flex-col overflow-hidden">
+        {bgLayer}
+        <div className="relative flex flex-col items-center justify-center min-h-0 flex-1 z-10 text-center">
+          <div className="font-display font-bold text-[clamp(28px,4vw,52px)] leading-tight text-white">
+            {activeTeam?.name || "…"}
+          </div>
+          <div className="kicker text-gold/60 mt-4">SẴN SÀNG</div>
+          <div className="text-mist mt-2 text-sm">Đang chờ MC bắt đầu đếm giờ.</div>
+        </div>
+      </div>
+    );
   }
 
   // Ring 1 kết thúc — tổng điểm toàn đội
@@ -801,18 +881,15 @@ export function KhoiDongAudience({ state, timer, flash }) {
         )}
       </div>
 
-      {/* Dưới — khối tách riêng: thanh bar tên đội + câu hỏi (tách rõ so với ảnh phía trên, margines od viển).
-          Chạy thành viền obwódki: conic-gradient złota od góry zgodnie z przez biegiem czasu khi thí sinh trả lời. */}
+      {/* Dưới — khối tách riêng: thanh bar tên đội + câu hỏi (tách rõ so với ảnh phía trên).
+          Viền tốc độ là SVG stroke chạy theo chu vi — đều ở mọi điểm trong đúng 1 phút. */}
       <div className="relative flex-none z-10 px-8 pb-5 pt-20">
         <div
-          className="rounded-2xl w-full max-w-[1200px] mx-auto"
-          style={{
-            padding: 4,
-            background: phase === "play"
-              ? `conic-gradient(from 0deg, #ffd60a calc(${timeProgress * 360}deg), transparent calc(${timeProgress * 360}deg))`
-              : "transparent",
-          }}
+          ref={ringRef}
+          className="relative rounded-2xl w-full max-w-[1200px] mx-auto"
+          style={{ padding: 4 }}
         >
+          <KdTimerRing box={ringBox} progress={timeProgress} />
           <div className="w-full rounded-2xl border border-[rgba(255,214,10,0.18)] bg-[#2a3d63] shadow-[0_10px_40px_rgba(0,0,0,0.45)]">
           <div className="flex w-full">
             {(state.teams || []).map((t) => {
