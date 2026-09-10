@@ -166,9 +166,12 @@ export default function Control() {
   } else if (g.round === "tang_toc") progress = `Câu ${(g.questionIndex || 0) + 1}/4`;
   else if (g.round === "vuot_cnv") {
     const doneCount = solved.filter(Boolean).length;
+    const isCenter = (p.currentRow ?? 0) === 4;
     progress = cnvKeywordPhase
       ? `Đoán từ khóa • ${doneCount}/5 mảnh mở`
-      : `Hàng ngang ${(p.currentRow ?? 0) + 1} • ${cornersDone ? 5 : doneCount}/5 mảnh xong`;
+      : isCenter
+        ? `Câu hỏi mảnh ghép trung tâm • ${doneCount}/5 mảnh xong`
+        : `Hàng ngang ${(p.currentRow ?? 0) + 1}/4 • ${cornersDone ? 5 : doneCount}/5 mảnh xong`;
   } else if (g.round === "ve_dich") {
     const picked = ((g.veDich?.picked || {})[cur?.id] || []);
     progress = `Câu ${(g.veDich?.pickIndex || 0) + 1}/${picked.length || 4} • ${q?.points || g.veDich?.packagePoints || 20}đ${veStar ? " • Sao ×2" : ""} • ${cur?.name || ""}`;

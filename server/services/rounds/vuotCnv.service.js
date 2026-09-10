@@ -69,8 +69,9 @@ export function cnvView(db) {
     keywordLetterCount: cnv.letterCount || String(cnv.keyword || "").replace(/\s/g, "").length,
     keyword: p.keywordSolved ? cnv.keyword : "",
     media: cnv.media && cnv.media.url ? { type: cnv.media.type || "image", url: cnv.media.url } : null,
-    // Câu hỏi hiện tại hiển thị CÙNG bảng mảnh (vòng 2: 5 hàng ngang đều là câu hỏi,
-    // mở đủ 5 mảnh → hiện nguyên bức ảnh; từ khóa chỉ nhìn hình, không có câu hỏi riêng).
+    // Câu hỏi hiện tại hiển thị CÙNG bảng mảnh (vòng 2: 4 câu hỏi hàng ngang mở 4 mảnh góc
+    // + CÂU HỎI MẢNH GHÉP TRUNG TÂM (index 4) mở mảnh giữa; mở đủ 5 mảnh → hiện nguyên
+    // bức ảnh; từ khóa chỉ nhìn hình, không có câu hỏi riêng).
     currentRow: p.currentRow ?? 0,
     rowPhase: p.rowPhase || "idle",
     question: p.rowPhase === "open" && cnv.rows?.[p.currentRow]
@@ -79,7 +80,7 @@ export function cnvView(db) {
   };
 }
 
-// 5 hàng ngang đã được xử lý hết (mở hoặc khóa vĩnh viễn)
+// 5 mảnh đã được xử lý hết (4 hàng ngang mở mảnh góc + câu hỏi cuối mở mảnh trung tâm)
 export function cornersResolved(p = g().puzzle) {
   return [0, 1, 2, 3, 4].every((i) => p.rowsSolved?.[i] || p.rowsLocked?.[i]);
 }
@@ -88,7 +89,7 @@ export function keywordPoints() {
   const p = g().puzzle;
   const opened = p.rowsSolved.filter(Boolean).length;
   // Điểm khi đoán TRÚNG từ khóa CNV theo giai đoạn (chỉ nhìn hình):
-  //   sau hàng ngang 1 → 60 · sau 2 → 50 · sau 3 → 40 · sau 4 → 30 · sau 5 → 20
+  //   sau 4 hàng ngang (mảnh góc) + câu hỏi mảnh ghép trung tâm → 60·50·40·30·20
   const OPEN_POINTS = [60, 50, 40, 30, 20];
   return OPEN_POINTS[Math.max(0, Math.min(opened, 5) - 1)] ?? 20;
 }

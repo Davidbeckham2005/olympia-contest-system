@@ -11,6 +11,8 @@ export default function RoundVuotCnv({ ctx }) {
   const screenMode = showing ? "question" : d.mode === "answers" ? "answers" : "puzzle";
 
   const rows = state.questions?.main?.vuotCnv?.rows || [];
+  // Index 4 không phải hàng ngang — là CÂU HỎI MẢNH GHÉP TRUNG TÂM (câu hỏi cuối mở mảnh giữa).
+  const isCenterActive = (p.currentRow ?? 0) === 4;
   // Được đánh giá "Đoán từ khóa": CHỈ khi có đội GHI DANH qua nút TỪ KHÓA
   // (puzzle.keywordClaim). Tách hoàn toàn khỏi chuông trả lời hàng ngang
   // (buzzer.winner) để không lẫn 2 chuông — tránh chấm nhầm điểm từ khóa cho
@@ -28,19 +30,46 @@ export default function RoundVuotCnv({ ctx }) {
         <div className="flex flex-wrap items-center gap-2">
           {/* 3 nút riêng: Câu hỏi / Bảng mảnh / Đáp án — bấm trực tiếp để chuyển màn hình.
               Nút đang hiển thị được tô sáng để MC dễ quản lý. */}
-          {["question", "puzzle", "answers"].map((m) => (
+          {["question", "puzzle", "answers"].map((m) => {
+            // Trong lúc còn nhận bài (rowPhase "open") mà đã có đội nộp, bấm "Đáp án"
+            // là thao tác DỄ BẤM NHẦM (đặt cùng hàng "Câu hỏi"/"Bảng mảnh") — tô màu
+            // cảnh báo và bắt xác nhận trước khi chuyển màn trên sân khấu.
+            const answersWhileAccepting = m === "answers" && p.rowPhase === "open" && Object.keys(p.submissions || {}).length > 0;
+            return (
             <button
               key={m}
               type="button"
               className={`btn text-sm! py-0! h-10 w-[7rem]! justify-center text-center ${
-                screenMode === m ? "bg-white/20 ring-1 ring-white/40 text-white" : "btn-ghost"
+                screenMode === m
+                  ? answersWhileAccepting
+                    ? "bg-[#ff465e]/25 ring-1 ring-[#ff465e]/60 text-white"
+                    : "bg-white/20 ring-1 ring-white/40 text-white"
+                  : answersWhileAccepting
+                    ? "btn-ghost ring-1 ring-[#ff465e]/50 text-[#ffb3c1]"
+                    : "btn-ghost"
               }`}
-              title={`Màn hình: ${SCREEN_LABEL[m]}`}
-              onClick={() => act("screen.set", { mode: m })}
+              title={
+                answersWhileAccepting
+                  ? "Các đội đang nộp bài — cần xác nhận trước khi hiện màn này"
+                  : `Màn hình: ${SCREEN_LABEL[m]}`
+              }
+              onClick={() => {
+                if (answersWhileAccepting) {
+                  const n = Object.keys(p.submissions || {}).length;
+                  if (
+                    !window.confirm(
+                      `Các đội đang nộp bài (${n} đội đã gửi, chưa hết giờ). Chuyển màn "Đáp án" lúc này sẽ che câu hỏi đang thi trên sân khấu — thường chỉ nên mở màn này sau khi đóng nhận bài. Xác nhận chuyển?`
+                    )
+                  )
+                    return;
+                }
+                act("screen.set", { mode: m });
+              }}
             >
               {SCREEN_LABEL[m]}
             </button>
-          ))}
+            );
+          })}
           <RulesToggle d={d} act={act} className="btn btn-ghost text-sm! py-0! h-10 w-[7rem]! justify-center text-center" />
           <span className="text-mist text-xs">
             Đang hiện: <b className="text-gold">{SCREEN_LABEL[screenMode]}</b>
@@ -129,11 +158,12 @@ export default function RoundVuotCnv({ ctx }) {
                 );
               })}
             </div>
-            {/* Ô TRUNG TÂM (hàng 4) — nằm chồng lên điểm gặp nhau của 4 mảnh */}
+            {/* Ô TRUNG TÂM — nằm chồng lên điểm gặp nhau của 4 mảnh; được MỞ bằng
+                "CÂU HỎI MẢNH GHÉP TRUNG TÂM" (câu hỏi cuối) — không phải hàng ngang thứ 5. */}
             <button
               type="button"
               onClick={() => !solved[4] && act("puzzle.piece", { index: 4 })}
-              title={!solved[4] ? "Mở ô trung tâm (hàng 5)" : "Ô trung tâm đã mở"}
+              title={!solved[4] ? "Mở ô trung tâm — mở qua câu hỏi mảnh ghép trung tâm" : "Ô trung tâm đã mở"}
               disabled={locked[4] || p.keywordSolved}
               className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[52%] h-[60%] rounded border-2 grid place-items-center font-display font-bold text-xl transition ${
                 cnv?.media?.url && cnv.media.type !== "video" && solved[4]
@@ -152,11 +182,16 @@ export default function RoundVuotCnv({ ctx }) {
       </div>
       )}
 
-      {/* MỞ Ô — list dọc: số kí tự + số mảnh ghép bên phải, biết trạng thái mở/chưa (chế độ Câu hỏi) */}
+      {/* MỞ Ô — list dọc: TÁCH RÕ 4 HÀNG NGANG (có số kí tự) với CÂU HỎI MẢNH GHÉP
+          TRUNG TÂM (câu hỏi cuối — KHÔNG số kí tự, nổi bật riêng). Tránh MC lẫn 2 loại. */}
       {showing && (
       <div className="rounded-lg border border-[rgba(255,214,10,0.2)] bg-[#2a3d63] px-3 py-2.5 shadow-[0_10px_40px_rgba(0,0,0,0.45)]">
+        <div className="flex items-center justify-between gap-2 mb-1.5">
+          <span className="text-xs tracking-[0.18em] text-mist uppercase">Hàng ngang — 4 câu hỏi mở 4 mảnh góc</span>
+          <span className="text-mist text-[10px] uppercase tracking-wide">Số mảnh ghép</span>
+        </div>
         <div className="flex flex-col gap-1.5">
-          {rows.map((row, i) => {
+          {rows.slice(0, 4).map((row, i) => {
             const isCurrent = i === (p.currentRow ?? 0);
             const count = row.letterCount || String(row.answer || "").replace(/\s/g, "").length;
             const canOpen = !solved[i] && !locked[i] && !p.keywordSolved;
@@ -166,7 +201,7 @@ export default function RoundVuotCnv({ ctx }) {
                 key={row.id}
                 type="button"
                 disabled={!canOpen}
-                title={canOpen ? "Mở câu hỏi cho các đội cùng trả lời tự luận" : undefined}
+                title={canOpen ? "Mở câu hỏi hàng ngang cho các đội cùng trả lời tự luận" : undefined}
                 onClick={() => act("puzzle.select", { row: i })}
                 className={`flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-left transition ${
                   isCurrent
@@ -214,14 +249,81 @@ export default function RoundVuotCnv({ ctx }) {
             );
           })}
         </div>
+
+        {/* NGĂN RIÊNG — Câu hỏi mảnh ghép trung tâm (câu hỏi cuối): giao diện khác biệt,
+            KHÔNG hiển thị số kí tự, để MC không nhầm là hàng ngang. */}
+        <div className="flex items-center gap-3 mt-4 mb-1.5">
+          <span className="h-px flex-1 bg-[rgba(255,214,10,0.18)]" />
+          <span className="text-xs font-bold tracking-[0.18em] uppercase text-gold">Câu hỏi mảnh ghép trung tâm</span>
+          <span className="h-px flex-1 bg-[rgba(255,214,10,0.18)]" />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          {(() => {
+            const i = 4;
+            const row = rows[4];
+            if (!row) return null;
+            const isCurrent = isCenterActive;
+            const canOpen = !solved[i] && !locked[i] && !p.keywordSolved;
+            const label = solved[i] ? "Đã mở" : locked[i] ? "Đã khóa" : isCurrent ? "Đang thi" : "Chưa mở";
+            return (
+              <button
+                key={row.id}
+                type="button"
+                disabled={!canOpen}
+                title={canOpen ? "Mở CÂU HỎI MẢNH GHÉP TRUNG TÂM (câu hỏi cuối) cho các đội cùng trả lời tự luận" : undefined}
+                onClick={() => act("puzzle.select", { row: i })}
+                className={`flex items-center justify-between gap-3 rounded-md border-2 px-3 py-2.5 text-left transition ${
+                  isCurrent
+                    ? "border-gold bg-gold/20 shadow-[0_0_18px_rgba(255,214,10,0.25)]"
+                    : solved[i]
+                      ? "border-[rgba(255,214,10,0.7)] bg-[#ffd60a]/15"
+                      : locked[i]
+                        ? "border-[rgba(255,70,94,0.4)] bg-[#ff465e]/10 opacity-70"
+                        : "border-[rgba(255,214,10,0.35)] bg-[#1d2c4a] hover:border-gold hover:bg-gold/10"
+                } disabled:opacity-40 disabled:cursor-not-allowed`}
+              >
+                <div className="flex flex-col min-w-0">
+                  <span className="text-sm font-bold text-white">Mảnh ghép trung tâm</span>
+                  {isCurrent && (
+                    <div className="flex items-baseline gap-1.5 mt-0.5">
+                      <span className="text-xs text-mist whitespace-nowrap">Đáp án:</span>
+                      <span className="text-sm font-bold text-gold">{row.answer || "—"}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span
+                    className={`text-xs font-semibold ${
+                      solved[i] ? "text-[#ffd60a]" : locked[i] ? "text-[#ff465e]/80" : isCurrent ? "text-gold" : "text-mist"
+                    }`}
+                  >
+                    {label}
+                  </span>
+                  <span
+                    className={`flex items-center justify-center w-9 h-9 rounded font-display font-bold text-lg ${
+                      solved[i] || isCurrent
+                        ? "bg-[#ffd60a] text-[#1a1400]"
+                        : locked[i]
+                          ? "bg-[#ff465e]/20 text-[#ff465e]/80"
+                          : "border-2 border-gold text-gold"
+                    }`}
+                  >
+                    {locked[i] ? "✕" : 5}
+                  </span>
+                </div>
+              </button>
+            );
+          })()}
+        </div>
       </div>
       )}
 
-      {/* BÀI NỘP TỰ LUẬN HÀNG NGANG — MC chấm từng đội rồi Chốt điểm */}
+      {/* BÀI NỘP TỰ LUẬN — MC chấm từng đội rồi Chốt điểm (cơ chế giống cho hàng ngang
+          lẫn CÂU HỎI MẢNH GHÉP TRUNG TÂM, chỉ khác nhãn hiển thị) */}
       {cnvRowPhase && (
         <div className="panel border-line/80">
           <div className="flex flex-wrap items-center gap-2 mb-2">
-            <span className="text-xs tracking-[0.18em] text-mist uppercase">Bài nộp hàng ngang</span>
+            <span className="text-xs tracking-[0.18em] text-mist uppercase">Bài nộp {isCenterActive ? "câu hỏi mảnh ghép trung tâm" : "hàng ngang"}</span>
             {p.rowPhase === "open" && (
               <span className="badge badge-warn text-xs!">Đang nhận bài — các đội gõ đáp án gửi về</span>
             )}
@@ -232,6 +334,21 @@ export default function RoundVuotCnv({ ctx }) {
               <span className="badge badge-ok text-xs!">Đã chốt điểm ô này</span>
             )}
             {p.rowPhase === "open" && <span className="text-mist text-xs ml-auto">Đã nộp: {Object.keys(p.submissions || {}).length}</span>}
+            {(p.rowPhase === "closed" || p.rowPhase === "scored") &&
+              Object.keys(p.submissions || {}).length > 0 && (
+                <span className="ml-auto flex items-center gap-1.5">
+                  <span className="text-mist text-xs">
+                    Màn Đáp án: {Math.min(p.revealedRows || 0, Object.keys(p.submissions || {}).length)}/
+                    {Object.keys(p.submissions || {}).length}
+                  </span>
+                  <button type="button" className="btn btn-ghost text-xs! py-1!" onClick={() => act("puzzle.nextAnswer")}>
+                    Mở đáp án tiếp
+                  </button>
+                  <button type="button" className="btn btn-ghost text-xs! py-1!" onClick={() => act("puzzle.allAnswers")}>
+                    Mở tất cả
+                  </button>
+                </span>
+              )}
           </div>
 
           {p.rowPhase !== "open" && (

@@ -824,8 +824,11 @@ function Round2Status({ state, g, d }) {
   const keywordDone = !!g.puzzle?.keywordSolved;
 
   // Màn hình giống Khán giả, theo d.mode do MC chọn.
-  const questionMode = d.mode === "question" && !keywordDone;
-  const answersMode = d.mode === "answers" && !keywordDone;
+  // Phòng MC bấm nhầm sang "Đáp án" giữa lúc còn nhận bài (rowPhase === "open"): thí sinh
+  // vẫn ở màn câu hỏi để tiếp tục nộp đáp án, không lộ bài của các đội khác.
+  const stillOpen = g.puzzle?.rowPhase === "open";
+  const questionMode = (d.mode === "question" || (d.mode === "answers" && stillOpen)) && !keywordDone;
+  const answersMode = d.mode === "answers" && !keywordDone && !stillOpen;
 
   return (
     <div className="flex flex-col items-center gap-5 w-full min-w-0">

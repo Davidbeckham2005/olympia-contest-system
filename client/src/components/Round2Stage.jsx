@@ -5,8 +5,9 @@ import { optimizeVideoUrl } from "../lib/media.js";
 
 // Khung ô chữ Vòng 2: bên trái các hàng ngang (ô chữ tròn), bên phải số mảnh ghép dọc.
 // Dùng chung cho màn hình Khán giả và Thí sinh.
-// Thiết kế chỉ HÌNH 4 câu hỏi đầu: hàng ngang thứ 5 (index 4) VẪN GIỮ trong dữ liệu/vòng
-// chơi nhưng KHÔNG hiển thị (slice 0..4) — MC vẫn thấy/điều khiển đủ 5 qua màn hình riêng.
+// Vòng có ĐÚNG 4 câu hỏi HÀNG NGANG (mở 4 mảnh góc). Vị trí index 4 là CÂU HỎI MẢNH
+// GHÉP TRUNG TÂM — một câu hỏi cuối RIÊNG để mở mảnh giữa, KHÔNG phải hàng ngang thứ 5
+// nên KHÔNG hiển thị ô chữ/số ký tự ở đây (slice 0..4); MC mở nó qua khối riêng.
 export function CnvRowsFrame({ state, g }) {
   const p = g.puzzle || {};
   const cnv = state.cnv;
@@ -36,23 +37,95 @@ export function CnvRowsFrame({ state, g }) {
   );
 }
 
+// Header ngữ cảnh Vòng 2 cho các màn sân khấu (khán giả + thí sinh): luôn cho biết rõ
+// "Vòng 2", câu/hàng đang thi (X/5) và trạng thái nhận bài (đang nhận / đã đóng / đã
+// chốt / sẵn sàng / cửa sổ từ khóa) — người xem không phải tự suy từ ô chữ. Kèm thẻ đỏ
+// đội đang GIỮ QUYỀN đoán TỪ KHÓA (persistent — không chỉ thoáng qua như hiệu ứng chuông).
+function Round2Context({ g, state, title }) {
+  const p = g.puzzle || {};
+  const idx = p.currentRow ?? 0;
+  // Index 4 = CÂU HỎI MẢNH GHÉP TRUNG TÂM (câu hỏi cuối) — không phải "hàng 5".
+  const isCenter = idx === 4;
+  const row = idx + 1;
+  const submitted = Object.keys(p.submissions || {}).length;
+  const hasRow = p.rowPhase === "open" || p.rowPhase === "scored" || (p.rowPhase === "closed" && submitted > 0);
+  const claim = !p.keywordSolved ? p.keywordClaim : null;
+  const claimTeam = claim ? (state?.teams || []).find((t) => t.id === claim) : null;
+
+  let status = "SẴN SÀNG";
+  let tone = "";
+  if (p.keywordSolved) {
+    status = "ĐÃ GIẢI TỪ KHÓA";
+    tone = "ok";
+  } else if (p.rowPhase === "open") {
+    status = p.timingStarted ? "ĐANG NHẬN BÀI" : "MỞ CÂU HỎI — CHỜ GIỜ";
+    tone = "warn";
+  } else if (p.rowPhase === "scored") {
+    status = "ĐÃ CHỐT ĐIỂM";
+    tone = "ok";
+  } else if (p.rowPhase === "closed" && submitted > 0) {
+    status = "ĐÃ ĐÓNG NHẬN BÀI — ĐANG CHẤM";
+    tone = "warn";
+  }
+  const keywordPhase = p.keywordWindow && !p.keywordSolved && p.rowPhase !== "open";
+
+  return (
+    <div className="mb-6 text-center flex flex-col items-center gap-2">
+      <div className="kicker tracking-[0.28em]">VÒNG 2 · VƯỢT CHƯỚNG NGẠI VẬT</div>
+      <div className="flex flex-wrap items-center justify-center gap-2">
+        {hasRow && (isCenter
+          ? <span className="badge badge-warn">CÂU HỎI MẢNH GHÉP TRUNG TÂM</span>
+          : <span className="badge">HÀNG {row}/4</span>
+        )}
+        <span className={`badge ${tone}`}>{status}</span>
+        {keywordPhase && <span className="badge badge-warn">ĐOÁN TỪ KHÓA</span>}
+      </div>
+      {claim && (
+        <div className="flex items-center gap-2 rounded-full border border-[#ff465e]/70 bg-[#ff465e]/15 px-3.5 py-1">
+          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: claimTeam?.color || "#fff" }} />
+          <span className="text-[11px] font-bold tracking-[0.16em] uppercase text-[#ffb3c1]">
+            Giữ quyền đoán từ khóa
+          </span>
+          <span className="font-display font-black text-[clamp(15px,1.8vw,24px)] leading-none text-white">
+            {claimTeam?.name || ""}
+          </span>
+        </div>
+      )}
+      {title && (
+        <div className="text-xs font-semibold tracking-[0.2em] uppercase text-mist">{title}</div>
+      )}
+    </div>
+  );
+}
+
 // MÀN KẾT QUẢ TRẢ LỜI — Vòng 2: luôn hiện đủ các đội đang thi (top 4). Mỗi đội 1 hàng,
-// không bọc trong border; đội đã nộp hiện đáp án + thời gian nộp, đội chưa nộp để trống.
-// Không còn duyệt qua revealedRows — MC mở màn này là thấy hết luôn.
+// không bọc trong border; đội đã lộ bài hiện đáp án + thời gian nộp, đội chưa để trống.
+// AN TOÀN: chỉ lộ đáp án sau khi giai đoạn đã đóng nhận bài (rowPhase closed/scored) và
+// theo revealedRows (mở dần từng bài theo thứ tự nộp — nhanh nhất trước). Trong lúc còn
+// nhận bài (open) hoặc chưa mở bài nào (revealedRows = 0) màn này chỉ hiện khung trống —
+// phòng MC bấm nhầm sang "Đáp án" khi các đội vẫn đang nộp (lộ đáp án đối thủ).
 export function RowResults({ state, g }) {
   const p = g.puzzle || {};
   const teams = state.teams || [];
   const active = activeTeamIds(g, teams);
   const subs = p.submissions || {};
   const corr = p.corrections || {};
+  const canReveal = p.rowPhase === "closed" || p.rowPhase === "scored";
+  const revealed = canReveal ? p.revealedRows || 0 : 0;
+  // Thứ tự lộ bài khớp với revealNextRowAnswer bên server: nộp nhanh nhất hiện trước.
+  const revealedIds = Object.entries(subs)
+    .sort((a, b) => (a[1].elapsed ?? Infinity) - (b[1].elapsed ?? Infinity))
+    .slice(0, revealed)
+    .map(([id]) => id);
   const cards = active.map((id) => {
     const t = teams.find((x) => x.id === id);
     const s = subs[id];
+    const shown = revealedIds.includes(id);
     return {
       teamId: id,
       team: t,
-      answer: s?.answer,
-      elapsed: s?.elapsed,
+      answer: shown ? s?.answer : null,
+      elapsed: shown ? s?.elapsed : null,
       ok: corr[id] === true,
       ng: corr[id] === false,
     };
@@ -60,9 +133,7 @@ export function RowResults({ state, g }) {
 
   return (
     <div className="w-full max-w-[1100px] mx-auto">
-      <div className="kicker text-center mb-6">
-        KẾT QUẢ TRẢ LỜI — HÀNG {p.currentRow + 1}
-      </div>
+      <Round2Context g={g} state={state} title="KẾT QUẢ TRẢ LỜI" />
       <div className="mx-auto w-[min(900px,94%)]">
         {cards.map((c, i) => (
           <div key={c.teamId} className="r2-row-in" style={{ animationDelay: `${i * 280}ms` }}>
@@ -113,15 +184,28 @@ export function StaggeredRow({ team, index, answer, elapsed, resultLabel /* unus
 
 // MÀN CÂU HỎI — Vòng 2: khung hàng ngang + câu hỏi/ảnh hiện tại. Nhận children để chèn
 // ô nhập đáp án của thí sinh.
+// Với CÂU HỎI MẢNH GHÉP TRUNG TÂM (index 4): không hiển thị ô chữ/số ký tự hàng ngang —
+// chỉ hiện chip vàng đánh số 5 (mảnh trung tâm) làm mục tiêu + câu hỏi cuối.
 export function Round2Question({ state, d, g, children }) {
   const p = g.puzzle || {};
   const cnv = state.cnv || {};
   const question = cnv.question || d.question || "";
+  const isCenter = (p.currentRow ?? 0) === 4;
   return (
     <div className="w-full max-w-[1200px] min-h-[60vh] mx-auto text-center flex flex-col items-center justify-center">
-      <div className="r2-rows mb-6 rounded-2xl border border-[rgba(255,214,10,0.28)] px-6 py-4">
-        <CnvRowsFrame state={state} g={g} />
-      </div>
+      <Round2Context g={g} state={state} />
+      {isCenter ? (
+        <div className="mb-6 flex flex-col items-center gap-2.5">
+          <div className="relative grid place-items-center w-[clamp(88px,12vw,130px)] aspect-square rounded-2xl border-2 border-gold bg-night text-gold shadow-[0_0_30px_rgba(255,214,10,0.5)] animate-pulse">
+            <span className="font-display font-black text-[clamp(40px,6vw,64px)] leading-none">5</span>
+          </div>
+          <div className="text-[11px] font-bold tracking-[0.22em] uppercase text-mist">Mảnh ghép trung tâm — câu hỏi cuối</div>
+        </div>
+      ) : (
+        <div className="r2-rows mb-6 rounded-2xl border border-[rgba(255,214,10,0.28)] px-6 py-4">
+          <CnvRowsFrame state={state} g={g} />
+        </div>
+      )}
       {d.mediaUrl && d.mediaType === "image" && (
         <img src={d.mediaUrl} alt="" className="max-h-[30vh] mx-auto rounded-2xl object-contain border border-line shadow-[0_10px_40px_rgba(0,0,0,0.4)]" />
       )}
@@ -145,8 +229,12 @@ export function Round2Board({ state, g, minimal }) {
   const solved = [0, 1, 2, 3, 4].map((i) => isOpen(p, i));
   const locked = [0, 1, 2, 3, 4].map((i) => isLocked(p, i));
   const media = cnv?.media;
+  // Câu hỏi MẢNH GHÉP TRUNG TÂM (index 4) đang thi → mảnh số 5 là mục tiêu: nổi bật/
+  // nhấp nháy vàng để khán giả biết câu hỏi cuối đang nhắm tới mảnh chính giữa.
+  const centerTarget = p.currentRow === 4 && p.rowPhase === "open" && !solved[4] && !locked[4];
   return (
     <div className="relative w-full max-w-[1200px] min-h-[60vh] mx-auto flex flex-col items-center justify-center">
+      <Round2Context g={g} state={state} />
       {!minimal && p.keywordClaim && !p.keywordSolved && (
         <div className="absolute left-1 top-1/2 -translate-y-1/2 z-30">
           <div className="animate-pulse rounded-lg border-2 border-red-500 bg-red-600/90 px-3 py-2 text-center">
@@ -185,8 +273,9 @@ export function Round2Board({ state, g, minimal }) {
               </div>
             ))}
           </div>
-          {/* Mảnh trung tâm (hàng 5) — thiết kế y hệt màn MC: ô đen bo viền, số 5 ở giữa.
-              Mở mảnh → lộ ảnh gốc (hoặc hiện vàng nếu vòng không có ảnh); khóa → ô đen. */}
+          {/* Mảnh trung tâm — MỞ bằng "Câu hỏi mảnh ghép trung tâm" (câu hỏi cuối), không
+              phải hàng ngang thứ 5. Đang thi câu hỏi cuối → mảnh nhấp nháy vàng làm mục
+              tiêu. Mở mảnh → lộ ảnh gốc (hoặc hiện vàng nếu vòng không có ảnh); khóa → ô đen. */}
           <div
             className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[52%] h-[60%] rounded-xl border-2 grid place-items-center font-display font-black text-[clamp(26px,3.4vw,52px)] tracking-tight drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)] transition ${
               solved[4]
@@ -195,7 +284,9 @@ export function Round2Board({ state, g, minimal }) {
                   : "bg-gold text-[#1a1400] border-gold shadow-[0_0_26px_rgba(255,214,10,0.45)]"
                 : locked[4]
                   ? "bg-black border-transparent"
-                  : "bg-[#0e1830] text-mist border-line"
+                  : centerTarget
+                    ? "bg-[#0e1830] text-gold border-gold shadow-[0_0_34px_rgba(255,214,10,0.6)] animate-pulse"
+                    : "bg-[#0e1830] text-mist border-line"
             }`}
           >
             {locked[4] ? "" : solved[4] && media?.url && media.type !== "video" ? "" : 5}
