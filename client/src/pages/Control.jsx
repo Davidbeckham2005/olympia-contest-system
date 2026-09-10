@@ -328,7 +328,6 @@ export default function Control() {
             danger
             open={groups.nguyhiem}
             onToggle={() => toggleGroup("nguyhiem")}
-            hint="Bấm Khóa = loại đội khỏi cuộc thi ngay (có xác nhận). Mở khóa để đưa đội trở lại."
           >
           {state.teams.map((t) => (
             <button
@@ -444,7 +443,6 @@ export default function Control() {
             Sort
           </button>
         </div>
-        <p className="text-[10px] text-danger/90 mb-1.5">Chấm tay — ± điểm áp dụng NGAY khi bấm (không xác nhận)</p>
         <div className="grid gap-1.5">
           {state.teams
             .filter((t) => (isKd ? true : activeTeamIds(g, state.teams).includes(t.id)))
@@ -544,7 +542,7 @@ export default function Control() {
 
 // Thanh bật/tắt (accordion) cho từng nhóm nút trên sidebar — phân loại rõ: điều hướng
 // (vòng thi), hiển thị (màn hình), thao tác chính (đội đang thi) và nguy hiểm (loại đội).
-function SideGroup({ title, open, onToggle, danger = false, hint, children }) {
+function SideGroup({ title, open, onToggle, danger = false, children }) {
   return (
     <section className={danger ? "rounded-sm border border-danger/40 px-2 pt-1.5 pb-2" : "border-b border-line/70 pb-3"}>
       <button
@@ -558,7 +556,6 @@ function SideGroup({ title, open, onToggle, danger = false, hint, children }) {
         <span className="text-xs tracking-[0.18em] uppercase font-semibold">{title}</span>
         <span className={`shrink-0 text-[10px] transition-transform ${open ? "rotate-90" : ""}`}>▸</span>
       </button>
-      {open && hint && <p className="text-[10px] text-mist mb-2">{hint}</p>}
       {open && <div className="grid gap-2">{children}</div>}
     </section>
   );
