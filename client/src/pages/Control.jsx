@@ -216,18 +216,27 @@ export default function Control() {
             ["ve_dich", "Về đích"],
             ["tie_break", "Phụ phuc"],
           ].map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              className={`flex items-center justify-between gap-2 border border-[rgba(255,255,255,0.15)] px-3 py-2.5 text-left transition ${
-                g.round === id
-                  ? "bg-white/20 ring-1 ring-white/40 text-white"
-                  : "bg-[#7d90b8] hover:bg-white/20 text-black/90"
-              }`}
-              onClick={() => requestRound(id, label)}
-            >
-              <span className="font-semibold text-sm">{label}</span>
-            </button>
+            <div key={id} className="flex gap-1">
+              <button
+                type="button"
+                className={`flex flex-1 items-center justify-between gap-2 border border-[rgba(255,255,255,0.15)] px-3 py-2.5 text-left transition ${
+                  g.round === id
+                    ? "bg-white/20 ring-1 ring-white/40 text-white"
+                    : "bg-[#7d90b8] hover:bg-white/20 text-black/90"
+                }`}
+                onClick={() => requestRound(id, label)}
+              >
+                <span className="font-semibold text-sm">{label}</span>
+              </button>
+              <button
+                type="button"
+                title={`Reset vòng ${label}`}
+                className="shrink-0 border border-[rgba(255,255,255,0.15)] bg-[#3a4356] px-2.5 font-bold text-white/70 transition hover:bg-danger/40 hover:text-white"
+                onClick={() => act("round.start", { round: id })}
+              >
+                ↺
+              </button>
+            </div>
           ))}
           <button type="button" className="border border-[rgba(255,255,255,0.25)] bg-[#7d90b8] px-3 py-2.5 font-semibold text-sm text-black/90 hover:bg-white/20 transition" onClick={() => act("scores.show")}>Hiện bảng điểm</button>
           <button type="button" className={`border px-3 py-2.5 font-semibold text-sm transition ${d.mode === "rules" ? "bg-gold/20 text-white ring-1 ring-gold/50" : "border-[rgba(255,255,255,0.25)] bg-[#7d90b8] text-black/90 hover:bg-white/20"}`} onClick={() => act("screen.rules", { show: d.mode !== "rules" })}>
