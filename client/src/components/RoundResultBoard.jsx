@@ -10,7 +10,9 @@ export default function RoundResultBoard({ state, g, className = "" }) {
     (t) => !top4Rounds.includes(g.round) || !t.eliminated
   );
   const ranked = [...sourceTeams].sort((a, b) => b.score - a.score);
-  const topScore = ranked[0]?.score ?? 0;
+  // Vòng 1 hiện cả đội đã bị MC khóa (đánh dấu "BỊ LOẠI") — vạch vàng highlight chỉ
+  // dành cho đội dẫn đầu CÒN thi (không bao giờ rơi vào đội đã bị loại).
+  const leaderScore = ranked.find((t) => !t.eliminated)?.score ?? -1;
 
   return (
     <div className={`relative isolate min-h-screen overflow-hidden text-center ${className}`}>
@@ -37,13 +39,15 @@ export default function RoundResultBoard({ state, g, className = "" }) {
         {/* Bảng xếp hạng dọc — mỗi đội một thanh ngang, viền kim loại mỏng */}
         <div className="mt-9 flex w-[min(860px,92vw)] flex-col gap-3.5">
           {ranked.map((t, i) => {
-            const isTop = topScore > 0 && t.score === topScore;
+            const isOut = !!t.eliminated;
+            const isTop = !isOut && t.score === leaderScore && leaderScore >= 0;
             return (
               <div
                 key={t.id}
                 className="r2-row-in"
                 style={{ animationDelay: `${250 + i * 180}ms` }}
               >
+                <div className={isOut ? "opacity-55 saturate-50" : ""}>
                 <div
                   className="flex items-stretch overflow-hidden rounded-[4px] p-[3px]"
                   style={{ background: "linear-gradient(180deg,#a4aeba,#646e7b 45%,#414a57)" }}
@@ -65,11 +69,16 @@ export default function RoundResultBoard({ state, g, className = "" }) {
                       </span>
                     </div>
 
-                    {/* Tên đội — trắng, căn giữa thanh */}
+                    {/* Tên đội — trắng, căn giữa thanh }, nhãn BỊ LOẠI khi bị MC khóa */}
                     <div className="relative flex flex-1 items-center justify-center px-8">
                       <span className="font-display font-bold text-[clamp(24px,3.2vw,40px)] text-white truncate drop-shadow-[0_2px_0_rgba(0,0,0,0.45)]">
                         {t.name}
                       </span>
+                      {isOut && (
+                        <span className="ml-3 shrink-0 rounded-sm border border-red-400/50 bg-red-500/20 px-2 py-0.5 text-[11px] font-bold tracking-widest text-red-200 uppercase">
+                          Bị loại
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -81,6 +90,7 @@ export default function RoundResultBoard({ state, g, className = "" }) {
                     <div className="absolute left-0 inset-y-1 w-px bg-black/35" />
                     <div className="h-2.5 w-2.5 rounded-full bg-[#232b38] shadow-[inset_0_1px_2px_rgba(255,255,255,0.5)]" />
                   </div>
+                </div>
                 </div>
               </div>
             );
