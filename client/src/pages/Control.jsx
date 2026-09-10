@@ -25,8 +25,6 @@ export default function Control() {
   const { state, timer } = useGameState();
   const [current, setCurrent] = useState(null);
   const [customScore, setCustomScore] = useState({});
-  const [confirmStart, setConfirmStart] = useState(null);
-  const [roundPin, setRoundPin] = useState("");
   const [sortScore, setSortScore] = useState(false);
 
   async function refreshQ() {
@@ -73,54 +71,8 @@ export default function Control() {
   const running = timer?.running ?? false;
 
   function requestRound(id, label) {
-    if (!g.round || g.round === "finished") {
-      act("round.start", { round: id });
-      return;
-    }
-    if (id === g.round) {
-      const active = showing || running || (g.questionStatus && g.questionStatus !== "idle");
-      // Reset vòng 2 (Vượt chướng ngại vật) luôn cần nhập mật khẩu admin — kể cả
-      // khi chưa có gì đang chạy, vì việc reset sẽ xóa toàn bộ bảng mảnh ghép.
-      if (id === "vuot_cnv") {
-        setConfirmStart({
-          roundId: id,
-          title: `Reset vòng ${label}?`,
-          message:
-            "Reset vòng 2 (Vượt chướng ngại vật) sẽ đặt lại toàn bộ bảng mảnh ghép. Vui lòng nhập mật khẩu admin để xác nhận.",
-          danger: true,
-          needPin: true,
-        });
-        return;
-      }
-      if (!active) {
-        act("round.start", { round: id });
-        return;
-      }
-      setConfirmStart({
-        roundId: id,
-        title: `Reset vòng ${label}?`,
-        message: "Vòng này đang có câu hỏi/đồng hồ đang chạy hoặc đang thi dở. Chuyển sẽ đặt lại vòng từ đầu và mất trạng thái hiện tại.",
-        danger: true,
-      });
-      return;
-    }
-    const currentInProgress =
-      showing ||
-      running ||
-      (g.questionStatus && g.questionStatus !== "idle") ||
-      (g.round === "khoi_dong" && Object.keys(g.khoiDong?.submissions || {}).length > 0) ||
-      (g.round === "tang_toc" && Object.keys(g.tangToc?.submissions || {}).length > 0) ||
-      (g.round === "vuot_cnv" && ((p.rowsSolved || []).some(Boolean) || p.keywordSolved)) ||
-      (g.round === "ve_dich" && (g.veDich?.answeringTeam || false));
-    if (currentInProgress) {
-      setConfirmStart({
-        roundId: id,
-        title: `Chuyển sang vòng ${label}?`,
-        message: `Vòng hiện tại đang hoạt động (${state.rounds?.find((r) => r.id === g.round)?.name || g.round}). Chuyển vòng sẽ bỏ qua trạng thái đang dở của vòng này.`,
-        danger: false,
-      });
-      return;
-    }
+    // Chuyển vòng tự do — bấm là chuyển ngay, không cần xác nhận. Bấm lại vòng
+    // đang chạy = reset vòng đó (server tự đặt lại trạng thái full).
     act("round.start", { round: id });
   }
 
@@ -507,53 +459,6 @@ export default function Control() {
         </div>
       </aside>
 
-      {confirmStart && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setConfirmStart(null)}>
-          <div className="panel w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-            <div className={`flex items-center gap-2 ${confirmStart.danger ? "text-danger" : "text-gold"}`}>
-              <span className="text-2xl">⚠️</span>
-              <h3 className="font-display font-bold">{confirmStart.title}</h3>
-            </div>
-            <p className="text-mist mt-3 leading-relaxed">{confirmStart.message}</p>
-            {confirmStart.needPin && (
-              <input
-                autoFocus
-                type="password"
-                placeholder="Nhập mật khẩu admin"
-                value={roundPin}
-                onChange={(e) => setRoundPin(e.target.value)}
-                className="mt-3 w-full!"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && roundPin) {
-                    const { roundId } = confirmStart;
-                    setConfirmStart(null);
-                    setRoundPin("");
-                    act("round.start", { round: roundId, pin: roundPin });
-                  }
-                }}
-              />
-            )}
-            <div className="flex gap-2 mt-5">
-              <button type="button" className="btn flex-1" onClick={() => setConfirmStart(null)}>
-                Hủy
-              </button>
-              <button
-                type="button"
-                disabled={confirmStart.needPin && !roundPin}
-                className={`btn flex-1 ${confirmStart.danger ? "btn-danger" : "btn-ok"}`}
-                onClick={() => {
-                  const { roundId, needPin } = confirmStart;
-                  setConfirmStart(null);
-                  setRoundPin("");
-                  act("round.start", { round: roundId, pin: needPin ? roundPin : getPin() });
-                }}
-              >
-                Tiếp tục
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
     </>
   );

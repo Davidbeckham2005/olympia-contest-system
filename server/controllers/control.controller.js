@@ -4,16 +4,8 @@ import { emitEvent } from "../config/io.js";
 
 const actions = {
   // Reset vòng 2 (Vượt chướng ngại vật) yêu cầu nhập mật khẩu admin để xác nhận.
-  "round.start": (p) => {
-    if (p.round === "vuot_cnv" && getDb().game.round === "vuot_cnv") {
-      if (!p.pin || p.pin !== getDb().settings.pin) {
-        const err = new Error("Vui lòng nhập mật khẩu admin để reset vòng Vượt chướng ngại vật.");
-        err.status = 401;
-        throw err;
-      }
-    }
-    return game.startRound(p.round);
-  },
+  // round.start — chuyển/bắt đầu lại vòng thi. Bấm lại vòng đang chạy = reset vòng đó.
+  "round.start": (p) => game.startRound(p.round),
   "timer.set": (p) => game.setTimer(p.seconds, p.running !== false),
   "timer.pause": () => game.pauseTimer(),
   "timer.resume": () => game.resumeTimer(),
