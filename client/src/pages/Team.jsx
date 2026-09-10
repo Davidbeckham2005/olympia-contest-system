@@ -426,6 +426,7 @@ export default function Team() {
           </button>
         </div>
         <KhoiDongAudience state={state} timer={timer} flash={null} />
+        <TeamsSidebar teams={state.teams || []} currentTeamId={team.id} />
       </div>
     );
   }
