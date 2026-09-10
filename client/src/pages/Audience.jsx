@@ -82,26 +82,15 @@ export default function Audience() {
   // Màn hình KẾT QUẢ CUỐI VÒNG (MC bật/tắt thủ công qua "screen.roundResult") —
   // hiển thị trên mọi vòng, nền đồng bộ như màn luật.
   if (d.mode === "roundResult") {
-    const bg = state.settings?.audienceBg || "dark";
-    const bgUrl = state.settings?.audienceBgUrl || "";
-    const bgLayer = (
-      <>
-        <div className="fixed inset-0 z-0 bg-[#070b16]" />
-        {bg === "blur" && bgUrl && (
-          <>
-            <div
-              className="fixed inset-0 z-0 bg-cover bg-center scale-110"
-              style={{ backgroundImage: `url(${bgUrl})`, filter: "blur(14px) brightness(0.5)" }}
-            />
-            <div className="fixed inset-0 z-0 bg-[#070b16]/45" />
-          </>
-        )}
-      </>
-    );
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-5 py-8 relative isolate overflow-hidden">
-        {bgLayer}
-        <RoundResultBoard state={state} g={g} className="relative z-10" />
+        <RoundResultBoard
+          state={state}
+          g={g}
+          bg={state.settings?.audienceBg}
+          bgUrl={state.settings?.audienceBgUrl}
+          className="relative z-10"
+        />
         <AudioUnlock audioOn={audioOn} onEnable={enableAudio} />
       </div>
     );

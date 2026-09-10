@@ -4,7 +4,7 @@
 // thanh xám đậm bọc viền kim loại (điểm trong ô cam/nâu bên trái, tên trắng căn giữa,
 // đầu nối kim loại bên phải). Bo góc hẹp, gần như không glow/neon.
 // Ở vòng 2/3/4 chỉ liệt kê các đội CHƯA bị MC block (team.eliminated).
-export default function RoundResultBoard({ state, g, className = "" }) {
+export default function RoundResultBoard({ state, g, className = "", bg = "dark", bgUrl = "" }) {
   const top4Rounds = ["vuot_cnv", "tang_toc", "ve_dich"];
   const sourceTeams = (state.teams || []).filter(
     (t) => !top4Rounds.includes(g.round) || !t.eliminated
@@ -16,15 +16,15 @@ export default function RoundResultBoard({ state, g, className = "" }) {
 
   return (
     <div className={`relative isolate min-h-screen overflow-hidden text-center ${className}`}>
-      {/* Nền xanh đậm kiểu truyền hình + ánh sáng rất nhẹ */}
+      {/* Nền đồng bộ màn hình khán giả: xanh đậm + (nếu có) ảnh nền làm mờ như các màn khác */}
       <div className="fixed inset-0 z-0 bg-[#0a1d3a]" />
-      <div
-        className="fixed inset-0 z-0"
-        style={{
-          background:
-            "radial-gradient(1000px 520px at 50% -10%, rgba(35,95,150,0.22), transparent 55%), radial-gradient(760px 460px at 50% 112%, rgba(10,35,65,0.55), transparent 60%)",
-        }}
-      />
+      {bg === "blur" && bgUrl && (
+        <div
+          className="fixed inset-0 z-0 bg-cover bg-center scale-110"
+          style={{ backgroundImage: `url(${bgUrl})`, filter: "blur(14px) brightness(0.5)" }}
+        />
+      )}
+      <div className="fixed inset-0 z-0 bg-[#0a1d3a]/45" />
 
       <div className="relative z-10 flex min-h-screen w-full flex-col items-center justify-center px-6 py-12">
         {/* Tiêu đề — xanh ngọc, đơn giản, không glow */}
@@ -36,7 +36,8 @@ export default function RoundResultBoard({ state, g, className = "" }) {
           style={{ background: "linear-gradient(90deg, transparent, #6d7a8a 30%, #8e9bb0 50%, #6d7a8a 70%, transparent)" }}
         />
 
-        {/* Bảng xếp hạng dọc — mỗi đội một thanh ngang, viền kim loại mỏng */}
+        {/* Bảng xếp hạng dọc — mỗi đội một thanh ngang, viền kim loại mỏng.
+            Xuất hiện CHẬM rãi từng dòng (broadcast): delay 450 + i*320ms, mỗi dòng 0.9s. */}
         <div className="mt-9 flex w-[min(860px,92vw)] flex-col gap-3.5">
           {ranked.map((t, i) => {
             const isOut = !!t.eliminated;
@@ -45,7 +46,7 @@ export default function RoundResultBoard({ state, g, className = "" }) {
               <div
                 key={t.id}
                 className="r2-row-in"
-                style={{ animationDelay: `${250 + i * 180}ms` }}
+                style={{ animationDelay: `${450 + i * 320}ms`, animationDuration: "0.9s" }}
               >
                 <div className={isOut ? "opacity-55 saturate-50" : ""}>
                 <div

@@ -276,13 +276,18 @@ export default function Team() {
     // giống màn luật, đồng bộ khán giả.
     return (
       <div className="relative min-h-screen flex flex-col items-center justify-center px-5 py-8 text-center isolate overflow-hidden">
-        <TeamBackground settings={state?.settings} />
         <div className="absolute top-4 left-4 z-40">
           <button type="button" className="btn btn-ghost py-2! px-3! text-sm" onClick={quit}>
             ← Đăng xuất
           </button>
         </div>
-        <RoundResultBoard state={state} g={g} className="relative z-10" />
+        <RoundResultBoard
+          state={state}
+          g={g}
+          bg={state?.settings?.audienceBg}
+          bgUrl={state?.settings?.audienceBgUrl}
+          className="relative z-10"
+        />
       </div>
     );
   } else if (g.phase === "finished") {
