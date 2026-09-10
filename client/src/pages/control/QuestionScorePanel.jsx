@@ -89,6 +89,8 @@ export function KdScorePanel({ ctx }) {
   const kdCurMark = isKd ? g?.khoiDong?.history?.[g.currentTeam]?.[mi]?.[g.questionIndex] : undefined;
   const alreadyScored = isKd && typeof kdCurMark === "boolean";
   // Round 2 chấm theo bảng "Bài nộp tự luận" riêng (trong RoundVuotCnv) — ẩn nút chấm chung này.
+  // Round 1 khi chưa chiếu ảnh nào (chưa Bắt đầu / đang nghỉ) cũng không cho chấm.
+  if (isKd && g?.questionStatus === "idle") return null;
   if (ttscoring || g?.round === "vuot_cnv" || g.round === "ve_dich") return null;
   return (
     <div className="px-3 py-2.5">
