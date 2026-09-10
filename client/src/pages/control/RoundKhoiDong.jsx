@@ -1,7 +1,8 @@
 import { useState } from "react";
+import RulesToggle from "../../components/RulesToggle.jsx";
 
 export default function RoundKhoiDong({ ctx }) {
-  const { isKd, act, state, g } = ctx;
+  const { isKd, act, state, g, d } = ctx;
   const [showAll, setShowAll] = useState(false);
   if (!isKd) return null;
   const order = (state.teams || []).map((x) => x.id);
@@ -36,6 +37,7 @@ export default function RoundKhoiDong({ ctx }) {
         <button type="button" className="btn btn-ghost text-xs py-1!" onClick={() => setShowAll((v) => !v)}>
           {showAll ? "Thu gọn" : "Hiện 5 thí sinh"}
         </button>
+        <RulesToggle d={d} act={act} className="btn btn-ghost text-xs py-1!" />
       </div>
 
       {clusters.length > 1 && mi + 1 < clusters.length && (

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { activeTeamIds } from "../../lib/teams.js";
+import RulesToggle from "../../components/RulesToggle.jsx";
 
 // Giao diện bàn MC Vòng 3 (Tăng tốc) — kế thừa TƯ TƯỞNG Vòng 2:
 //   1. Panel ĐIỀU KHIỂN đầu trang: nút chuyển màn hình khán giả + "Đang hiện" +
@@ -152,6 +153,15 @@ export default function RoundTangToc({ ctx }) {
           >
             Đáp án các đội
           </button>
+          <RulesToggle
+            d={g.display || {}}
+            act={act}
+            className={`flex items-center justify-center h-10 rounded-lg border text-sm font-semibold transition ${
+              g.display?.mode === "rules"
+                ? "border-gold bg-gold/15 text-gold"
+                : "border-line bg-night/40 text-mist hover:border-gold/40 hover:text-white"
+            }`}
+          />
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {phase === "preparing" ? (

@@ -1,4 +1,5 @@
 import { formatTime } from "../../lib/format.js";
+import RulesToggle from "../../components/RulesToggle.jsx";
 
 // 3 màn hình riêng biệt của vòng 2 (Khán giả + Thí sinh đồng bộ), MC bấm nút để chuyển.
 const SCREEN_LABEL = { question: "Câu hỏi", puzzle: "Bảng mảnh", answers: "Đáp án" };
@@ -40,6 +41,7 @@ export default function RoundVuotCnv({ ctx }) {
               {SCREEN_LABEL[m]}
             </button>
           ))}
+          <RulesToggle d={d} act={act} className="btn btn-ghost text-sm! py-0! h-10 w-[7rem]! justify-center text-center" />
           <span className="text-mist text-xs">
             Đang hiện: <b className="text-gold">{SCREEN_LABEL[screenMode]}</b>
           </span>

@@ -1,4 +1,5 @@
 import CurrentQuestionCard from "./CurrentQuestionCard.jsx";
+import RulesToggle from "../../components/RulesToggle.jsx";
 
 const PACKAGES = {
   60: [10, 10, 20, 20],
@@ -9,7 +10,7 @@ const PACKAGES = {
 const ANSWER_SECONDS = { 10: 30, 20: 45, 30: 60 };
 
 export default function RoundVeDich({ ctx }) {
-  const { g, state, act, remaining, q, pts, revealed, running } = ctx;
+  const { g, state, act, remaining, q, pts, revealed, running, d } = ctx;
   if (g.round !== "ve_dich") return null;
 
   const activeTeam = state.teams.find((t) => t.id === g.currentTeam);
@@ -44,6 +45,7 @@ export default function RoundVeDich({ ctx }) {
           <b className="text-sm" style={{ color: activeTeam?.color }}>{activeTeam?.name || g.currentTeam?.toUpperCase()}</b>
           <span className="text-ok text-xs">Đã chọn {picked.length}/4 câu{hasPackage ? ` • gói ${PACKAGE_LABEL[pkg]}` : ""}</span>
         </div>
+        <RulesToggle d={d} act={act} className="btn btn-ghost text-xs py-1! w-full mb-3" />
 
         <div className="grid gap-1.5">
           {Object.entries(PACKAGES).map(([total, structure]) => {

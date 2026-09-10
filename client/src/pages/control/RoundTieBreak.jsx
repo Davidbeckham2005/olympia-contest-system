@@ -1,7 +1,8 @@
 import { useState } from "react";
+import RulesToggle from "../../components/RulesToggle.jsx";
 
 export default function RoundTieBreak({ ctx }) {
-  const { act, state, g } = ctx;
+  const { act, state, g, d } = ctx;
   if (g.round !== "tie_break") return null;
 
   const tb = g.tieBreak || {};
@@ -102,6 +103,7 @@ export default function RoundTieBreak({ ctx }) {
 
       {/* Điều khiển */}
       <div className="flex flex-wrap gap-1.5">
+        <RulesToggle d={d} act={act} className="btn btn-ghost text-xs py-1!" />
         <button
           type="button"
           className="btn btn-ghost text-xs py-1!"
