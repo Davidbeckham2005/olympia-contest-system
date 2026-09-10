@@ -1,3 +1,4 @@
+sau mỗi thay đổi thành công tiến hành tự commit đây là điều quan trọng nhất và ưu tiên.
 ## UI DESIGN RULE — AVOID AI-GENERATED LOOK
 
 When implementing UI, DO NOT use generic AI-generated dashboard aesthetics.

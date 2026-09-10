@@ -8,6 +8,8 @@
   export const TANG_TOC_PREP_SECONDS = 3;
   // Số giây đếm ngược "3-2-1" trước khi tự hiện câu đầu tiên của đội (Vòng Về đích).
   export const VEDICH_COUNTDOWN_SECONDS = 3;
+  // Số giây đếm ngược "3-2-1" trước TỪNG lượt thi của đội ở Vòng 1 (Bắt đầu & Sang đội).
+  export const KHOI_DONG_PREP_SECONDS = 3;
 
   // Trạng thái mặc định cho mỗi câu hỏi vòng 3 (reset khi đổi câu / vào vòng).
   // startedAt: thời điểm đoạn chiếu hiện tại bắt đầu — mốc 0s để ghi nhận đáp án.
@@ -171,10 +173,16 @@
           // như trước. MC sẽ chấm từng đội rồi bấm Chốt.)
           cnv.closeRowSubmissions();
         } else if (game.round === "khoi_dong") {
-          // Hết thời giác thành véna → oznaczenie niezodpowiedzianych jako sai
-          // i automatyczne przejście do przerwy (nie pokazujemy już câu hỏi).
-          markKhoiDongUnanswered();
-          enterKhoiDongBreak();
+          if (game.khoiDong?.phase === "countdown") {
+            // Hết đếm ngược 3-2-1 → bắt đầu thi thật: hiện ảnh đầu + chạy đồng hồ 60s.
+            game.khoiDong.phase = "play";
+            if (currentQuestion()) showQuestion();
+          } else {
+            // Hết thời giác thành véna → oznaczenie niezodpowiedzianych jako sai
+            // i automatyczne przejście do przerwy (nie pokazujemy już câu hỏi).
+            markKhoiDongUnanswered();
+            enterKhoiDongBreak();
+          }
         }
         broadcast("game:timer", game.timer);
         emit();
@@ -800,18 +808,18 @@ if (game.round === "khoi_dong") {
       game.questionIndex = 0;
       game.khoiDong.phase = "play";
       game.khoiDong.breakInfo = null;
-    } else if (b?.kind === "team" && b.nextTeamId) {
-      game.currentTeam = b.nextTeamId;
-      game.khoiDong.memberIndex = 0;
-      game.questionIndex = 0;
-      game.khoiDong.phase = "play";
-      game.khoiDong.breakInfo = null;
+      setTimer(game.khoiDong?.timerSeconds || 60, false);
+      // Hiện câu hỏi đầu tiên của thành viên mới sau khoảng nghỉ (không đếm ngược —
+      // đếm ngược chỉ dành cho LƯỢT tới của một ĐỘI mới).
+      if (currentQuestion()) showQuestion();
+      saveDb();
+      emit();
+      return;
     }
-    setTimer(game.khoiDong?.timerSeconds || 60, false);
-    // Hiện câu hỏi đầu tiên của thành viên/đội mới sau khoảng nghỉ
-    if (currentQuestion()) showQuestion();
-    saveDb();
-    emit();
+    if (b?.kind === "team" && b.nextTeamId) {
+      // Đội kế tiếp bắt đầu lượt → đếm ngược 3-2-1 rồi mới hiện ảnh + chạy 60s.
+      kdCountdown(b.nextTeamId);
+    }
   }
 
   export function prevQuestion() {
@@ -874,6 +882,38 @@ if (game.round === "khoi_dong") {
     emit();
   }
 
+  // Bắt đầu lượt thi của đội ở Vòng 1 bằng ĐẾM NGƯỢC 3-2-1: màn khán giả hiện số lớn +
+  // tên đội, 60s CHƯA chạy (không tính 3s này vào thời gian thi). Hết đếm, timer loop
+  // tự chuyển phase "play" + showQuestion() để hiện ảnh đầu và chạy đồng hồ thật.
+  function kdCountdown(teamId, memberIndex = 0) {
+    const game = g();
+    const timerSec = game.khoiDong?.timerSeconds || 60;
+    const history = game.khoiDong?.history || {};
+    game.currentTeam = teamId;
+    game.questionIndex = 0;
+    game.khoiDong = {
+      submissions: {},
+      timerSeconds: timerSec,
+      answerSeconds: game.khoiDong?.answerSeconds,
+      history,
+      memberIndex,
+      timerStarted: -1,
+    };
+    game.khoiDong.phase = "countdown";
+    game.khoiDong.ready = false;
+    game.khoiDong.breakInfo = null;
+    resetDisplayToBoard();
+    game.display.note = `${team(teamId)?.name || ""} — Chuẩn bị thi`;
+    setTimer(KHOI_DONG_PREP_SECONDS, true);
+    saveDb();
+    emit();
+  }
+
+  // MC bấm "▶ Bắt đầu" cho đội đang chờ ở Vòng 1 → chạy đếm ngược chuẩn bị.
+  export function startKhoiDongTeam(teamId) {
+    kdCountdown(teamId);
+  }
+
   export function jumpToQuestion(teamId, questionIndex, memberIndex = undefined) {
     const game = g();
     const prevTeam = game.currentTeam;
@@ -883,19 +923,19 @@ if (game.round === "khoi_dong") {
       const timerSec = game.khoiDong?.timerSeconds || 60;
       const prevMember = game.khoiDong?.memberIndex ?? 0;
       if (teamId !== prevTeam) {
-        const history = game.khoiDong?.history || {};
-        game.khoiDong = { submissions: {}, timerSeconds: timerSec, answerSeconds: game.khoiDong?.answerSeconds, history, memberIndex: memberIndex ?? 0, timerStarted: -1 };
-      } else if (memberIndex !== undefined) {
+        // Chuyển sang ĐỘI MỚI = lượt thi mới → đếm ngược 3-2-1 trước khi hiện ảnh + chạy 60s.
+        kdCountdown(teamId, memberIndex ?? 0);
+        return;
+      }
+      if (memberIndex !== undefined) {
         game.khoiDong.memberIndex = memberIndex;
       }
-      // Nhảy trực đến thành viên/đội — thoát khoảng nghỉ, quay sang thi.
+      // Nhảy trực đến thành viên/ảnh cùng đội — thoát khoảng nghỉ, quay sang thi.
       game.khoiDong.phase = "play";
       game.khoiDong.breakInfo = null;
-      // Reset đồng hồ chỉ khi ĐỔI thí sinh/đội; giữ đồng hồ khi đổi ảnh trong cùng thí sinh
+      // Reset đồng hồ chỉ khi ĐỔI thí sinh; giữ đồng hồ khi đổi ảnh trong cùng thí sinh
       // (mỗi thí sinh tổng 1 phút cho cả 5 ảnh).
-      let memberChanged = false;
-      if (teamId !== prevTeam) memberChanged = true;
-      else if (memberIndex !== undefined) memberChanged = (game.khoiDong.memberIndex !== prevMember);
+      const memberChanged = memberIndex !== undefined && game.khoiDong.memberIndex !== prevMember;
       if (memberChanged) {
         // Đặt timerStarted = -1 để showQuestion() phía dưới KHỞI ĐỘNG đồng hồ chạy
         // (running = true). Nếu set timerStarted = memberIndex, showQuestion sẽ tưởng

@@ -743,6 +743,22 @@ export function KhoiDongAudience({ state, timer, flash }) {
 
   // Chưa chọn đội → chỉ giữ nền (không lộ đội/ảnh mặc định).
   const kdWaiting = phase === "play" && !!g.khoiDong?.ready;
+  // Đếm ngược 3•2•1 trước khi đội bắt đầu lượt thi (mỗi lượt đội mới — Bắt đầu / Sang đội):
+  // hiện tên đội + số lớn; đồng hồ 60s CHƯA chạy (3s đếm không tính vào thời gian thi).
+  if (phase === "countdown") {
+    const cd = Math.max(1, Math.min(3, Math.ceil(t.remaining || 3)));
+    return (
+      <div className="relative isolate min-h-screen overflow-hidden">
+        {bgLayer}
+        <div className="relative flex flex-col items-center justify-center min-h-screen px-6 z-10 text-center">
+          <div className="kicker tracking-[0.35em] text-[#ffd60a]">VÒNG 1 · KHỞI ĐỘNG</div>
+          <div className="font-display font-bold text-[clamp(26px,4vw,52px)] leading-tight text-white mt-6">{activeTeam?.name || "…"}</div>
+          <div className="font-display font-black text-[clamp(90px,20vw,220px)] leading-none mt-3 text-[#ffd60a]">{cd}</div>
+          <div className="kicker text-gold/60 mt-4">CHUẨN BỊ</div>
+        </div>
+      </div>
+    );
+  }
   if (g.questionStatus === "idle" && !kdWaiting) {
     return <div className="relative isolate min-h-screen overflow-hidden">{bgLayer}</div>;
   }

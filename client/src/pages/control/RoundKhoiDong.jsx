@@ -14,6 +14,13 @@ export default function RoundKhoiDong({ ctx }) {
     : [];
   const mi = g.khoiDong?.memberIndex ?? 0;
   if (g.questionStatus === "idle") {
+    if (g.khoiDong?.phase === "countdown") {
+      return (
+        <div className="panel">
+          <div className="text-xs text-mist">Đang đếm ngược 3 • 2 • 1 — {t?.name || curTeamId} chuẩn bị bắt đầu.</div>
+        </div>
+      );
+    }
     return (
       <div className="panel">
         <div className="text-xs text-mist">Chưa bắt đầu — chọn đội ở cột trái rồi bấm “▶ Bắt đầu” để show câu hỏi đầu tiên.</div>

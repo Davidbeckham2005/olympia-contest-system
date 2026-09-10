@@ -69,6 +69,7 @@ const actions = {
     return game.resetKhoiDong(p.teamId);
   },
   "khoi_dong.continue": () => game.continueKhoiDong(),
+  "khoi_dong.start": (p) => game.startKhoiDongTeam(p.teamId),
   "team.set": (p) => game.setCurrentTeam(p.teamId),
   "buzzer.open": () => game.openBuzzer(),
   "buzzer.close": () => game.closeBuzzer(),

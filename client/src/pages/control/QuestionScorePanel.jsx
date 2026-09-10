@@ -16,7 +16,9 @@ export default function QuestionScorePanel({ ctx }) {
           </div>
         )}
         {kdIdle && (
-          <div className="text-mist">Chuyển đội để bắt đầu lượt.</div>
+          <div className="text-mist">
+            {g?.khoiDong?.phase === "countdown" ? "Đang đếm ngược 3 • 2 • 1 — chuẩn bị bắt đầu." : "Chuyển đội để bắt đầu lượt."}
+          </div>
         )}
         {!q && !kdIdle && (
           <div className="text-mist">

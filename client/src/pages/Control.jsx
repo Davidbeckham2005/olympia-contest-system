@@ -178,6 +178,7 @@ export default function Control() {
   const kdPhase = isKd ? (g.khoiDong?.phase || "play") : null;
   if (isKd && kdPhase === "done") status = { cls: "ok", text: "KẼT THÚC" };
   else if (isKd && kdPhase === "break") status = { cls: "warn", text: "KHOÀNG NGHỉ — TIẾP" };
+  else if (isKd && kdPhase === "countdown") status = { cls: "warn", text: "ĐẾM NGƯỢC 3 • 2 • 1" };
   else if (isKd && showing) status = { cls: "ok", text: "ĐANG THI" };
   else if (isKd) status = { cls: "", text: "CHỰA BẦT DỈ" };
   else if (p.keywordSolved && g.round === "vuot_cnv") status = { cls: "ok", text: "ĐÃ XUẤT TỪ KHÓA" };
@@ -193,13 +194,15 @@ export default function Control() {
     const mi = g.khoiDong?.memberIndex ?? 0;
     const clusters = state.questions?.main?.khoiDong?.[g.currentTeam] || [];
     const memberTotal = clusters.length || 1;
-    progress = kdPhase === "break"
-      ? (g.khoiDong?.breakInfo?.kind === "member"
-        ? `Đội ${cur?.name || ""} — thí sinh ${mi + 1} hết. Chuẩn bị thí sinh ${(g.khoiDong?.breakInfo?.nextMember || mi + 1) + 1}.`
-        : g.khoiDong?.breakInfo?.kind === "team"
-          ? `Đội ${cur?.name || ""} hết. Chuẩn bị đội ${state.teams.find((t) => t.id === g.khoiDong?.breakInfo?.nextTeamId)?.name || ""}.`
-          : "Khoàng nghỉ.")
-      : `Thí sinh ${mi + 1}/${memberTotal} • Ảnh ${g.questionIndex + 1}/5 • ${cur?.name || ""}`;
+    progress = kdPhase === "countdown"
+      ? `Đội ${cur?.name || ""} chuẩn bị thi — đếm ngược ${remaining}s`
+      : kdPhase === "break"
+        ? (g.khoiDong?.breakInfo?.kind === "member"
+          ? `Đội ${cur?.name || ""} — thí sinh ${mi + 1} hết. Chuẩn bị thí sinh ${(g.khoiDong?.breakInfo?.nextMember || mi + 1) + 1}.`
+          : g.khoiDong?.breakInfo?.kind === "team"
+            ? `Đội ${cur?.name || ""} hết. Chuẩn bị đội ${state.teams.find((t) => t.id === g.khoiDong?.breakInfo?.nextTeamId)?.name || ""}.`
+            : "Khoàng nghỉ.")
+        : `Thí sinh ${mi + 1}/${memberTotal} • Ảnh ${g.questionIndex + 1}/5 • ${cur?.name || ""}`;
   } else if (g.round === "tang_toc") progress = `Câu ${(g.questionIndex || 0) + 1}/4`;
   else if (g.round === "vuot_cnv") {
     const doneCount = solved.filter(Boolean).length;
@@ -398,7 +401,7 @@ export default function Control() {
         )}
 
         {/* 1 · HIỂN THỊ CÂU HỎI — thời gian · đáp án · ảnh (Round 1) — trên đầu trang */}
-        {isKd && g.questionStatus === "idle" && kdStartTeam === g.currentTeam && (
+        {isKd && g.questionStatus === "idle" && kdStartTeam === g.currentTeam && kdPhase !== "countdown" && (
           <div className="panel border-gold/40 bg-gold/10">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="text-sm font-semibold text-white">
@@ -408,8 +411,7 @@ export default function Control() {
                 type="button"
                 className="btn btn-ok"
                 onClick={() => {
-                  const fid = firstValidIndex(g.currentTeam);
-                  act("question.jump", { teamId: g.currentTeam, memberIndex: fid.memberIndex, questionIndex: fid.questionIndex });
+                  act("khoi_dong.start", { teamId: g.currentTeam });
                   setKdStartTeam(null);
                 }}
               >
