@@ -4,8 +4,18 @@ import { emitEvent } from "../config/io.js";
 
 const actions = {
   // Reset vòng 2 (Vượt chướng ngại vật) yêu cầu nhập mật khẩu admin để xác nhận.
-  // round.start — chuyển/bắt đầu lại vòng thi. Bấm lại vòng đang chạy = reset vòng đó.
-  "round.start": (p) => game.startRound(p.round),
+  // round.start — chuyển vòng tự do. Bấm lại vòng ĐANG CHẠY (= reset) phải có mật
+  // khẩu admin để tránh xóa nhầm trạng thái đang thi dở.
+  "round.start": (p) => {
+    if (p.round === getDb().game.round) {
+      if (!p.pin || p.pin !== getDb().settings.pin) {
+        const err = new Error("Cần mật khẩu admin để reset vòng đang chạy.");
+        err.status = 401;
+        throw err;
+      }
+    }
+    return game.startRound(p.round);
+  },
   "timer.set": (p) => game.setTimer(p.seconds, p.running !== false),
   "timer.pause": () => game.pauseTimer(),
   "timer.resume": () => game.resumeTimer(),

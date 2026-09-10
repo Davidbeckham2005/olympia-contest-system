@@ -26,6 +26,8 @@ export default function Control() {
   const [current, setCurrent] = useState(null);
   const [customScore, setCustomScore] = useState({});
   const [sortScore, setSortScore] = useState(false);
+  const [resetRound, setResetRound] = useState(null);
+  const [resetPin, setResetPin] = useState("");
 
   async function refreshQ() {
     try {
@@ -71,8 +73,13 @@ export default function Control() {
   const running = timer?.running ?? false;
 
   function requestRound(id, label) {
-    // Chuyển vòng tự do — bấm là chuyển ngay, không cần xác nhận. Bấm lại vòng
-    // đang chạy = reset vòng đó (server tự đặt lại trạng thái full).
+    // Bấm vòng khác → chuyển ngay, không cần xác nhận.
+    // Bấm lại vòng ĐANG CHẠY = RESET vòng đó từ đầu → cần mật khẩu admin.
+    if (g.round === id) {
+      setResetPin("");
+      setResetRound({ id, label });
+      return;
+    }
     act("round.start", { round: id });
   }
 
@@ -216,27 +223,21 @@ export default function Control() {
             ["ve_dich", "Về đích"],
             ["tie_break", "Phụ phuc"],
           ].map(([id, label]) => (
-            <div key={id} className="flex gap-1">
-              <button
-                type="button"
-                className={`flex flex-1 items-center justify-between gap-2 border border-[rgba(255,255,255,0.15)] px-3 py-2.5 text-left transition ${
-                  g.round === id
-                    ? "bg-white/20 ring-1 ring-white/40 text-white"
-                    : "bg-[#7d90b8] hover:bg-white/20 text-black/90"
-                }`}
-                onClick={() => requestRound(id, label)}
-              >
-                <span className="font-semibold text-sm">{label}</span>
-              </button>
-              <button
-                type="button"
-                title={`Reset vòng ${label}`}
-                className="shrink-0 border border-[rgba(255,255,255,0.15)] bg-[#3a4356] px-2.5 font-bold text-white/70 transition hover:bg-danger/40 hover:text-white"
-                onClick={() => act("round.start", { round: id })}
-              >
-                ↺
-              </button>
-            </div>
+            <button
+              key={id}
+              type="button"
+              className={`flex items-center justify-between gap-2 border border-[rgba(255,255,255,0.15)] px-3 py-2.5 text-left transition ${
+                g.round === id
+                  ? "bg-white/20 ring-1 ring-white/40 text-white"
+                  : "bg-[#7d90b8] hover:bg-white/20 text-black/90"
+              }`}
+              onClick={() => requestRound(id, label)}
+            >
+              <span className="font-semibold text-sm">{label}</span>
+              {g.round === id && (
+                <span className="ml-auto text-[10px] tracking-wide text-white/50 uppercase">bấm lại: reset</span>
+              )}
+            </button>
           ))}
           <button type="button" className="border border-[rgba(255,255,255,0.25)] bg-[#7d90b8] px-3 py-2.5 font-semibold text-sm text-black/90 hover:bg-white/20 transition" onClick={() => act("scores.show")}>Hiện bảng điểm</button>
           <button type="button" className={`border px-3 py-2.5 font-semibold text-sm transition ${d.mode === "rules" ? "bg-gold/20 text-white ring-1 ring-gold/50" : "border-[rgba(255,255,255,0.25)] bg-[#7d90b8] text-black/90 hover:bg-white/20"}`} onClick={() => act("screen.rules", { show: d.mode !== "rules" })}>
@@ -466,6 +467,45 @@ export default function Control() {
             })}
         </div>
       </aside>
+
+      {resetRound && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4" onClick={() => setResetRound(null)}>
+          <div className="panel w-full max-w-xs" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-display font-bold">Reset vòng {resetRound.label}?</h3>
+            <p className="text-mist mt-2 text-sm">Toàn bộ trạng thái vòng sẽ được đặt lại. Nhập mật khẩu admin để xác nhận.</p>
+            <input
+              autoFocus
+              type="password"
+              placeholder="Mật khẩu admin"
+              value={resetPin}
+              onChange={(e) => setResetPin(e.target.value)}
+              className="mt-3 w-full!"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && resetPin) {
+                  act("round.start", { round: resetRound.id, pin: resetPin });
+                  setResetRound(null);
+                  setResetPin("");
+                }
+              }}
+            />
+            <div className="flex gap-2 mt-4">
+              <button type="button" className="btn flex-1" onClick={() => setResetRound(null)}>Hủy</button>
+              <button
+                type="button"
+                disabled={!resetPin}
+                className="btn btn-danger flex-1"
+                onClick={() => {
+                  act("round.start", { round: resetRound.id, pin: resetPin });
+                  setResetRound(null);
+                  setResetPin("");
+                }}
+              >
+                Reset
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
     </>
