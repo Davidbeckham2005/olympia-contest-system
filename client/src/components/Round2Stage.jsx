@@ -99,11 +99,10 @@ function Round2Context({ g, state, title }) {
 }
 
 // MÀN KẾT QUẢ TRẢ LỜI — Vòng 2: luôn hiện đủ các đội đang thi (top 4). Mỗi đội 1 hàng,
-// không bọc trong border; đội đã lộ bài hiện đáp án + thời gian nộp, đội chưa để trống.
-// AN TOÀN: chỉ lộ đáp án sau khi giai đoạn đã đóng nhận bài (rowPhase closed/scored) và
-// theo revealedRows (mở dần từng bài theo thứ tự nộp — nhanh nhất trước). Trong lúc còn
-// nhận bài (open) hoặc chưa mở bài nào (revealedRows = 0) màn này chỉ hiện khung trống —
-// phòng MC bấm nhầm sang "Đáp án" khi các đội vẫn đang nộp (lộ đáp án đối thủ).
+// không bọc trong border. AN TOÀN: chỉ hiện đáp án sau khi giai đoạn đã đóng nhận bài
+// (rowPhase closed/scored) — xong là HIỂN THỊ TOÀN BỘ bài nộp + điểm luôn (không mở
+// dần). Trong lúc còn nhận bài (open) màn này chỉ hiện khung trống — phòng MC bấm nhầm
+// sang "Đáp án" khi các đội vẫn đang nộp (lộ đáp án đối thủ).
 export function RowResults({ state, g }) {
   const p = g.puzzle || {};
   const teams = state.teams || [];
@@ -112,8 +111,10 @@ export function RowResults({ state, g }) {
   const corr = p.corrections || {};
   const ranked = p.ranked || [];
   const canReveal = p.rowPhase === "closed" || p.rowPhase === "scored";
-  const revealed = canReveal ? p.revealedRows || 0 : 0;
-  // Thứ tự lộ bài khớp với revealNextRowAnswer bên server: nộp nhanh nhất hiện trước.
+  // Màn Đáp án LUÔN hiện đầy đủ đáp án từng thí sinh ngay khi đóng/đã chốt nhận bài
+  // (không còn mở dần theo revealedRows) — khán giả thấy toàn bộ bài nộp + điểm.
+  const revealed = canReveal ? Object.keys(subs).length : 0;
+  // Thứ tự hiển thị bài nộp theo độ nhanh: nộp nhanh nhất đứng trước.
   const revealedIds = Object.entries(subs)
     .sort((a, b) => (a[1].elapsed ?? Infinity) - (b[1].elapsed ?? Infinity))
     .slice(0, revealed)
@@ -142,6 +143,9 @@ export function RowResults({ state, g }) {
   return (
     <div className="w-full max-w-[1100px] mx-auto">
       <Round2Context g={g} state={state} title={title} />
+      {p.rowPhase === "scored" && p.lastResult && (
+        <ResultBanner lastResult={p.lastResult} />
+      )}
       <div className="mx-auto w-[min(900px,94%)]">
         {cards.map((c, i) => (
           <div key={c.teamId} className="r2-row-in" style={{ animationDelay: `${i * 280}ms` }}>
@@ -293,6 +297,36 @@ export function Round2Question({ state, d, g, strip = true, children }) {
       </div>
 
       {strip && <Round2QuestionStrip state={state} d={d} g={g}>{children}</Round2QuestionStrip>}
+    </div>
+  );
+}
+
+// Tên hiển thị của mảnh vừa xử lý: 4 hàng ngang → số 1..4, câu hỏi cuối → MẢNH TRUNG TÂM.
+function pieceLabel(row) {
+  return (row ?? 0) === 4 ? "MẢNH TRUNG TÂM" : `MẢNH ${(row ?? 0) + 1}`;
+}
+
+// Banner hệ quả ngay trên MÀN ĐÁP ÁN sau khi MC "Chốt điểm" (Nhịp 1): khán giả đã thấy
+// từng đội Đúng/Sai + bao nhiêu điểm, giờ biết ô vừa được MỞ hay bị KHÓA — chưa cần
+// chuyển sang bảng mảnh. Chỉ hiện khi ô đã chốt (rowPhase "scored") và tồn tại đến khi
+// MC chọn ô kế tiếp (lastResult bị xóa).
+function ResultBanner({ lastResult }) {
+  return (
+    <div className={`mx-auto w-[min(680px,92%)] mb-4 rounded-2xl border-2 px-6 py-3.5 text-center ${
+      lastResult.correct
+        ? "border-[rgba(128,237,153,0.6)] bg-[rgba(128,237,153,0.14)]"
+        : "border-[rgba(255,77,109,0.6)] bg-[rgba(255,77,109,0.14)]"
+    }`}>
+      <div className={`font-display font-black text-[clamp(26px,3.8vw,46px)] leading-none tracking-wide ${
+        lastResult.correct ? "text-[#80ed99]" : "text-[#ff8fa3]"
+      }`}>
+        {lastResult.correct ? `MỞ ${pieceLabel(lastResult.row)}` : `KHÓA ${pieceLabel(lastResult.row)}`}
+      </div>
+      <div className="text-mist text-[clamp(13px,1.6vw,17px)] mt-1.5 font-semibold">
+        {lastResult.correct
+          ? "Ô vừa được mở — MC chuyển sang bảng mảnh để xem mảnh ghép mới."
+          : "Không đội nào đúng — mảnh vừa bị khóa vĩnh viễn."}
+      </div>
     </div>
   );
 }

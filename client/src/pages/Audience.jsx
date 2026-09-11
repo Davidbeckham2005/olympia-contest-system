@@ -30,6 +30,7 @@ function playBuzz() {
 export default function Audience() {
   const { state, timer } = useGameState();
   const [flash, setFlash] = useState(null);
+  const [scoreFlash, setScoreFlash] = useState([]);
   const { audioOn, enableAudio } = useAudienceAudio(state);
 
   useEffect(() => {
@@ -39,6 +40,23 @@ export default function Audience() {
       setTimeout(() => setFlash(null), 1200);
     });
   }, []);
+
+  // Khi MC "Chốt điểm" Vòng 2 → làm nổi trên TeamsRow các đội VỪA được cộng điểm, để
+  // khán giả thấy tổng điểm nhảy lên rõ ràng (trong vài giây rồi thôi).
+  const lastResultAt = state?.game?.puzzle?.lastResult?.at || 0;
+  useEffect(() => {
+    if (!lastResultAt || Date.now() - lastResultAt > 3000) {
+      setScoreFlash([]);
+      return undefined;
+    }
+    const scored = (state?.game?.puzzle?.ranked || [])
+      .filter((r) => r.correct === true && r.points > 0)
+      .map((r) => r.teamId);
+    setScoreFlash(scored);
+    const t = setTimeout(() => setScoreFlash([]), 3000);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastResultAt]);
 
   if (!state) {
     return <div className="min-h-screen grid place-items-center text-mist">Đang kết nối màn hình…</div>;
@@ -182,6 +200,16 @@ export default function Audience() {
       ? [...(state.teams || [])].sort((a, b) => b.score - a.score).slice(0, 4)
       : state.teams;
 
+  // Màn Đáp án Vòng 2 (MC đang chấm Đúng/Sai): làm nổi trên TeamsRow các đội ĐƯỢC CHẤM
+  // ĐÚNG — khán giả nhìn thấy trước ai sắp được cộng điểm (+40/+30/...) ngay lúc chấm,
+  // không phải đợi tới khi MC "Chốt điểm".
+  const answersPreview =
+    g.round === "vuot_cnv" && d.mode === "answers"
+      ? (state?.game?.puzzle?.ranked || [])
+          .filter((r) => r.correct === true && r.points > 0)
+          .map((r) => r.teamId)
+      : [];
+
   // Background đồng bộ cho MỌI VÒNG trên màn khán giả (nền tối #070b16 + ảnh mờ blur theo
   // cài đặt nếu có) — áp dụng luôn cho khung chính để màn khán giả không bao giờ trống nền.
   const cnvAudienceBg = state.settings?.audienceBg || "dark";
@@ -220,7 +248,7 @@ export default function Audience() {
       </div>
 
       <div className="relative z-10">
-        <TeamsRow teams={outTeams} state={state} flash={flash} currentTeam={g.round === "ve_dich" ? g.currentTeam : ""}>
+        <TeamsRow teams={outTeams} state={state} flash={flash} currentTeam={g.round === "ve_dich" ? g.currentTeam : ""} scoreFlash={scoreFlash} steadyFlash={answersPreview}>
           {g.round === "ve_dich" && <Round4Footer state={state} g={g} />}
           {g.round === "vuot_cnv" && d.mode === "question" && <Round2QuestionStrip state={state} d={d} g={g} />}
         </TeamsRow>
@@ -264,7 +292,7 @@ function BuzzOverlay({ state, flash }) {
   );
 }
 
-function TeamsRow({ teams, state, flash, currentTeam, ranked, children }) {
+function TeamsRow({ teams, state, flash, currentTeam, ranked, scoreFlash = [], steadyFlash = [], children }) {
   const displayTeams = teams || ranked || (state && state.teams) || [];
   return (
     <div className="w-[min(1200px,100%)] mx-auto rounded-2xl border border-[rgba(255,214,10,0.18)] bg-[#2a3d63] shadow-[0_10px_40px_rgba(0,0,0,0.45)] overflow-hidden">
@@ -272,11 +300,13 @@ function TeamsRow({ teams, state, flash, currentTeam, ranked, children }) {
       <div className="flex w-full">
         {displayTeams.map((t) => {
           const active = currentTeam === t.id;
+          const isFlash = flash === t.id || (scoreFlash || []).includes(t.id);
+          const isSteady = (steadyFlash || []).includes(t.id);
           return (
             <div
               key={t.id}
               className={`flex-1 flex items-center justify-center gap-2.5 py-3.5 px-2 border-r border-[rgba(255,214,10,0.1)] last:border-r-0 transition-colors ${
-                flash === t.id ? "team-buzz" : active ? "bg-[#ffd60a]/12" : ""
+                isFlash ? "team-buzz bg-[#ffd60a]/20" : isSteady ? "bg-[#ffd60a]/25" : active ? "bg-[#ffd60a]/12" : ""
               }`}
             >
               <span
@@ -346,11 +376,12 @@ function Stage({ state, timer }) {
 
   // Vòng 2 (Vượt CNV): 3 màn hình riêng biệt, MC điều khiển bằng nút trên bàn MC (display.mode):
   //   - "question" → màn câu hỏi: khung hàng ngang + câu hỏi hiện tại
-  //   - "answers"  → màn đáp án các đội gửi về (MC mở dần từng đáp án qua revealedRows)
+  //   - "answers"  → màn đáp án các đội gửi về (hiện TOÀN BỘ bài nộp + điểm khi đã đóng/chốt)
   //   - "puzzle"/khác → màn bảng mảnh ghép (bộ 5 mảnh: 4 góc + ô trung tâm mở cuối)
   //   - "idle"     → MÀN CHỜ ĐẦU VÒNG: chưa chọn/chiếu câu hỏi nào (mở vòng ở đó).
-  // Chọn ô (selectRow) giữ nguyên màn đang xem — không tự nhảy sang bảng mảnh;
-  // từ màn chờ (idle) chọn ô sẽ tự hiện câu hỏi.
+  // Sau "Chốt điểm" chuỗi tự động: màn Đáp án (điểm) ~5s → màn Câu hỏi + lật đáp án ~3s
+  // → Bảng mảnh (mảnh vừa mở/khóa). Chọn ô (selectRow) giữ nguyên màn đang xem — không
+  // tự nhảy sang bảng mảnh; từ màn chờ (idle) chọn ô sẽ tự hiện câu hỏi.
   if (g.round === "vuot_cnv") {
     // Màn Đáp án hiển thị BẤT KỲ lúc nào MC muốn (không phụ thuộc keywordSolved).
     // Nếu chưa có đáp án cho hàng nào, RowResults tự hiển thị trạng thái trống.

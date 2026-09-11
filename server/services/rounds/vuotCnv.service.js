@@ -445,6 +445,8 @@ export function settleRow() {
     teamId: anyCorrect ? (ranked.find((r) => r.correct === true && r.place === 1)?.teamId ?? null) : null,
     row: p.currentRow,
     pts: anyCorrect ? (ranked.find((r) => r.correct === true && r.place === 1)?.points || 0) : 0,
+    // Mốc thời gian chốt — client dùng để nổi tổng điểm mới trên TeamsRow một lúc ngắn.
+    at: Date.now(),
   };
   // Có ≥1 đội đúng → mở mảnh; tất cả sai → khóa vĩnh viễn. Cả hai đều mở cửa sổ từ khóa.
   if (anyCorrect) {
@@ -452,12 +454,49 @@ export function settleRow() {
   } else {
     lockRow(p.currentRow);
   }
-  resetDisplayToBoard();
-  // Sau khi chốt điểm → quay về BẢNG MẢNH GHÉP: mảnh vừa được MỞ (có đội đúng) hoặc
-  // KHÓA hiện × (không ai đúng) hiện ngay rõ ràng trên ảnh; MC mở ô kế tiếp từ đó.
-  game.display.mode = "puzzle";
+  // Tiếng hiệu ĐÚNG/SAI của ô vừa chốt — khán giả nghe kết quả ngay trên màn Đáp án.
+  emitEvent("sound:play", { slot: anyCorrect ? "correct" : "wrong" });
+  // CHUỖI TỰ ĐỘNG sau chốt điểm (MC không cần bấm gì):
+  //   t+5s → màn Đáp án (đang hiện điểm từng đội) chuyển sang màn CÂU HỎI + tự lật đáp án
+  //   t+8s → chuyển sang BẢNG MẢNH thấy mảnh vừa mở/khóa
+  // MC bấm bất kỳ nút chuyển màn trong lúc này là HỦY các bước còn lại (mỗi bước chỉ chạy
+  // khi màn vẫn đúng vị trí trung gian chương trình đặt) — MC toàn quyền can thiệp.
+  scheduleRowReveal(p.currentRow);
   saveDb();
   emit();
+}
+
+// Chuỗi màn hình tự động chạy sau "Chốt điểm" (xem chi tiết ở settleRow):
+//   bước 1 (t+ANSWER_STAY_MS)  → màn Đáp án → màn CÂU HỎI + lật đáp án
+//   bước 2 (tầm thêm QUESTION_STAY_MS) → màn CÂU HỎI → BẢNG MẢNH (mảnh đã mở/khóa)
+// Mỗi bước chỉ tự chuyển khi: chưa giải từ khóa, vẫn ở đúng ô được chốt (currentRow khớp
+// + rowPhase "scored"), và màn hình đang nằm đúng chỗ chương trình đặt — MC bấm nút đổi
+// màn là các bước tiếp theo bị bỏ qua (không chồng lấn với thao tác tay của MC).
+function scheduleRowReveal(row) {
+  const ANSWER_STAY_MS = 5000;   // giữ màn Đáp án (hiển thị điểm từng đội) trước khi đi tiếp
+  const QUESTION_STAY_MS = 3000; // giữ màn câu hỏi + đáp án rồi mới sang bảng mảnh
+  setTimeout(() => {
+    const gm = g();
+    const pp = gm.puzzle;
+    if (gm.round !== "vuot_cnv" || pp?.currentRow !== row || pp?.rowPhase !== "scored" || pp?.keywordSolved) return;
+    if (gm.display.mode !== "answers") return;
+    gm.display.mode = "question";
+    gm.display.answerRevealed = true;
+    gm.questionStatus = "revealed";
+    saveDb();
+    emit();
+    setTimeout(() => {
+      const gm2 = g();
+      const pp2 = gm2.puzzle;
+      if (gm2.round !== "vuot_cnv" || pp2?.currentRow !== row || pp2?.rowPhase !== "scored" || pp2?.keywordSolved) return;
+      if (gm2.display.mode !== "question") return;
+      gm2.display.mode = "puzzle";
+      gm2.display.answerRevealed = false;
+      gm2.questionStatus = "showing";
+      saveDb();
+      emit();
+    }, QUESTION_STAY_MS);
+  }, ANSWER_STAY_MS);
 }
 
 export function showPuzzle() {
