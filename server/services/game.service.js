@@ -394,7 +394,7 @@ export function resetKhoiDong(teamId = null) {
     game.questionStatus = "idle";
   }
 
-  export function showQuestion() {
+  export function showQuestion(opts = {}) {
     const game = g();
     const q = currentQuestion();
     if (!q) {
@@ -419,7 +419,12 @@ export function resetKhoiDong(teamId = null) {
       game.display.note = rowIdx === 4
         ? "Câu hỏi mảnh ghép trung tâm — câu hỏi cuối"
         : `Hàng ngang ${rowIdx + 1} • ${q.letterCount || ""} chữ`;
-      setTimer(game.vuotCnv?.answerSeconds || 30, true);
+      // Mặc định auto-start timer. Vòng 2 (Vuot Cnv) đặt opts.skipTimer để tránh phát
+      // broadcast "running=true" ngắn ngủi rồi lập tức pause — chính là tiếng đồng hồ
+      // NHÁY LÊN rồi biến mất trên màn hình MC mỗi khi bấm chọn câu hỏi.
+      if (!opts.skipTimer) {
+        setTimer(game.vuotCnv?.answerSeconds || 30, true);
+      }
     }
     if (game.round === "tang_toc") {
       // Không tự phát — chỉ "sẵn sàng chiếu": MC bấm "Chiếu video" để chạy đếm ngược

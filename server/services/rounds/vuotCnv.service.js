@@ -161,8 +161,12 @@ export function selectRow(rowIndex) {
   // Thiết lập câu hỏi hiện tại cho bài nộp tự luận (questionStatus "showing") NHƯNG
   // KHÔNG tự đổi màn hình — giữ nguyên trạng thái màn hình đang xem (bảng mảnh hoặc
   // câu hỏi). Đồng hồ được tạm dừng: MC bấm "Bắt đầu giờ" thì mới chạy.
-  showQuestion();
-  pauseTimer();
+  // Đồng hồ được đặt ở trạng thái TẠM DỪNG với đủ số giây (không chạy): MC bấm
+  // "Bắt đầu giờ" thì mới chạy. Dùng skipTimer để showQuestion không auto-start rồi
+  // pause ngay (gây đồng hồ nháy lên rồi biến mất), và setTimer(…, false) chỉ phát
+  // DUY NHẤT một broadcast trạng thái running=false.
+  showQuestion({ skipTimer: true });
+  setTimer(game.vuotCnv?.answerSeconds || 30, false);
   // Ô mới bắt đầu → không ở lại màn ĐÁP ÁN của ô trước (quay về bảng mảnh).
   game.display.mode = prevMode === "answers" ? "puzzle" : prevMode || "puzzle";
   game.display.answerRevealed = false;

@@ -343,12 +343,22 @@
     flex-wrap: wrap;
     gap: 4px;
   }
-  /* Khung câu hỏi Round 2 (màn khán giả): ô chữ là HÌNH TRÒN, viền liền (không đứt đoạn) */
+  /* Khung câu hỏi Round 2 (màn khán giả + thí sinh): ô chữ là HÌNH TRÒN, viền liền
+     (không đứt đoạn). Ô chữ có KÍCH THƯỚC CỐ ĐỊNH theo màn (không phụ thuộc vw liên tục)
+     để khi chuyển câu hoặc câu dài xuống dòng, ô chữ không đổi size / khung không rung.
+     Màn nhỏ (điện thoại/tablet thí sinh) chỉ bước xuống cỡ cố định nhỏ hơn. */
   .r2-rows .ltr {
-    width: clamp(20px, 2.6vw, 42px);
-    height: clamp(20px, 2.6vw, 42px);
-    font-size: clamp(11px, 1.4vw, 20px);
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
     border-radius: 9999px;
+  }
+  @media (max-width: 760px) {
+    .r2-rows .ltr {
+      width: 27px;
+      height: 27px;
+      font-size: 14px;
+    }
   }
   .r2-rows .ltr:not(.ltr-open):not(.ltr-locked) {
     border-style: solid;

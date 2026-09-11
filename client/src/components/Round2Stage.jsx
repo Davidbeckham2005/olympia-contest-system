@@ -238,7 +238,7 @@ export function Round2Question({ state, d, g, children }) {
   const question = cnv.question || d.question || "";
   const isCenter = (p.currentRow ?? 0) === 4;
   return (
-    <div className="w-full max-w-[1200px] min-h-[60vh] mx-auto text-center flex flex-col items-center justify-center">
+    <div className="w-full max-w-[1200px] min-h-[60vh] mx-auto text-center flex flex-col items-center justify-start">
       <Round2Context g={g} state={state} />
       {isCenter ? (
         <div className="mb-6 flex flex-col items-center gap-2.5">
