@@ -3,6 +3,23 @@ import { isOpen, isLocked } from "../lib/cnv.js";
 import { activeTeamIds } from "../lib/teams.js";
 import { optimizeVideoUrl } from "../lib/media.js";
 
+// Hiệu ứng "MỞ LẦN ĐẦU": chữ hàng ngang / mảnh ghép chỉ phát hiệu ứng đúng lúc hàng (ô)
+// vừa được mở 1 lần trong phiên — không replay mỗi khi chuyển màn / quay lại màn.
+// Nếu thấy toàn bộ trở lại trạng thái chưa mở (vòng bị reset) thì quên ký ức để vòng mới
+// phát lại đúng lần mở đầu.
+const r2LtrAnimated = new Set();
+const r2TileAnimated = new Set();
+function rowOpenAnimated(i) {
+  if (r2LtrAnimated.has(i)) return false;
+  r2LtrAnimated.add(i);
+  return true;
+}
+function tileOpenAnimated(i) {
+  if (r2TileAnimated.has(i)) return false;
+  r2TileAnimated.add(i);
+  return true;
+}
+
 // Khung ô chữ Vòng 2: bên trái các hàng ngang (ô chữ tròn), bên phải số mảnh ghép dọc.
 // Dùng chung cho màn hình Khán giả và Thí sinh.
 // Vòng có ĐÚNG 4 câu hỏi HÀNG NGANG (mở 4 mảnh góc). Vị trí index 4 là CÂU HỎI MẢNH
@@ -11,14 +28,26 @@ import { optimizeVideoUrl } from "../lib/media.js";
 export function CnvRowsFrame({ state, g }) {
   const p = g.puzzle || {};
   const cnv = state.cnv;
+  const rows = (cnv?.rows || []).slice(0, 4);
+  // Vòng bị reset (mọi hàng về "chưa mở") → quên hiệu ứng đã phát, hàng mới sẽ phát lại.
+  if (!rows.some((r) => r.status === "open")) r2LtrAnimated.clear();
   return (
     <div className="grid grid-cols-[auto_2.5rem] gap-x-4 gap-y-2.5 w-fit mx-auto">
-      {(cnv?.rows || []).slice(0, 4).map((row, i) => (
+      {rows.map((row, i) => {
+        const isOpenRow = row.status === "open";
+        const firstOpen = isOpenRow && rowOpenAnimated(i);
+        return (
         <Fragment key={i}>
           <div className="flex gap-1.5 self-center">
-            {row.status === "open"
+            {isOpenRow
               ? row.word.replace(/\s/g, "").split("").map((ch, j) => (
-                  <span key={j} className="ltr ltr-open">{ch}</span>
+                  <span
+                    key={j}
+                    className={`ltr ltr-open ${firstOpen ? "r2-ltr-pop" : ""}`}
+                    style={firstOpen ? { "--ltr-i": j } : undefined}
+                  >
+                    {ch}
+                  </span>
                 ))
               : row.status === "locked"
                 ? Array.from({ length: row.letterCount }, (_, j) => (
@@ -32,7 +61,8 @@ export function CnvRowsFrame({ state, g }) {
             {i + 1}
           </span>
         </Fragment>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -41,7 +71,7 @@ export function CnvRowsFrame({ state, g }) {
 // "Vòng 2", câu/hàng đang thi (X/5) và trạng thái nhận bài (đang nhận / đã đóng / đã
 // chốt / sẵn sàng / cửa sổ từ khóa) — người xem không phải tự suy từ ô chữ. Kèm thẻ đỏ
 // đội đang GIỮ QUYỀN đoán TỪ KHÓA (persistent — không chỉ thoáng qua như hiệu ứng chuông).
-function Round2Context({ g, state, title, showStatus = true }) {
+function Round2Context({ g, state, title, showStatus = true, hideScored = false }) {
   const p = g.puzzle || {};
   const idx = p.currentRow ?? 0;
   // Index 4 = CÂU HỎI MẢNH GHÉP TRUNG TÂM (câu hỏi cuối) — không phải "hàng 5".
@@ -67,6 +97,9 @@ function Round2Context({ g, state, title, showStatus = true }) {
     status = "ĐÃ ĐÓNG NHẬN BÀI — ĐANG CHẤM";
     tone = "warn";
   }
+  // Màn Câu hỏi KHÔNG hiển thị badge "ĐÃ CHỐT ĐIỂM" (xanh) — chỉ giữ HÀNG x/4 + các
+  // trạng thái khác; badge chốt điểm chỉ còn trên Bảng mảnh / màn Đáp án.
+  const scoredBadge = hideScored && (p.rowPhase === "scored") && status === "ĐÃ CHỐT ĐIỂM";
   const keywordPhase = p.keywordWindow && !p.keywordSolved && p.rowPhase !== "open";
 
   return (
@@ -78,7 +111,7 @@ function Round2Context({ g, state, title, showStatus = true }) {
             ? <span className="badge badge-warn">CÂU HỎI MẢNH GHÉP TRUNG TÂM</span>
             : <span className="badge">HÀNG {row}/4</span>
           )}
-          <span className={`badge ${tone}`}>{status}</span>
+          {!scoredBadge && <span className={`badge ${tone}`}>{status}</span>}
           {keywordPhase && <span className="badge badge-warn">ĐOÁN TỪ KHÓA</span>}
         </div>
       )}
@@ -395,7 +428,7 @@ export function Round2Question({ state, d, g, strip = true, children }) {
   return (
     <div className="w-full max-w-[1200px] min-h-[60vh] mx-auto text-center flex flex-col items-center">
       <div className="flex-1 w-full flex flex-col items-center justify-center">
-        <Round2Context g={g} state={state} />
+        <Round2Context g={g} state={state} hideScored />
         {isCenter ? (
           <div className="mb-6 flex flex-col items-center gap-2.5">
             <div className="relative grid place-items-center w-[clamp(88px,12vw,130px)] aspect-square rounded-2xl border-2 border-gold bg-night text-gold shadow-[0_0_30px_rgba(255,214,10,0.5)] animate-pulse">
@@ -463,6 +496,8 @@ export function Round2Board({ state, g, minimal }) {
   // Câu hỏi MẢNH GHÉP TRUNG TÂM (index 4) đang thi → mảnh số 5 là mục tiêu: nổi bật/
   // nhấp nháy vàng để khán giả biết câu hỏi cuối đang nhắm tới mảnh chính giữa.
   const centerTarget = p.currentRow === 4 && p.rowPhase === "open" && !solved[4] && !locked[4];
+  // Vòng bị reset (chưa mảnh nào mở) → quên hiệu ứng đã phát.
+  if (![0, 1, 2, 3, 4].some((i) => solved[i])) r2TileAnimated.clear();
   return (
     <div className="relative w-full max-w-[1200px] min-h-[60vh] mx-auto flex flex-col items-center justify-center">
       <Round2Context g={g} state={state} />
@@ -481,14 +516,16 @@ export function Round2Board({ state, g, minimal }) {
             <img src={media.url} alt="" className="absolute inset-0 w-full h-full object-cover" />
           )}
           <div className="absolute inset-0 grid grid-cols-2 grid-rows-2">
-            {[0, 1, 2, 3].map((r) => (
+            {[0, 1, 2, 3].map((r) => {
+              const first = solved[r] && tileOpenAnimated(r);
+              return (
               <div
                 key={r}
                 className={`relative flex ${r % 2 === 0 ? "justify-start" : "justify-end"} ${r < 2 ? "items-start" : "items-end"} font-display font-black text-[clamp(26px,3.4vw,52px)] tracking-tight drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)] transition-colors ${
                   solved[r]
                     ? (media?.url && media.type !== "video")
-                      ? "pointer-events-none"
-                      : "bg-gold/90 text-[#1a1400]"
+                      ? `pointer-events-none ${first ? "r2-tile-open" : ""}`
+                      : `bg-gold/90 text-[#1a1400] ${first ? "r2-tile-open" : ""}`
                     : locked[r]
                       ? "bg-black pointer-events-none"
                       : "bg-[#0e1830] text-mist"
@@ -502,7 +539,8 @@ export function Round2Board({ state, g, minimal }) {
                   <span className={`px-3 ${r < 2 ? "pt-2" : "pb-2"}`}>{r + 1}</span>
                 )}
               </div>
-            ))}
+              );
+            })}
           </div>
           {/* Mảnh trung tâm — MỞ bằng "Câu hỏi mảnh ghép trung tâm" (câu hỏi cuối), không
               phải hàng ngang thứ 5. Đang thi câu hỏi cuối → mảnh nhấp nháy vàng làm mục
@@ -511,8 +549,8 @@ export function Round2Board({ state, g, minimal }) {
             className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[52%] h-[60%] rounded-xl border-2 grid place-items-center font-display font-black text-[clamp(26px,3.4vw,52px)] tracking-tight drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)] transition ${
               solved[4]
                 ? media?.url && media.type !== "video"
-                  ? "border-transparent"
-                  : "bg-gold text-[#1a1400] border-gold shadow-[0_0_26px_rgba(255,214,10,0.45)]"
+                  ? `border-transparent ${tileOpenAnimated(4) ? "r2-tile-open" : ""}`
+                  : `bg-gold text-[#1a1400] border-gold shadow-[0_0_26px_rgba(255,214,10,0.45)] ${tileOpenAnimated(4) ? "r2-tile-open" : ""}`
                 : locked[4]
                   ? "bg-black border-transparent"
                   : centerTarget

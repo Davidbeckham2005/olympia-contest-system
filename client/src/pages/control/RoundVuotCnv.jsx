@@ -1,6 +1,15 @@
 import { formatTime } from "../../lib/format.js";
 import RulesToggle from "../../components/RulesToggle.jsx";
 
+// Hiệu ứng MỞ mảnh ghép trên panel MC: chỉ phát LẦN ĐẦU mảnh vừa được mở trong phiên
+// (không replay khi MC quay lại xem bảng). Quên ký ức nếu vòng bị reset (chưa mảnh nào mở).
+const r2TileAnimated = new Set();
+function tileOpenAnimated(i) {
+  if (r2TileAnimated.has(i)) return false;
+  r2TileAnimated.add(i);
+  return true;
+}
+
 // 3 màn hình riêng biệt của vòng 2 (Khán giả + Thí sinh đồng bộ), MC bấm nút để chuyển.
 const SCREEN_LABEL = { question: "Câu hỏi", puzzle: "Bảng mảnh", answers: "Đáp án" };
 
@@ -11,6 +20,8 @@ export default function RoundVuotCnv({ ctx }) {
   const screenMode = showing ? "question" : d.mode === "answers" ? "answers" : "puzzle";
 
   const rows = state.questions?.main?.vuotCnv?.rows || [];
+  // Vòng bị reset (chưa mảnh nào mở) → quên hiệu ứng đã phát.
+  if (![0, 1, 2, 3, 4].some((i) => solved[i])) r2TileAnimated.clear();
   // Index 4 không phải hàng ngang — là CÂU HỎI MẢNH GHÉP TRUNG TÂM (câu hỏi cuối mở mảnh giữa).
   const isCenterActive = (p.currentRow ?? 0) === 4;
   // Được đánh giá "Đoán từ khóa": CHỈ khi có đội GHI DANH qua nút TỪ KHÓA
@@ -138,6 +149,7 @@ export default function RoundVuotCnv({ ctx }) {
             <div className="absolute inset-0 grid grid-cols-2 grid-rows-2">
               {[0, 1, 2, 3].map((r) => {
                 const isImage = cnv?.media?.url && cnv.media.type !== "video";
+                const firstOpen = solved[r] && tileOpenAnimated(r);
                 return (
                   <button
                     key={r}
@@ -147,11 +159,11 @@ export default function RoundVuotCnv({ ctx }) {
                     disabled={locked[r] || p.keywordSolved}
                     className={`relative flex items-start ${r % 2 === 0 ? "justify-start" : "justify-end"} font-display font-bold text-xl transition ${
                       isImage && solved[r]
-                        ? "pointer-events-none bg-transparent"
+                        ? `pointer-events-none bg-transparent ${firstOpen ? "r2-tile-open" : ""}`
                         : locked[r]
                           ? "bg-black pointer-events-none cursor-not-allowed"
                           : solved[r]
-                            ? "bg-[#ffd60a]/80 text-[#1a1400]"
+                            ? `bg-[#ffd60a]/80 text-[#1a1400] ${firstOpen ? "r2-tile-open" : ""}`
                             : "bg-[#0e1830] text-mist hover:bg-[#2a3d63] hover:text-gold cursor-pointer"
                     }`}
                   >
@@ -169,11 +181,11 @@ export default function RoundVuotCnv({ ctx }) {
               disabled={locked[4] || p.keywordSolved}
               className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[52%] h-[60%] rounded border-2 grid place-items-center font-display font-bold text-xl transition ${
                 cnv?.media?.url && cnv.media.type !== "video" && solved[4]
-                  ? "pointer-events-none bg-transparent border-transparent"
+                  ? `pointer-events-none bg-transparent border-transparent ${tileOpenAnimated(4) ? "r2-tile-open" : ""}`
                   : locked[4]
                     ? "bg-black pointer-events-none border-transparent cursor-not-allowed"
                     : solved[4]
-                      ? "bg-[#ffd60a] text-[#1a1400] border-gold shadow-[0_0_26px_rgba(255,214,10,0.45)]"
+                      ? `bg-[#ffd60a] text-[#1a1400] border-gold shadow-[0_0_26px_rgba(255,214,10,0.45)] ${tileOpenAnimated(4) ? "r2-tile-open" : ""}`
                       : "bg-[#0e1830] text-mist border-line hover:bg-[#2a3d63] hover:text-gold cursor-pointer"
               }`}
             >

@@ -182,6 +182,28 @@
     60% { opacity: 1; transform: scale(1.06) translateY(0); filter: blur(0); }
     100% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); }
   }
+  /* MỞ HÀNG NGANG — từng chữ trong hàng bung ra nối tiếp (lệch nhau 70ms) kèm loé vàng.
+     Khi revealRow() đặt rowsSolved[i]=true, client cấp .ltr-open + biến --ltr-i cho delay. */
+  .ltr-open.r2-ltr-pop {
+    animation: r2LtrOpen 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    animation-delay: calc(var(--ltr-i, 0) * 70ms);
+  }
+  @keyframes r2LtrOpen {
+    0% { transform: rotateX(90deg) scale(0.4); opacity: 0; }
+    70% { transform: rotateX(0deg) scale(1.18); opacity: 1; box-shadow: 0 0 18px rgba(255, 214, 10, 0.75); }
+    100% { transform: rotateX(0deg) scale(1); opacity: 1; box-shadow: 0 0 8px rgba(255, 214, 10, 0.25); }
+  }
+  /* MỞ MẢNH GHÉP — mảnh vừa được mở (hàng ngang chốt đúng / MC mở tay) bung ra + loé vàng.
+     Áp cho mảnh góc + mảnh trung tâm trên bảng mảnh (màn khán giả lẫn panel MC). */
+  .r2-tile-open {
+    z-index: 5;
+    animation: r2TileOpen 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  @keyframes r2TileOpen {
+    0% { box-shadow: 0 0 0 rgba(255, 214, 10, 0); filter: brightness(1.6); }
+    50% { box-shadow: 0 0 38px rgba(255, 214, 10, 0.9); filter: brightness(1.3); }
+    100% { box-shadow: 0 0 0 rgba(255, 214, 10, 0); filter: brightness(1); }
+  }
   .kd-ring {
     position: absolute;
     inset: 0;
