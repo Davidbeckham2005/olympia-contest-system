@@ -413,7 +413,12 @@ export function resetKhoiDong(teamId = null) {
     game.display.note = q.note || "";
     game.display.title = ROUNDS.find((r) => r.id === game.round)?.name || "";
     if (game.round === "vuot_cnv" && !cnv.cornersResolved()) {
-      game.display.note = `Hàng ngang ${game.puzzle.currentRow + 1} • ${q.letterCount || ""} chữ`;
+      const rowIdx = game.puzzle.currentRow ?? 0;
+      // Index 4 là CÂU HỎI MẢNH GHÉP TRUNG TÂM — không phải "hàng ngang 5", không hiển
+      // thị số ký tự (chỉ 4 hàng ngang đầu mới có nhãn "Hàng ngang X • N chữ").
+      game.display.note = rowIdx === 4
+        ? "Câu hỏi mảnh ghép trung tâm — câu hỏi cuối"
+        : `Hàng ngang ${rowIdx + 1} • ${q.letterCount || ""} chữ`;
       setTimer(game.vuotCnv?.answerSeconds || 30, true);
     }
     if (game.round === "tang_toc") {

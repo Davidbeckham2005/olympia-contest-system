@@ -110,6 +110,7 @@ export function RowResults({ state, g }) {
   const active = activeTeamIds(g, teams);
   const subs = p.submissions || {};
   const corr = p.corrections || {};
+  const ranked = p.ranked || [];
   const canReveal = p.rowPhase === "closed" || p.rowPhase === "scored";
   const revealed = canReveal ? p.revealedRows || 0 : 0;
   // Thứ tự lộ bài khớp với revealNextRowAnswer bên server: nộp nhanh nhất hiện trước.
@@ -117,27 +118,44 @@ export function RowResults({ state, g }) {
     .sort((a, b) => (a[1].elapsed ?? Infinity) - (b[1].elapsed ?? Infinity))
     .slice(0, revealed)
     .map(([id]) => id);
+  // Nhãn màn kết quả theo loại câu hỏi đang xử lý (4 hàng ngang / câu hỏi cuối mảnh giữa).
+  const isCenter = (p.currentRow ?? 0) === 4;
+  const title = isCenter ? "KẾT QUẢ CÂU HỎI CUỐI" : `KẾT QUẢ HÀNG NGANG ${(p.currentRow ?? 0) + 1}`;
   const cards = active.map((id) => {
     const t = teams.find((x) => x.id === id);
     const s = subs[id];
     const shown = revealedIds.includes(id);
+    const rank = ranked.find((r) => r.teamId === id);
     return {
       teamId: id,
       team: t,
+      submitted: !!s,
       answer: shown ? s?.answer : null,
       elapsed: shown ? s?.elapsed : null,
       ok: corr[id] === true,
       ng: corr[id] === false,
+      pts: rank?.points ?? 0,
+      revealed: shown,
     };
   });
 
   return (
     <div className="w-full max-w-[1100px] mx-auto">
-      <Round2Context g={g} state={state} title="KẾT QUẢ TRẢ LỜI" />
+      <Round2Context g={g} state={state} title={title} />
       <div className="mx-auto w-[min(900px,94%)]">
         {cards.map((c, i) => (
           <div key={c.teamId} className="r2-row-in" style={{ animationDelay: `${i * 280}ms` }}>
-            <StaggeredRow team={c.team} index={i} answer={c.answer} elapsed={c.elapsed} />
+            <StaggeredRow
+              team={c.team}
+              index={i}
+              answer={c.answer}
+              elapsed={c.elapsed}
+              submitted={c.submitted}
+              ok={c.ok}
+              ng={c.ng}
+              pts={c.pts}
+              revealed={c.revealed}
+            />
           </div>
         ))}
       </div>
@@ -147,13 +165,41 @@ export function RowResults({ state, g }) {
 
 // Hàng ô đội theo thiết kế so le: ● (ô trống phía cạnh ngắn) + tên đội + đáp án + thời gian.
 // Dấu ● biểu thị ô TRỐNG — hiện mờ/đậm tùy đội sáng/tối, vị trí so lệch trái-phải theo index.
-export function StaggeredRow({ team, index, answer, elapsed, resultLabel /* unused */ }) {
+// Màn kết quả Vòng 2 truyền thêm trạng thái: chưa nộp → "Không nộp bài"; đã nộp chưa lật →
+// "? · Đã nộp"; đã lật + chấm Đúng → viền vàng + "+Xđ"; chấm Sai → viền đỏ + "0đ".
+// Các màn khác (vd Tăng tốc) không truyền → giữ hành vi cũ (đáp án / "—").
+export function StaggeredRow({ team, index, answer, elapsed, resultLabel /* unused */, submitted, ok, ng, pts, revealed }) {
   const left = index % 2 === 0;
-  const answered = !!answer && answer !== "";
+  // isR2: màn kết quả Vòng 2 truyền "revealed" (boolean) — bật các trạng thái chuyên biệt.
+  const isR2 = typeof revealed === "boolean";
+  const answered = isR2 ? revealed && !!answer && answer !== "" : !!answer && answer !== "";
+  let center;
+  let right;
+  let tone = "";
+  if (isR2 && !submitted) {
+    center = <span className="text-[#ffb3c1]/75">Không nộp bài</span>;
+    right = <span className="text-[#ffb3c1]/60">✕</span>;
+    tone = "ring-1 ring-[#ff465e]/20 bg-[#ff465e]/5";
+  } else if (isR2 && !revealed) {
+    center = <span className="text-white/45">? <span className="text-white/30">·</span> Đã nộp</span>;
+    right = <span className="text-ok">✓</span>;
+    tone = "";
+  } else if (isR2 && ok) {
+    center = <span className="text-gold">“{answer}”</span>;
+    right = <span className="font-bold text-ok">+{pts}đ</span>;
+    tone = "ring-1 ring-[#ffd60a]/45 bg-[#ffd60a]/12";
+  } else if (isR2 && ng) {
+    center = <span className="text-[#ff8fa3]">“{answer}”</span>;
+    right = <span className="font-bold text-[#ff8fa3]">0đ</span>;
+    tone = "ring-1 ring-[#ff465e]/35 bg-[#ff465e]/10";
+  } else {
+    center = answered ? `“${answer}”` : "—";
+    right = answered && elapsed != null ? elapsed.toFixed(2) + "s" : "";
+  }
   return (
     <div className="flex items-center px-4 py-3.5 justify-center">
       <div
-        className={`flex items-center gap-4 ${left ? "pr-10 pl-2" : "pl-10 pr-2"} w-full max-w-xl`}
+        className={`flex items-center gap-4 ${left ? "pr-10 pl-2" : "pl-10 pr-2"} w-full max-w-xl rounded-xl py-2.5 transition ${tone}`}
       >
         <span
           className={`text-[clamp(14px,1.6vw,20px)] ${answered ? "" : "text-mist/40"}`}
@@ -163,19 +209,19 @@ export function StaggeredRow({ team, index, answer, elapsed, resultLabel /* unus
         </span>
         <span
           className="w-40 shrink-0 font-bold text-[clamp(16px,1.6vw,22px)] truncate"
-          style={{ color: team?.color }}
+          style={{ color: team?.color || "#fff" }}
         >
           {team?.name || ""}
         </span>
         <span
           className={`flex-1 text-center font-semibold text-[clamp(15px,1.8vw,22px)] leading-snug px-2 ${
-            answered ? "text-white" : "text-mist/40"
+            answered ? "" : "text-mist/40"
           }`}
         >
-          {answered ? `“${answer}”` : "—"}
+          {center}
         </span>
         <span className="w-24 shrink-0 text-right text-mist font-mono tabular-nums text-sm">
-          {answered && elapsed != null ? elapsed.toFixed(2) + "s" : ""}
+          {right}
         </span>
       </div>
     </div>

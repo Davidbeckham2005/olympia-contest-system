@@ -400,6 +400,46 @@ export default function RoundVuotCnv({ ctx }) {
             </div>
           )}
 
+          {/* BẢNG TỔNG KẾT NGẮN — sau khi lật/chấm: đội đúng nhanh nhất + điểm từng đội.
+              Trong giai đoạn closed đây là ĐIỂM DỰ KIẾN (theo độ nhanh hiện tại đã chấm);
+              chỉ được CỘNG chính thức khi bấm "Chốt điểm". */}
+          {(p.rowPhase === "closed" || p.rowPhase === "scored") && (p.ranked?.length > 0) && (
+            <div className="mt-2.5 border-t border-line/50 pt-2.5 text-xs text-mist flex flex-wrap items-center gap-x-4 gap-y-1.5">
+              {(() => {
+                const fastest = p.ranked.find((r) => r.correct === true && r.place === 1);
+                return fastest ? (
+                  <span className="flex items-center gap-1.5">
+                    Đội đúng nhanh nhất:
+                    <span
+                      className="w-2 h-2 rounded-full shrink-0"
+                      style={{ background: findTeam(fastest.teamId)?.color }}
+                    />
+                    <b className="text-white">{findTeam(fastest.teamId)?.name || ""}</b>
+                    <b className="text-ok">+{fastest.points}đ</b>
+                  </span>
+                ) : (
+                  <span className="text-[#ffb3c1]">Chưa có đội nào đúng — mảnh sẽ bị khóa (×).</span>
+                );
+              })()}
+              <span className="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span className="uppercase tracking-[0.14em]">Điểm {p.rowPhase === "closed" ? "dự kiến" : "đã chốt"}:</span>
+                {p.ranked.map((r) => {
+                  const t = findTeam(r.teamId);
+                  if (!t) return null;
+                  return (
+                    <span key={r.teamId} className="flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: t.color }} />
+                      <span className="truncate max-w-24">{t.name}</span>
+                      <b className={r.correct === true ? "text-ok" : "text-mist/70"}>
+                        {r.correct === true ? `+${r.points}` : "0"}
+                      </b>
+                    </span>
+                  );
+                })}
+              </span>
+            </div>
+          )}
+
           {p.rowPhase === "closed" && (
             <div className="flex items-center gap-2 mt-2.5 border-t border-line/50 pt-2.5">
               <button type="button" className="btn btn-ok text-sm!" onClick={() => act("puzzle.settle")}>

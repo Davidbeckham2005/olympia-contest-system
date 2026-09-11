@@ -158,8 +158,6 @@ export function selectRow(rowIndex) {
   game.buzzer = { open: false, locked: false, winner: null, order: [], blocked: [] };
   game.questionStatus = "idle";
   game.display.answerRevealed = false;
-  saveDb();
-  emit();
   // Thiết lập câu hỏi hiện tại cho bài nộp tự luận (questionStatus "showing") NHƯNG
   // KHÔNG tự đổi màn hình — giữ nguyên trạng thái màn hình đang xem (bảng mảnh hoặc
   // câu hỏi). Đồng hồ được tạm dừng: MC bấm "Bắt đầu giờ" thì mới chạy.
@@ -167,6 +165,10 @@ export function selectRow(rowIndex) {
   pauseTimer();
   // Ô mới bắt đầu → không ở lại màn ĐÁP ÁN của ô trước (quay về bảng mảnh).
   game.display.mode = prevMode === "answers" ? "puzzle" : prevMode || "puzzle";
+  game.display.answerRevealed = false;
+  // CHỈ PHÁT MỘT LẦN DUY NHẤT ở cuối — trước đây phát 2 lần (lần đầu TRƯỚC khi
+  // showQuestion) khiến khán giả/MC nhận trạng thái trung gian (câu cũ + highlight cũ)
+  // rồi mới tới trạng thái thật → vẽ 2 lần liền → màn hình BỊ GIẬT khi chuyển câu.
   saveDb();
   emit();
 }
@@ -440,8 +442,9 @@ export function settleRow() {
     lockRow(p.currentRow);
   }
   resetDisplayToBoard();
-  // Sau khi chốt điểm → quay về tab CÂU HỎI để MC xử lý / mở ô kế tiếp.
-  game.display.mode = "question";
+  // Sau khi chốt điểm → quay về BẢNG MẢNH GHÉP: mảnh vừa được MỞ (có đội đúng) hoặc
+  // KHÓA hiện × (không ai đúng) hiện ngay rõ ràng trên ảnh; MC mở ô kế tiếp từ đó.
+  game.display.mode = "puzzle";
   saveDb();
   emit();
 }
