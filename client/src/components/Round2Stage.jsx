@@ -228,40 +228,71 @@ export function StaggeredRow({ team, index, answer, elapsed, resultLabel /* unus
   );
 }
 
-// MÀN CÂU HỎI — Vòng 2: khung hàng ngang + câu hỏi/ảnh hiện tại. Nhận children để chèn
-// ô nhập đáp án của thí sinh.
-// Với CÂU HỎI MẢNH GHÉP TRUNG TÂM (index 4): không hiển thị ô chữ/số ký tự hàng ngang —
-// chỉ hiện chip vàng đánh số 5 (mảnh trung tâm) làm mục tiêu + câu hỏi cuối.
-export function Round2Question({ state, d, g, children }) {
+// DẢI CÂU HỎI — Vòng 2 (thiết kế tham khảo Round4Footer của Vòng 4): hiện câu hỏi/note/
+// đáp án thành dải ngang gọn ĐẶT DƯỚI THANH TÊN ĐỘI trên màn khán giả, vùng chính ở giữa
+// chỉ giữ khung ô chữ + ảnh. `children` (vd ô nhập đáp án thí sinh) được chèn dưới đáp án.
+export function Round2QuestionStrip({ state, d, g, children }) {
   const p = g.puzzle || {};
   const cnv = state.cnv || {};
   const question = cnv.question || d.question || "";
+  if (!(question || d.note || d.answerRevealed || children)) return null;
+  return (
+    <div className="border-t border-[rgba(255,214,10,0.15)] flex items-stretch">
+      <div className="flex-1 min-w-0 px-5 py-4 flex items-center justify-center">
+        <div className="w-full">
+          {question && (
+            <div className="stage-q text-[clamp(20px,2.6vw,32px)]">{question}</div>
+          )}
+          {d.note && (
+            <div className="text-mist mt-1.5 text-[clamp(13px,1.7vw,17px)] tracking-wide">
+              {d.note}
+            </div>
+          )}
+          {d.answerRevealed && (
+            <div className="stage-answer mt-2 text-[clamp(17px,2.2vw,26px)]">Đáp án: {d.answer}</div>
+          )}
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// MÀN CÂU HỎI — Vòng 2: khung hàng ngang + ảnh/video là nội dung chính ở giữa. Trên màn
+// khán giả dùng `strip={false}` và đưa dải câu hỏi xuống DƯỚI THANH TÊN ĐỘI (giống Vòng 4);
+// màn thí sinh giữ `strip` mặc định (true) để câu hỏi nằm ngay dưới nội dung trong thân màn.
+// Nhận children để chèn ô nhập đáp án của thí sinh.
+// Với CÂU HỎI MẢNH GHÉP TRUNG TÂM (index 4): không hiển thị ô chữ/số ký tự hàng ngang —
+// chỉ hiện chip vàng đánh số 5 (mảnh trung tâm) làm mục tiêu + câu hỏi cuối.
+export function Round2Question({ state, d, g, strip = true, children }) {
+  const p = g.puzzle || {};
+  const cnv = state.cnv || {};
   const isCenter = (p.currentRow ?? 0) === 4;
   return (
-    <div className="w-full max-w-[1200px] min-h-[60vh] mx-auto text-center flex flex-col items-center justify-start">
-      <Round2Context g={g} state={state} />
-      {isCenter ? (
-        <div className="mb-6 flex flex-col items-center gap-2.5">
-          <div className="relative grid place-items-center w-[clamp(88px,12vw,130px)] aspect-square rounded-2xl border-2 border-gold bg-night text-gold shadow-[0_0_30px_rgba(255,214,10,0.5)] animate-pulse">
-            <span className="font-display font-black text-[clamp(40px,6vw,64px)] leading-none">5</span>
+    <div className="w-full max-w-[1200px] min-h-[60vh] mx-auto text-center flex flex-col items-center">
+      <div className="flex-1 w-full flex flex-col items-center justify-center">
+        <Round2Context g={g} state={state} />
+        {isCenter ? (
+          <div className="mb-6 flex flex-col items-center gap-2.5">
+            <div className="relative grid place-items-center w-[clamp(88px,12vw,130px)] aspect-square rounded-2xl border-2 border-gold bg-night text-gold shadow-[0_0_30px_rgba(255,214,10,0.5)] animate-pulse">
+              <span className="font-display font-black text-[clamp(40px,6vw,64px)] leading-none">5</span>
+            </div>
+            <div className="text-[11px] font-bold tracking-[0.22em] uppercase text-mist">Mảnh ghép trung tâm — câu hỏi cuối</div>
           </div>
-          <div className="text-[11px] font-bold tracking-[0.22em] uppercase text-mist">Mảnh ghép trung tâm — câu hỏi cuối</div>
-        </div>
-      ) : (
-        <div className="r2-rows mb-6 rounded-2xl border border-[rgba(255,214,10,0.28)] px-6 py-4">
-          <CnvRowsFrame state={state} g={g} />
-        </div>
-      )}
-      {d.mediaUrl && d.mediaType === "image" && (
-        <img src={d.mediaUrl} alt="" className="max-h-[30vh] mx-auto rounded-2xl object-contain border border-line shadow-[0_10px_40px_rgba(0,0,0,0.4)]" />
-      )}
-      {d.mediaUrl && d.mediaType === "video" && (
-        <video src={optimizeVideoUrl(d.mediaUrl)} autoPlay controls className="max-h-[30vh] mx-auto rounded-2xl" />
-      )}
-      {question && <div className="stage-q mt-4">{question}</div>}
-      {d.note && <div className="stage-note">{d.note}</div>}
-      {d.answerRevealed && <div className="stage-answer mt-3">Đáp án: {d.answer}</div>}
-      {children}
+        ) : (
+          <div className="r2-rows mb-6 rounded-2xl border border-[rgba(255,214,10,0.28)] px-6 py-4">
+            <CnvRowsFrame state={state} g={g} />
+          </div>
+        )}
+        {d.mediaUrl && d.mediaType === "image" && (
+          <img src={d.mediaUrl} alt="" className="max-h-[30vh] mx-auto rounded-2xl object-contain border border-line shadow-[0_10px_40px_rgba(0,0,0,0.4)]" />
+        )}
+        {d.mediaUrl && d.mediaType === "video" && (
+          <video src={optimizeVideoUrl(d.mediaUrl)} autoPlay controls className="max-h-[30vh] mx-auto rounded-2xl" />
+        )}
+      </div>
+
+      {strip && <Round2QuestionStrip state={state} d={d} g={g}>{children}</Round2QuestionStrip>}
     </div>
   );
 }

@@ -5,7 +5,7 @@ import { optimizeVideoUrl } from "../lib/media.js";
 import { on } from "../lib/socket.js";
 import { useGameState } from "../lib/useGame.js";
 import { activeTeamIds } from "../lib/teams.js";
-import { CnvRowsFrame, Round2Board, Round2Question, RowResults } from "../components/Round2Stage.jsx";
+import { CnvRowsFrame, Round2Board, Round2Question, Round2QuestionStrip, RowResults } from "../components/Round2Stage.jsx";
 import RulesBoard from "../components/RulesBoard.jsx";
 import RoundResultBoard from "../components/RoundResultBoard.jsx";
 
@@ -210,6 +210,7 @@ export default function Audience() {
       <div className="relative z-10">
         <TeamsRow teams={outTeams} state={state} flash={flash} currentTeam={g.currentTeam}>
           {g.round === "ve_dich" && <Round4Footer state={state} g={g} />}
+          {g.round === "vuot_cnv" && d.mode === "question" && <Round2QuestionStrip state={state} d={d} g={g} />}
         </TeamsRow>
       </div>
       <BuzzOverlay state={state} flash={flash} />
@@ -343,7 +344,7 @@ function Stage({ state, timer }) {
       return <RowResults state={state} g={g} />;
     }
     return d.mode === "question"
-      ? <Round2Question state={state} d={d} g={g} />
+      ? <Round2Question state={state} d={d} g={g} strip={false} />
       : <Round2Board state={state} g={g} />;
   }
 
