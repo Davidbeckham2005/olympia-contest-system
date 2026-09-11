@@ -221,7 +221,7 @@ export default function RoundVuotCnv({ ctx }) {
                     <span className="text-mist text-xs whitespace-nowrap">kí tự</span>
                   </div>
                   {isCurrent && (
-                    <div className="flex items-baseline gap-1.5 mt-1">
+                    <div className={`flex items-baseline gap-1.5 mt-1 ${revealed ? "r2-answer-reveal" : ""}`}>
                       <span className="text-xs text-mist whitespace-nowrap">Đáp án:</span>
                       <span className="text-sm font-bold text-gold">{row.answer || "—"}</span>
                     </div>
@@ -287,7 +287,7 @@ export default function RoundVuotCnv({ ctx }) {
                 <div className="flex flex-col min-w-0">
                   <span className="text-sm font-bold text-white">Mảnh ghép trung tâm</span>
                   {isCurrent && (
-                    <div className="flex items-baseline gap-1.5 mt-0.5">
+                    <div className={`flex items-baseline gap-1.5 mt-0.5 ${revealed ? "r2-answer-reveal" : ""}`}>
                       <span className="text-xs text-mist whitespace-nowrap">Đáp án:</span>
                       <span className="text-sm font-bold text-gold">{row.answer || "—"}</span>
                     </div>

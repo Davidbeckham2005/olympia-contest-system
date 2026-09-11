@@ -172,14 +172,23 @@ function formatAnswerTime(sec) {
 // dọc, nối bằng node tròn xanh sáng viền vàng. Các thanh xuất hiện lần lượt từ trên xuống.
 function R2AnswersTimeline({ cards }) {
   return (
-    <div className="relative mx-auto w-[min(820px,95%)] rounded-[1.25rem] border border-white/10 bg-panel-solid px-4 shadow-[0_18px_50px_rgba(0,0,0,0.35)]">
-      {/* Đường timeline dọc — mảnh 1px, vàng nhạt */}
-      <div className="absolute left-1/2 top-6 bottom-6 w-px -translate-x-1/2 bg-[rgba(255,214,10,0.28)]" aria-hidden />
-      {/* Các thanh ngang xen kẽ trái/phải đường dọc */}
-      <div className="relative flex flex-col py-5">
-        {cards.map((c, i) => (
-          <R2TimelineRow key={c.teamId} c={c} i={i} />
-        ))}
+    <div className="relative mx-auto w-[min(820px,95%)]">
+      {/* Halo ngoài — giống màn Luật thi: viền cyan mờ phát sáng nhẹ */}
+      <div className="absolute -inset-[5px] rounded-[28px] border-2 border-[#4cc9f0]/60 blur-[9px]" />
+      <div className="absolute -inset-[2px] rounded-[28px] bg-[#4cc9f0]/25" />
+
+      {/* Khung: gradient xanh đậm → xanh dương + viền trong trắng mờ / highlight trên
+          (tham chiếu RulesBoard) — nổi bật hơn panel phẳng cũ */}
+      <div className="relative rounded-[24px] overflow-hidden bg-gradient-to-b from-[#0a1c40] via-[#0e2f62] to-[#144883] shadow-[0_18px_50px_rgba(0,0,0,0.35)]">
+        <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-white/[0.14] to-transparent" />
+        <div className="absolute inset-[3px] rounded-[21px] border border-white/25 pointer-events-none" />
+        {/* Đường timeline dọc — mảnh 1px, vàng nhạt */}
+        <div className="absolute left-1/2 top-6 bottom-6 w-px -translate-x-1/2 bg-[rgba(255,214,10,0.28)]" aria-hidden />
+        <div className="relative flex flex-col px-4 py-5">
+          {cards.map((c, i) => (
+            <R2TimelineRow key={c.teamId} c={c} i={i} />
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -364,7 +373,7 @@ export function Round2QuestionStrip({ state, d, g, children }) {
             </div>
           )}
           {d.answerRevealed && (
-            <div className="stage-answer mt-2 text-[clamp(17px,2.2vw,26px)]">Đáp án: {d.answer}</div>
+            <div className="stage-answer r2-answer-reveal mt-2 text-[clamp(17px,2.2vw,26px)]">Đáp án: {d.answer}</div>
           )}
           {children}
         </div>
