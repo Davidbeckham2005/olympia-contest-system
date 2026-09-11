@@ -123,6 +123,99 @@ try {
   cnv.startRowTimer();
   ok(captured && captured.sec === 7 && captured.running === true, "startRowTimer khi còn giây dư → tiếp tục từ 7s (không reset về 0)");
 
+  // 7. selectRow KHÔNG cho chọn đè ô ĐÃ XỬ LÝ (solved/locked): no-op, giữ nguyên
+  //    ranked/lastResult — MC bấm nhầm ô đã mở/khóa không hủy bài cũ.
+  resetPuzzle();
+  getDb().game.puzzle.rowPhase = "scored";
+  getDb().game.puzzle.currentRow = 0;
+  getDb().game.puzzle.rowsSolved[1] = true;
+  getDb().game.puzzle.rowsLocked[2] = true;
+  getDb().game.puzzle.ranked = [{ teamId: "a", correct: true, points: 40 }];
+  getDb().game.puzzle.lastResult = { correct: true, row: 0, pts: 40 };
+  cnv.selectRow(1);
+  ok(
+    getDb().game.puzzle.currentRow === 0 && getDb().game.puzzle.rowPhase === "scored" && getDb().game.puzzle.ranked.length === 1,
+    "selectRow ô đã MỞ (solved) → no-op, không reset bài/ranked"
+  );
+  cnv.selectRow(2);
+  ok(
+    getDb().game.puzzle.currentRow === 0 && getDb().game.puzzle.rowPhase === "scored" && getDb().game.puzzle.lastResult?.row === 0,
+    "selectRow ô đã KHÓA (locked) → no-op, không xóa lastResult"
+  );
+
+  // 8. selectRow đang XỬ LÝ một ô (open/closed) → CHẶN chuyển sang ô khác, không xóa
+  //    submissions đang nhận dở (bảo vệ bài nộp khi MC bấm nhầm ô khác).
+  resetPuzzle();
+  getDb().game.puzzle.rowPhase = "open";
+  getDb().game.puzzle.currentRow = 0;
+  getDb().game.puzzle.submissions = { a: { answer: "X", elapsed: 2.5 } };
+  let threw = false;
+  try {
+    cnv.selectRow(1);
+  } catch (e) {
+    threw = true;
+  }
+  ok(
+    threw && !!getDb().game.puzzle.submissions.a && getDb().game.puzzle.currentRow === 0,
+    "selectRow sang ô khác khi đang nhận bài → chặn (throw), giữ nguyên submissions/currentRow"
+  );
+  // Sau khi đóng nhận bài (chấm dở) cũng không cho đổi ô ngang — phải Chốt/Bỏ chọn trước.
+  getDb().game.puzzle.rowPhase = "closed";
+  threw = false;
+  try {
+    cnv.selectRow(3);
+  } catch (e) {
+    threw = true;
+  }
+  ok(threw && getDb().game.puzzle.rowPhase === "closed", "selectRow khi đang chấm (closed) → chặn đổi ô");
+
+  // 9. ĐỔI HÀNG sau khi ô cũ đã xử lý xong → đặt lại đồng hồ ô mới (đủ giây, DỪNG), không
+  //    vác giờ (elapsed) cũ sang câu mới.
+  resetPuzzle();
+  getDb().game.puzzle.rowPhase = "idle";
+  getDb().game.puzzle.currentRow = null;
+  getDb().game.timer = { duration: 30, remaining: 12, running: true, endsAt: Date.now() + 12000 };
+  captured = null;
+  install({
+    setTimer: (sec, running) => {
+      captured = { sec, running };
+    },
+  });
+  cnv.selectRow(3);
+  ok(
+    captured && captured.sec === 30 && captured.running === false,
+    "đổi hàng khi timer cũ đang chạy → setTimer(30, dừng) để câu mới tính elapsed từ 0"
+  );
+
+  // 10. BỎ CHỌN (puzzle.deselect): rowPhase → "idle" + currentRow → null + xóa bài nộp.
+  //     Sau đó thí sinh KHÔNG nộp được và settleRow KHÔNG khóa nhầm hàng.
+  resetPuzzle();
+  getDb().game.puzzle.rowPhase = "open";
+  getDb().game.puzzle.currentRow = 2;
+  getDb().game.puzzle.submissions = { a: { answer: "ABC", elapsed: 1 } };
+  captured = null;
+  install({
+    setTimer: (sec, running) => {
+      captured = { sec, running };
+    },
+  });
+  cnv.deselectRow();
+  ok(getDb().game.puzzle.rowPhase === "idle", "Bỏ chọn → rowPhase idle (không còn ô đang nhận)");
+  ok(getDb().game.puzzle.currentRow === null, "Bỏ chọn → currentRow null");
+  ok(Object.keys(getDb().game.puzzle.submissions).length === 0, "Bỏ chọn → xóa bài nộp cũ của ô đó");
+  ok(captured && captured.sec === 0 && captured.running === false, "Bỏ chọn → đặt lại đồng hồ 0 (không chạy)");
+  // Chốt điểm sau Bỏ chọn phải no-op — không được khóa nhầm hàng 2 chưa chơi.
+  cnv.settleRow();
+  ok(
+    getDb().game.puzzle.rowPhase === "idle" && !getDb().game.puzzle.rowsLocked[2],
+    "settleRow sau Bỏ chọn → no-op (không khóa nhầm hàng vừa bỏ)"
+  );
+  // Cổng nộp: ô đã bỏ chọn không nhận bài nữa.
+  getDb().game.timer.running = true;
+  getDb().game.timer.endsAt = Date.now() + 30 * 1000;
+  const late = cnv.submitRowAnswer("a", "LATE");
+  ok(late.ok === false, "sau Bỏ chọn → submitRowAnswer từ chối (closed)");
+
   console.log(`\n${pass} passed, ${fail} failed`);
 } finally {
   // Khôi phục DB về trạng thái trước khi chạy (chạy :reset nếu chưa cài).

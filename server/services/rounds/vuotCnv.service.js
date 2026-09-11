@@ -139,6 +139,15 @@ export function selectRow(rowIndex) {
   const i = Number(rowIndex);
   if (!(i >= 0 && i <= 4)) return;
   if (p.rowsSolved?.[i] || p.rowsLocked?.[i] || p.keywordSolved) return;
+  // An toàn dữ liệu: đang XỬ LÝ một ô (nhận bài "open" hoặc đang chấm "closed") thì cú
+  // bấm chọn ô khác KHÔNG được phép ngắt ngang — nếu không sẽ xóa sạch submissions/
+  // corrections/ranked còn dở của ô đang thi, làm mất bài đã nộp + hiệu ứng lastResult.
+  // MC muốn bỏ ô này hẳn thì bấm "Bỏ chọn" (deselectRow) trước rồi mới chọn ô mới.
+  if (p.currentRow != null && (p.rowPhase === "open" || p.rowPhase === "closed")) {
+    const err = new Error("Ô hiện tại đang nhận bài/chấm điểm — hãy bấm “Bỏ chọn” hoặc “Chốt điểm” trước khi sang ô khác.");
+    err.status = 400;
+    throw err;
+  }
   p.currentRow = i;
   // Giữ nguyên màn hình người dùng đang xem (câu hỏi hoặc bảng mảnh) khi mở ô mới
   const prevMode = game.display.mode;
@@ -183,7 +192,7 @@ export function selectRow(rowIndex) {
   emit();
 }
 
-// MC bấm "Bỏ chọn" cho ô đang mở: quay về trạng thái CHƯA chọn câu hỏi nào —
+// MC bấm "Bỏ chọn" cho ô đang mở/dang chấm: quay về trạng thái CHƯA chọn câu hỏi nào —
 // không đếm giờ, không hiện câu hỏi, xóa sạch bài nộp của ô đó. (Hoàn tác selectRow.)
 // GIỮ NGUYÊN tab khán giả đang xem (câu hỏi / bảng mảnh) — chỉ xóa nội dung câu hỏi,
 // không nhảy màn hình.
@@ -191,10 +200,12 @@ export function deselectRow() {
   const game = g();
   const p = game.puzzle;
   if (game.round !== "vuot_cnv") return;
-  if (p.rowPhase !== "open") return;
+  if (p.rowPhase !== "open" && p.rowPhase !== "closed") return;
   // Giữ nguyên màn hình người dùng đang xem (câu hỏi hoặc bảng mảnh)
   const prevMode = game.display.mode;
-  p.rowPhase = "closed";
+  p.currentRow = null;
+  p.rowPhase = "idle";
+  p.lastResult = null;
   p.submissions = {};
   p.corrections = {};
   p.ranked = [];
@@ -438,7 +449,18 @@ export function revealAllRowAnswers() {
 export function settleRow() {
   const game = g();
   const p = game.puzzle;
-  if (game.round !== "vuot_cnv" || p.keywordSolved || p.rowPhase === "scored") return;
+  if (game.round !== "vuot_cnv" || p.keywordSolved) return;
+  // Chỉ chốt được khi đang có 1 ô ĐÃ ĐÓNG nhận bài và đã chấm xong: chưa chọn ô
+  // (idle), đang nhận bài (open) hay ô đã xử lý (scored/solved/locked) đều KHÔNG
+  // được chốt — tránh cảnh nhấn "Chốt điểm" sau "Bỏ chọn" khóa nhầm hàng chưa chơi.
+  if (
+    p.currentRow == null ||
+    p.rowPhase !== "closed" ||
+    p.rowsSolved?.[p.currentRow] ||
+    p.rowsLocked?.[p.currentRow]
+  ) {
+    return;
+  }
   const ranked = computeRowRanked();
   p.ranked = ranked;
   p.rowPhase = "scored";

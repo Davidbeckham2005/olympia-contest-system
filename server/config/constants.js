@@ -69,7 +69,7 @@ export function emptyPuzzle() {
     keywordSolved: false,
     keywordWinner: null,
     keywordPointsAwarded: 0,
-    currentRow: 0,
+    currentRow: null,
     // Cửa sổ giành quyền đoán TỪ KHÓA giữa vòng: mở sau mỗi hàng ngang, đóng khi chọn ô mới
     keywordWindow: false,
     // Các đội đã đoán TỪ KHÓA sai (giữ nguyên tới khi ra từ khóa, không được đoán lại)
@@ -84,11 +84,16 @@ export function emptyPuzzle() {
     rowBanned: [],
     // === Trả lời TỰ LUẬN gửi về MC (tham khảo vòng 3 Tăng tốc) phân bố trong vòng 2.
     // Mọi đội cùng nộp đáp án cho câu hàng ngang hiện tại, kèm thời gian nộp (elapsed).
-    // rowPhase: "open" | "closed" | "scored" — đang nhận bài / đã đóng / đã chấm xong ô.
-    // Khởi tạo "closed": vào vòng 2 CHƯA mở/chiếu câu hỏi nào (mở ở bảng mảnh ghép).
+    // rowPhase: "idle" | "open" | "closed" | "scored" —
+    //   "idle"   → chưa chọn ô nào (vào vòng / vừa "Bỏ chọn"): không có câu hỏi, không
+    //              nhận bài, không chốt được điểm. currentRow = null ở trạng thái này.
+    //   "open"   → đang chọn 1 ô, nhận bài tự luận khi đồng hồ chạy (timer.running).
+    //   "closed" → đóng nhận bài (hết giờ / MC bấm "Đóng nhận bài"), MC chấm từng đội.
+    //   "scored" → đã "Chốt điểm" xong ô (mảnh mở/khóa) — chọn ô kế tiếp được.
+    // Khởi tạo "idle": vào vòng 2 CHƯA mở/chiếu câu hỏi nào (mở ở bảng mảnh ghép).
     // Phải bấm chọn 1 ô (selectRow → "open") thì mới có câu hỏi và mới hiện nút
     // "Bắt đầu giờ".
-    rowPhase: "closed",
+    rowPhase: "idle",
     submissions: {},   // teamId -> { answer, elapsed }
     corrections: {},   // teamId -> true|false (MC chấm từng đội)
     ranked: [],        // danh sách xếp hạng tính điểm theo tốc độ (đã chốt)

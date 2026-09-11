@@ -24,6 +24,11 @@ export default function RoundVuotCnv({ ctx }) {
   if (![0, 1, 2, 3, 4].some((i) => solved[i])) r2TileAnimated.clear();
   // Index 4 không phải hàng ngang — là CÂU HỎI MẢNH GHÉP TRUNG TÂM (câu hỏi cuối mở mảnh giữa).
   const isCenterActive = (p.currentRow ?? 0) === 4;
+  // Đang có 1 ô được chọn/xử lý (khác "idle") — dùng để hiện khối "Bài nộp" + "Bỏ chọn".
+  const rowActive = p.currentRow != null && (p.rowPhase === "open" || p.rowPhase === "closed" || p.rowPhase === "scored");
+  // Đang THỰC SỰ nhận bài: cần ô mở + đồng hồ đang chạy (timer.running là nguồn sự thật
+  // duy nhất của cổng nộp — không hiện "Đang nhận" khi đồng hồ dừng).
+  const rowAccepting = p.rowPhase === "open" && running;
   // Được đánh giá "Đoán từ khóa": CHỈ khi có đội GHI DANH qua nút TỪ KHÓA
   // (puzzle.keywordClaim). Tách hoàn toàn khỏi chuông trả lời hàng ngang
   // (buzzer.winner) để không lẫn 2 chuông — tránh chấm nhầm điểm từ khóa cho
@@ -109,8 +114,9 @@ export default function RoundVuotCnv({ ctx }) {
             )}
             {/* Nút bắt đầu giờ — CHỈ hiện khi đang chọn 1 câu (rowPhase === "open") và
                 đồng hồ chưa chạy. Ngược lại với đồng hồ state.game (g.timer, cập nhật
-                theo từng broadcast), `running` ở đây là game:timer realtime 250ms. */}
-            {cnvRowPhase && p.rowPhase === "open" && !running && (
+                theo từng broadcast), `running` ở đây là game:timer realtime 250ms.
+                Bấm khi đã từng Tạm dừng (còn giây dư) sẽ TIẾP TỤC từ giây còn lại. */}
+            {cnvRowPhase && p.currentRow != null && p.rowPhase === "open" && !running && (
               <button
                 type="button"
                 className="btn btn-ok text-sm! py-1.5! px-3!"
@@ -119,8 +125,33 @@ export default function RoundVuotCnv({ ctx }) {
                 ▶ Bắt đầu giờ
               </button>
             )}
-            {/* Nút bỏ chọn — hoàn tác ô đang mở: không hiện câu hỏi nữa */}
-            {p.rowPhase === "open" && (
+            {/* Đồng hồ đang chạy: Tạm dừng (giữ ô, khóa nộp bài nhất thời) tách biệt với
+                "Đóng nhận bài" (dừng hẳn + sang màn chấm). Hai đường "dừng" không lẫn
+                nhau: Tạm dừng chỉ dừng clock (phase vẫn open — thí sinh chưa nộp được),
+                Đóng nhận bài vừa đóng phase "closed" vừa dừng clock để chấm điểm. */}
+            {p.rowPhase === "open" && running && (
+              <button
+                type="button"
+                className="btn btn-ghost text-sm! py-1.5! px-3!"
+                title="Tạm dừng đồng hồ nhất thời — thí sinh chưa nộp được. Bấm ▶ Bắt đầu giờ để tiếp tục từ giây còn lại."
+                onClick={() => act("timer.pause")}
+              >
+                ⏸ Tạm dừng
+              </button>
+            )}
+            {p.rowPhase === "open" && running && (
+              <button
+                type="button"
+                className="btn btn-danger text-sm! py-1.5! px-3!"
+                title="Dừng hẳn và đóng nhận bài để chấm điểm (đồng hồ dừng, sang màn Đáp án)"
+                onClick={() => act("puzzle.close")}
+              >
+                ■ Đóng nhận bài
+              </button>
+            )}
+            {/* Nút bỏ chọn — hoàn tác ô đang mở/chấm dở: quay về trạng thái chưa chọn
+                câu hỏi nào (hủy luôn bài nộp của ô đó nếu đang có). */}
+            {p.currentRow != null && (p.rowPhase === "open" || p.rowPhase === "closed") && (
               <button
                 type="button"
                 className="btn btn-ghost text-sm! py-1.5! px-3!"
@@ -197,8 +228,9 @@ export default function RoundVuotCnv({ ctx }) {
       )}
 
       {/* MỞ Ô — list dọc: TÁCH RÕ 4 HÀNG NGANG (có số kí tự) với CÂU HỎI MẢNH GHÉP
-          TRUNG TÂM (câu hỏi cuối — KHÔNG số kí tự, nổi bật riêng). Tránh MC lẫn 2 loại. */}
-      {showing && (
+          TRUNG TÂM (câu hỏi cuối — KHÔNG số kí tự, nổi bật riêng). Tránh MC lẫn 2 loại.
+          NHÓM CHỌN HÀNG này luôn hiển thị (mọi màn hình: Câu hỏi / Bảng mảnh / Đáp án)
+          để MC mở ô kế tiếp ngay sau khi chốt điểm, không phải quay về màn Câu hỏi. */}
       <div className="rounded-lg border border-[rgba(255,214,10,0.2)] bg-[#2a3d63] px-3 py-2.5 shadow-[0_10px_40px_rgba(0,0,0,0.45)]">
         <div className="flex items-center justify-between gap-2 mb-1.5">
           <span className="text-xs tracking-[0.18em] text-mist uppercase">Hàng ngang — 4 câu hỏi mở 4 mảnh góc</span>
@@ -330,16 +362,18 @@ export default function RoundVuotCnv({ ctx }) {
           })()}
         </div>
       </div>
-      )}
 
       {/* BÀI NỘP TỰ LUẬN — MC chấm từng đội rồi Chốt điểm (cơ chế giống cho hàng ngang
           lẫn CÂU HỎI MẢNH GHÉP TRUNG TÂM, chỉ khác nhãn hiển thị) */}
-      {cnvRowPhase && (
+      {cnvRowPhase && rowActive && (
         <div className="panel border-line/80">
           <div className="flex flex-wrap items-center gap-2 mb-2">
             <span className="text-xs tracking-[0.18em] text-mist uppercase">Bài nộp {isCenterActive ? "câu hỏi mảnh ghép trung tâm" : "hàng ngang"}</span>
-            {p.rowPhase === "open" && (
+            {rowAccepting && (
               <span className="badge badge-warn text-xs!">Đang nhận bài — các đội gõ đáp án gửi về</span>
+            )}
+            {p.rowPhase === "open" && !running && (
+              <span className="badge badge-warn text-xs!">Tạm dừng — bấm ▶ Bắt đầu giờ để tiếp tục nhận bài</span>
             )}
             {p.rowPhase === "closed" && (
               <span className="badge badge-warn text-xs!">Đã đóng — hãy chấm từng đội rồi Chốt</span>
