@@ -127,27 +127,39 @@ export default function Audience() {
   if (g.round === "tie_break") {
     const tb = g.tieBreak || {};
     const tbTeams = (tb.teams || []).map((id) => state.teams.find((t) => t.id === id)).filter(Boolean);
+    const showing = g.questionStatus === "showing" && !!g.display?.question;
     return (
       <div className="relative min-h-screen flex flex-col items-center justify-center px-6 py-4 gap-6">
-        <div className="round-badge">PHỤ PHUC</div>
+        <div className="round-badge">VÒNG PHỤ</div>
         {g.buzzer?.winner && (
           <div className="round-badge">
             Quyền trả lời: {state.teams.find((t) => t.id === g.buzzer.winner)?.name}
           </div>
         )}
-        {g.questionStatus === "showing" && g.display?.question && (
-          <div className="panel w-full max-w-3xl text-center">
-            <p className="text-ink text-2xl font-semibold">{g.display.question}</p>
-            {g.display?.mediaUrl ? (
-              <img src={g.display.mediaUrl} alt="" className="mt-4 max-h-64 mx-auto object-contain" />
-            ) : (
-              <NoMediaFallback className="w-[min(320px,54vw)] aspect-[4/3] mt-4" />
+        {showing ? (
+          <>
+            <div className="panel w-full max-w-3xl text-center">
+              <p className="text-ink text-2xl font-semibold">{g.display.question}</p>
+              {g.display?.mediaUrl ? (
+                <img src={g.display.mediaUrl} alt="" className="mt-4 max-h-64 mx-auto object-contain" />
+              ) : (
+                <NoMediaFallback className="w-[min(320px,54vw)] aspect-[4/3] mt-4" />
+              )}
+            </div>
+            {g.display?.answerRevealed && (
+              <div className="panel w-full max-w-3xl text-center">
+                <p className="text-gold text-xl font-semibold">Dap an: {g.display.answer}</p>
+              </div>
             )}
-          </div>
-        )}
-        {g.display?.answerRevealed && (
-          <div className="panel w-full max-w-3xl text-center">
-            <p className="text-gold text-xl font-semibold">Dap an: {g.display.answer}</p>
+          </>
+        ) : (
+          // MÀN CHỜ VÒNG PHỤ: chưa có câu hỏi nào được mở — chưa trao quyền bấm chuông
+          // (server chỉ mở chuông khi showTieBreakQuestion).
+          <div className="flex flex-col items-center gap-3">
+            <div className="kicker tracking-[0.35em] text-[#ffd60a]">VÒNG PHỤ</div>
+            <div className="text-mist text-[clamp(16px,2.4vw,28px)] text-center">
+              Đang chờ MC chọn đội và mở câu hỏi…
+            </div>
           </div>
         )}
         {tb.winner && (
@@ -208,7 +220,7 @@ export default function Audience() {
       </div>
 
       <div className="relative z-10">
-        <TeamsRow teams={outTeams} state={state} flash={flash} currentTeam={g.currentTeam}>
+        <TeamsRow teams={outTeams} state={state} flash={flash} currentTeam={g.round === "ve_dich" ? g.currentTeam : ""}>
           {g.round === "ve_dich" && <Round4Footer state={state} g={g} />}
           {g.round === "vuot_cnv" && d.mode === "question" && <Round2QuestionStrip state={state} d={d} g={g} />}
         </TeamsRow>
@@ -336,16 +348,22 @@ function Stage({ state, timer }) {
   //   - "question" → màn câu hỏi: khung hàng ngang + câu hỏi hiện tại
   //   - "answers"  → màn đáp án các đội gửi về (MC mở dần từng đáp án qua revealedRows)
   //   - "puzzle"/khác → màn bảng mảnh ghép (bộ 5 mảnh: 4 góc + ô trung tâm mở cuối)
-  // Chọn ô (selectRow) giữ nguyên màn đang xem — không tự nhảy sang bảng mảnh.
+  //   - "idle"     → MÀN CHỜ ĐẦU VÒNG: chưa chọn/chiếu câu hỏi nào (mở vòng ở đó).
+  // Chọn ô (selectRow) giữ nguyên màn đang xem — không tự nhảy sang bảng mảnh;
+  // từ màn chờ (idle) chọn ô sẽ tự hiện câu hỏi.
   if (g.round === "vuot_cnv") {
     // Màn Đáp án hiển thị BẤT KỲ lúc nào MC muốn (không phụ thuộc keywordSolved).
     // Nếu chưa có đáp án cho hàng nào, RowResults tự hiển thị trạng thái trống.
     if (d.mode === "answers") {
       return <RowResults state={state} g={g} />;
     }
-    return d.mode === "question"
-      ? <Round2Question state={state} d={d} g={g} strip={false} />
-      : <Round2Board state={state} g={g} />;
+    if (d.mode === "question") {
+      return <Round2Question state={state} d={d} g={g} strip={false} />;
+    }
+    if (d.mode === "idle") {
+      return <RoundVCNVWait />;
+    }
+    return <Round2Board state={state} g={g} />;
   }
 
   // Vòng 4 (Về đích): màn hình chuyên dụng — chờ chuẩn bị / đếm ngược 3-2-1 / câu hỏi + đáp án.
@@ -487,6 +505,21 @@ function TangTocList({ items, teams, settled, judge }) {
   );
 }
 
+// VÒNG 2 — MÀN CHỜ ĐẦU VÒNG (display.mode "idle"): chưa có câu hỏi/mảnh ghép nào được
+// MC mở. Đồng bộ phong cách với màn chờ Vòng 3 (Tăng tốc) — tên vòng + thông báo chờ.
+function RoundVCNVWait() {
+  return (
+    <div className="w-full flex flex-col items-center justify-center gap-4 min-h-[50vh]">
+      <div className="font-display font-bold text-[clamp(28px,5vw,58px)] text-gold text-center">
+        VÒNG 2 — VƯỢT CHƯỚNG NGẠI VẬT
+      </div>
+      <div className="text-mist text-[clamp(16px,2.4vw,28px)] text-center">
+        Đang chờ MC mở câu hỏi hàng ngang…
+      </div>
+    </div>
+  );
+}
+
 // MÀN HÌNH CHUYÊN DỤNG — Vòng 4 (Về đích): chờ chuẩn bị / đếm ngược / câu hỏi + đáp án.
 function Round4Stage({ state, g, timer }) {
   const d = g.display || {};
@@ -513,15 +546,21 @@ function Round4Stage({ state, g, timer }) {
     );
   }
 
-  // CHỜ CHUẨN BỊ (soan / ready): chỉ tên đội + trạng thái ngắn gọn.
+  // CHỜ CHUẨN BỊ (soan / ready / prep): tên vòng + tên đội + trạng thái ngắn gọn.
+  // Không hiển thị câu hỏi/đáp án/gói câu cũ — chỉ cho MC quyết định khi nào chiếu câu.
   if (!inQuestion || !d.question) {
     return (
       <div className="text-center">
-        <div className="font-display font-bold text-[clamp(34px,5vw,64px)]" style={{ color: activeTeam?.color }}>
+        <div className="kicker tracking-[0.35em] text-[#ffd60a]">VÒNG 4 — VỀ ĐÍCH</div>
+        <div className="font-display font-bold text-[clamp(34px,5vw,64px)] mt-4" style={{ color: activeTeam?.color }}>
           {teamName}
         </div>
         <div className="text-mist mt-4 text-[clamp(18px,2.6vw,30px)]">
-          {phase === "ready" ? "Sẵn sàng thi" : phase === "prep" ? "Chuẩn bị câu kế tiếp" : "Đang chuẩn bị"}
+          {phase === "ready"
+            ? "Sẵn sàng thi"
+            : phase === "prep"
+              ? "Chuẩn bị câu hỏi kế tiếp"
+              : "MC đang soạn bộ câu hỏi"}
         </div>
       </div>
     );
@@ -778,7 +817,22 @@ export function KhoiDongAudience({ state, timer, flash }) {
     );
   }
   if (g.questionStatus === "idle" && !kdWaiting) {
-    return <div className="relative isolate min-h-screen overflow-hidden">{bgLayer}</div>;
+    // MÀN CHỜ ĐẦU VÒNG: vừa vào Vòng 1, chưa hiện ảnh/câu hỏi, đồng hồ 60s đứng yên.
+    // Chỉ cho MC chọn đội (selectTeam → ready) rồi bấm Bắt đầu mới chiếu câu hỏi.
+    return (
+      <div className="relative isolate min-h-screen overflow-hidden">
+        {bgLayer}
+        <div className="relative flex flex-col items-center justify-center min-h-screen px-6 z-10 text-center">
+          <div className="kicker tracking-[0.35em] text-[#ffd60a]">VÒNG 1 — KHỞI ĐỘNG</div>
+          <div className="font-display font-bold text-[clamp(28px,4vw,52px)] leading-tight text-white mt-6">
+            Chào mừng vòng thi
+          </div>
+          <div className="text-mist mt-4 text-[clamp(16px,2.4vw,28px)]">
+            Đang chờ MC chọn đội và bắt đầu lượt thi…
+          </div>
+        </div>
+      </div>
+    );
   }
   // Đã chọn đội, CHỜ bấm "Bắt đầu": hiện tên đội + SẴN SÀNG, KHÔNG hiện thanh thời gian
   // (đồng hồ 60s đứng yên; chỉ khi MC bấm Bắt đầu mới show câu hỏi + ring chạy).
@@ -805,9 +859,9 @@ export function KhoiDongAudience({ state, timer, flash }) {
         {bgLayer}
         <div className="relative flex flex-col items-center justify-center min-h-screen px-6 z-10">
           <div className="w-full max-w-[1100px] mx-auto rounded-3xl border border-[rgba(255,214,10,0.3)] bg-[#2a3d63]/95 shadow-[0_10px_50px_rgba(0,0,0,0.5)] px-10 py-12">
-            <div className="kicker text-center">VÒNG 1 · KHỘIDỌNG</div>
+            <div className="kicker text-center">VÒNG 1 · KHỞI ĐỘNG</div>
             <div className="font-display font-bold text-[clamp(36px,5vw,64px)] leading-tight text-white text-center mb-8">
-              KẼT THÚC — TÔNG ĐIỂM
+              KẾT THÚC — TỔNG ĐIỂM
             </div>
             <div className="flex flex-col gap-4">
               {ranked.map((t, i) => (

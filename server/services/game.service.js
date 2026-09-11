@@ -334,8 +334,10 @@ export function resetKhoiDong(teamId = null) {
       // MC tự quyết định ai tiếp tục bằng nút Khóa (khóa vĩnh viễn) — hệ thống không
       // tự loại/chọn đội nào cả.
       // Không còn thứ tự chọn ô (pick-order): MC chọn trực tiếp ô nào cũng được.
-      // Mở vòng ở màn hình BẢNG MẢNH GHÉP — chưa chọn/chiếu câu hỏi nào cả.
-      game.display.mode = "puzzle";
+      // Mở vòng ở MÀN CHỜ (idle) — chưa chọn/chiếu câu hỏi nào, chưa tự mở bảng mảnh
+      // ghép. Chỉ sau khi MC chọn hàng ngang (selectRow) mới hiện câu hỏi; MC có thể
+      // bấm "Bảng mảnh" (setScreenMode "puzzle") để mở bảng mảnh ghép bất kỳ lúc nào.
+      game.display.mode = "idle";
     }
     if (roundId === "tang_toc") {
       game.tangToc = freshTangToc();
@@ -1549,7 +1551,7 @@ if (game.round === "khoi_dong") {
     game.questionStatus = "showing";
     game.display = {
       mode: "question",
-      title: `Phụ phuc — Câu ${game.questionIndex + 1}`,
+      title: `Vòng phụ — Câu ${game.questionIndex + 1}`,
       question: q.question || "",
       options: q.options || [],
       mediaUrl: q.mediaUrl || "",

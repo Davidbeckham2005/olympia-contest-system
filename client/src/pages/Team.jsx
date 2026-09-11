@@ -388,11 +388,11 @@ export default function Team() {
     const isWinner = g.buzzer?.winner === team.id;
     body = (
       <div className="flex flex-col items-center gap-5 w-full max-w-lg">
-        <div className="round-badge">PHỤ PHUC</div>
+        <div className="round-badge">VÒNG PHỤ</div>
         {!isParticipant ? (
           <p className="text-mist">Đội bạn không tham gia vòng phụ.</p>
         ) : g.questionStatus !== "showing" ? (
-          <p className="text-mist">Chờ MC chiếu câu hỏi...</p>
+          <p className="text-mist">Đang chờ MC mở câu hỏi…</p>
         ) : (
           <>
             <div className="panel w-full text-left">
@@ -829,6 +829,19 @@ function Round2Status({ state, g, d }) {
   const stillOpen = g.puzzle?.rowPhase === "open";
   const questionMode = (d.mode === "question" || (d.mode === "answers" && stillOpen)) && !keywordDone;
   const answersMode = d.mode === "answers" && !keywordDone && !stillOpen;
+
+  // MÀN CHỜ ĐẦU VÒNG (display.mode "idle"): MC chưa mở câu hỏi nào — KHÔNG tự hiện bảng
+  // mảnh ghép. Chờ MC chọn hàng ngang mới có câu hỏi.
+  if (d.mode === "idle") {
+    return (
+      <div className="flex flex-col items-center gap-5 w-full max-w-lg">
+        <div className="round-badge">VÒNG 2 — VƯỢT CHƯỚNG NGẠI VẬT</div>
+        <p className="text-mist max-w-md">
+          Đang chờ MC mở câu hỏi hàng ngang…
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col items-center gap-5 w-full min-w-0">

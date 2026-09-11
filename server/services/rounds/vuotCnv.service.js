@@ -168,7 +168,14 @@ export function selectRow(rowIndex) {
   showQuestion({ skipTimer: true });
   setTimer(game.vuotCnv?.answerSeconds || 30, false);
   // Ô mới bắt đầu → không ở lại màn ĐÁP ÁN của ô trước (quay về bảng mảnh).
-  game.display.mode = prevMode === "answers" ? "puzzle" : prevMode || "puzzle";
+  // Màn CHỜ ĐẦU VÒNG (display.mode "idle") → MC vừa chọn hàng → HIỆN CÂU HỎI
+  // (không giữ nguyên idle, nếu không khán giả sẽ kẹt ở màn chờ).
+  game.display.mode =
+    prevMode === "answers"
+      ? "puzzle"
+      : prevMode === "idle"
+        ? "question"
+        : prevMode || "puzzle";
   game.display.answerRevealed = false;
   // CHỈ PHÁT MỘT LẦN DUY NHẤT ở cuối — trước đây phát 2 lần (lần đầu TRƯỚC khi
   // showQuestion) khiến khán giả/MC nhận trạng thái trung gian (câu cũ + highlight cũ)

@@ -230,7 +230,7 @@ export default function Control() {
             ["vuot_cnv", "Vượt CNV"],
             ["tang_toc", "Tăng tốc"],
             ["ve_dich", "Về đích"],
-            ["tie_break", "Phụ phuc"],
+            ["tie_break", "Vòng phụ"],
           ].map(([id, label]) => (
             <button
               key={id}
@@ -375,7 +375,7 @@ export default function Control() {
                   </div>
                 </div>
               </div>
-              <button type="button" className="btn btn-ghost text-xs py-1!" onClick={() => requestRound("tie_break", "Phụ phuc")}>
+              <button type="button" className="btn btn-ghost text-xs py-1!" onClick={() => requestRound("tie_break", "Vòng phụ")}>
                 Mở vòng phụ
               </button>
             </div>

@@ -38,7 +38,7 @@ export default function RoundTieBreak({ ctx }) {
   return (
     <div className="panel">
       <div className="flex items-center justify-between gap-2 mb-3">
-        <h3 className="text-sm font-semibold text-mist uppercase tracking-wider">Phụ phuc</h3>
+        <h3 className="text-sm font-semibold text-mist uppercase tracking-wider">Vòng phụ</h3>
         {phase === "done" && winner && (
           <span className="badge badge-ok">
             Thắng: {teams.find((t) => t.id === winner)?.name || winner}

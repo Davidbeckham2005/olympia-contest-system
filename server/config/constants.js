@@ -59,7 +59,7 @@ export const ROUNDS = [
       "Đội giành quyền trả lời sai: trừ đúng số điểm câu hỏi, đội chọn ngôi sao trừ phân nửa số điểm.",
     ],
   },
-  { id: "tie_break", name: "Phụ phuc", rules: [] },
+  { id: "tie_break", name: "Vòng phụ", rules: [] },
 ];
 
 export function emptyPuzzle() {
