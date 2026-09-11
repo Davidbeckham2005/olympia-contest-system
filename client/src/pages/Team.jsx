@@ -894,7 +894,7 @@ function VeDichBody({ g, d, teams, me, remaining, running, onBuzz, winnerId }) {
             ? "Bộ câu đã xác nhận — sẵn sàng thi"
             : phase === "prep"
               ? "Chuẩn bị câu hỏi kế tiếp …"
-              : "MC đang soạn bộ câu. Quan sát màn hình lớn."}
+              : "MC đang soạn bộ câu hỏi… Quan sát màn hình lớn."}
         </p>
       </div>
     );

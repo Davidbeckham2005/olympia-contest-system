@@ -505,18 +505,29 @@ function TangTocList({ items, teams, settled, judge }) {
   );
 }
 
-// VÒNG 2 — MÀN CHỜ ĐẦU VÒNG (display.mode "idle"): chưa có câu hỏi/mảnh ghép nào được
-// MC mở. Đồng bộ phong cách với màn chờ Vòng 3 (Tăng tốc) — tên vòng + thông báo chờ.
-function RoundVCNVWait() {
+// MÀN CHỜ ĐẦU VÒNG — dùng chung cho MỌI vòng (Khởi động / Vượt CNV / Tăng tốc / Về đích):
+// title tên vòng lớn màu vàng + thông báo chờ. Hiện khi MC VỪA mở/vào vòng nhưng chưa kích
+// hoạt hoạt động nào (chưa chọn đội/câu, chưa chiếu câu hỏi, chưa đếm giờ). Đồng bộ phong
+// cách giữa các vòng để khán giả luôn thấy một màn chờ nhất quán.
+function RoundWait({ title, message }) {
   return (
     <div className="w-full flex flex-col items-center justify-center gap-4 min-h-[50vh]">
       <div className="font-display font-bold text-[clamp(28px,5vw,58px)] text-gold text-center">
-        VÒNG 2 — VƯỢT CHƯỚNG NGẠI VẬT
+        {title}
       </div>
-      <div className="text-mist text-[clamp(16px,2.4vw,28px)] text-center">
-        Đang chờ MC mở câu hỏi hàng ngang…
-      </div>
+      <div className="text-mist text-[clamp(16px,2.4vw,28px)] text-center">{message}</div>
     </div>
+  );
+}
+
+// VÒNG 2 — MÀN CHỜ ĐẦU VÒNG (display.mode "idle"): chưa có câu hỏi/mảnh ghép nào được
+// MC mở. Dùng chung thiết kế RoundWait với các vòng khác.
+function RoundVCNVWait() {
+  return (
+    <RoundWait
+      title="VÒNG 2 — VƯỢT CHƯỚNG NGẠI VẬT"
+      message="Đang chờ MC mở câu hỏi hàng ngang…"
+    />
   );
 }
 
@@ -546,9 +557,20 @@ function Round4Stage({ state, g, timer }) {
     );
   }
 
-  // CHỜ CHUẨN BỊ (soan / ready / prep): tên vòng + tên đội + trạng thái ngắn gọn.
-  // Không hiển thị câu hỏi/đáp án/gói câu cũ — chỉ cho MC quyết định khi nào chiếu câu.
+  // CHỜ CHUẨN BỊ (soan / ready / prep): KHÔNG hiển thị câu hỏi/đáp án/gói câu cũ — chỉ cho
+  // MC quyết định khi nào chiếu câu.
   if (!inQuestion || !d.question) {
+    // VỪA MỞ VÒNG / MC ĐANG SOẠN BỘ CÂU (chưa chốt): màn chờ ĐẦU VÒNG giống Vòng 2 & 3 —
+    // chỉ tên vòng + thông báo chờ, chưa lộ tên đội/câu hỏi/gói.
+    if (phase === "soan") {
+      return (
+        <RoundWait
+          title="VÒNG 4 — VỀ ĐÍCH"
+          message="MC đang soạn bộ câu hỏi…"
+        />
+      );
+    }
+    // Đã chốt bộ câu (ready) / chuyển câu kế tiếp (prep): hiện tên đội + trạng thái.
     return (
       <div className="text-center">
         <div className="kicker tracking-[0.35em] text-[#ffd60a]">VÒNG 4 — VỀ ĐÍCH</div>
@@ -818,18 +840,16 @@ export function KhoiDongAudience({ state, timer, flash }) {
   }
   if (g.questionStatus === "idle" && !kdWaiting) {
     // MÀN CHỜ ĐẦU VÒNG: vừa vào Vòng 1, chưa hiện ảnh/câu hỏi, đồng hồ 60s đứng yên.
+    // Thiết kế giống màn chờ các vòng khác (RoundWait): tên vòng + thông báo chờ.
     // Chỉ cho MC chọn đội (selectTeam → ready) rồi bấm Bắt đầu mới chiếu câu hỏi.
     return (
       <div className="relative isolate min-h-screen overflow-hidden">
         {bgLayer}
-        <div className="relative flex flex-col items-center justify-center min-h-screen px-6 z-10 text-center">
-          <div className="kicker tracking-[0.35em] text-[#ffd60a]">VÒNG 1 — KHỞI ĐỘNG</div>
-          <div className="font-display font-bold text-[clamp(28px,4vw,52px)] leading-tight text-white mt-6">
-            Chào mừng vòng thi
-          </div>
-          <div className="text-mist mt-4 text-[clamp(16px,2.4vw,28px)]">
-            Đang chờ MC chọn đội và bắt đầu lượt thi…
-          </div>
+        <div className="relative flex items-center justify-center min-h-screen px-6 z-10">
+          <RoundWait
+            title="VÒNG 1 — KHỞI ĐỘNG"
+            message="Đang chờ MC chọn đội và bắt đầu lượt thi…"
+          />
         </div>
       </div>
     );
@@ -1168,17 +1188,13 @@ function TangTocStage({ state, g, timer }) {
 
   // Đang chiếu video — VIDEO LÀM TRUNG TÂM, không hiện kết quả.
   // Chỉ hiện video sau khi MC ĐÃ CHIẾU (display.mode === "question") để màn hình khán giả
-  // đồng bộ với MC — trước đó hiện màn chờ.
+  // đồng bộ với MC — trước đó hiện màn chờ (cùng thiết kế với các vòng khác).
   if (!mcShown) {
     return (
-      <div className="w-full flex flex-col items-center justify-center gap-4 min-h-[50vh]">
-        <div className="font-display font-bold text-[clamp(28px,5vw,58px)] text-gold text-center">
-          VÒNG 3 — TĂNG TỐC
-        </div>
-        <div className="text-mist text-[clamp(16px,2.4vw,28px)] text-center">
-          Đang chờ MC mở câu hỏi và chiếu video…
-        </div>
-      </div>
+      <RoundWait
+        title="VÒNG 3 — TĂNG TỐC"
+        message="Đang chờ MC mở câu hỏi và chiếu video…"
+      />
     );
   }
 
