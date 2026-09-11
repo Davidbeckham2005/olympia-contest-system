@@ -188,9 +188,10 @@ function synthWaitWav() {
 
 export function bedKindFromGame(g) {
   if (!g) return "wait";
-  // Màn hình LUẬT THI: vòng Khởi động phát nhạc hiệu riêng (slot "khoi_dong" — nhạc luật
-  // chơi), các vòng khác phát nhạc nền chung "bg" để không lặng im.
-  if (g.display?.mode === "rules") return g.round === "khoi_dong" && pack["khoi_dong"]?.url ? "khoi_dong" : "bg";
+  // Màn hình LUẬT THI: phát nhạc hiệu riêng (slot "khoi_dong" — nhạc luật chơi) cho
+  // LUẬT THI CỦA MỌI VÒNG (màn "Chiếu luật chơi" dùng chung qua screen.rules); vòng
+  // chưa upload file nhạc luật thì dùng nhạc nền chung "bg" để không lặng im.
+  if (g.display?.mode === "rules") return pack["khoi_dong"]?.url ? "khoi_dong" : "bg";
   if (
     g.round === "tang_toc" &&
     (g.tangToc?.phase === "preparing" || g.tangToc?.phase === "video") &&
