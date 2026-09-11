@@ -41,7 +41,7 @@ export function CnvRowsFrame({ state, g }) {
 // "Vòng 2", câu/hàng đang thi (X/5) và trạng thái nhận bài (đang nhận / đã đóng / đã
 // chốt / sẵn sàng / cửa sổ từ khóa) — người xem không phải tự suy từ ô chữ. Kèm thẻ đỏ
 // đội đang GIỮ QUYỀN đoán TỪ KHÓA (persistent — không chỉ thoáng qua như hiệu ứng chuông).
-function Round2Context({ g, state, title }) {
+function Round2Context({ g, state, title, showStatus = true }) {
   const p = g.puzzle || {};
   const idx = p.currentRow ?? 0;
   // Index 4 = CÂU HỎI MẢNH GHÉP TRUNG TÂM (câu hỏi cuối) — không phải "hàng 5".
@@ -58,7 +58,7 @@ function Round2Context({ g, state, title }) {
     status = "ĐÃ GIẢI TỪ KHÓA";
     tone = "ok";
   } else if (p.rowPhase === "open") {
-    status = p.timingStarted ? "ĐANG NHẬN BÀI" : "MỞ CÂU HỎI — CHỜ GIỜ";
+    status = g.timer?.running ? "ĐANG NHẬN BÀI" : "MỞ CÂU HỎI — CHỜ GIỜ";
     tone = "warn";
   } else if (p.rowPhase === "scored") {
     status = "ĐÃ CHỐT ĐIỂM";
@@ -72,14 +72,16 @@ function Round2Context({ g, state, title }) {
   return (
     <div className="mb-6 text-center flex flex-col items-center gap-2">
       <div className="kicker tracking-[0.28em]">VÒNG 2 · VƯỢT CHƯỚNG NGẠI VẬT</div>
-      <div className="flex flex-wrap items-center justify-center gap-2">
-        {hasRow && (isCenter
-          ? <span className="badge badge-warn">CÂU HỎI MẢNH GHÉP TRUNG TÂM</span>
-          : <span className="badge">HÀNG {row}/4</span>
-        )}
-        <span className={`badge ${tone}`}>{status}</span>
-        {keywordPhase && <span className="badge badge-warn">ĐOÁN TỪ KHÓA</span>}
-      </div>
+      {showStatus && (
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          {hasRow && (isCenter
+            ? <span className="badge badge-warn">CÂU HỎI MẢNH GHÉP TRUNG TÂM</span>
+            : <span className="badge">HÀNG {row}/4</span>
+          )}
+          <span className={`badge ${tone}`}>{status}</span>
+          {keywordPhase && <span className="badge badge-warn">ĐOÁN TỪ KHÓA</span>}
+        </div>
+      )}
       {claim && (
         <div className="flex items-center gap-2 rounded-full border border-[#ff465e]/70 bg-[#ff465e]/15 px-3.5 py-1">
           <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: claimTeam?.color || "#fff" }} />
@@ -142,26 +144,135 @@ export function RowResults({ state, g }) {
 
   return (
     <div className="w-full max-w-[1100px] mx-auto">
-      <Round2Context g={g} state={state} title={title} />
+      <Round2Context g={g} state={state} title={title} showStatus={false} />
       {p.rowPhase === "scored" && p.lastResult && (
         <ResultBanner lastResult={p.lastResult} />
       )}
-      <div className="mx-auto w-[min(900px,94%)]">
+      <R2AnswersTimeline cards={cards} />
+    </div>
+  );
+}
+
+// Định dạng thời gian trả lời kiểu game show: "01.28s" — phần giây + phần lẻ 2 chữ số
+// (font mono, màu mờ) để khán giả dễ so sánh tốc độ.
+function formatAnswerTime(sec) {
+  if (sec == null) return null;
+  let s = Math.floor(sec);
+  let cs = Math.round((sec - s) * 100);
+  if (cs === 100) {
+    s += 1;
+    cs = 0;
+  }
+  return { ss: String(s).padStart(2, "0"), cs: String(cs).padStart(2, "0") };
+}
+
+// MÀN ĐÁP ÁN VÒNG 2 — thiết kế game show kiểu timeline dọc: khung giữa màn hình có viền
+// trắng mảnh, nền navy-có-chiều-sâu với bokeh blur; ở trung tâm một đường kết nối màu nâu
+// đồng/vàng tối chạy dọc. Đáp án/người chơi là các THANH NGANG đặt XEN KẼ trái/phải đường
+// dọc, nối bằng node tròn xanh sáng viền vàng. Các thanh xuất hiện lần lượt từ trên xuống.
+function R2AnswersTimeline({ cards }) {
+  return (
+    <div className="relative mx-auto w-[min(820px,95%)] rounded-[1.25rem] border border-white/10 bg-panel-solid px-4 shadow-[0_18px_50px_rgba(0,0,0,0.35)]">
+      {/* Đường timeline dọc — mảnh 1px, vàng nhạt */}
+      <div className="absolute left-1/2 top-6 bottom-6 w-px -translate-x-1/2 bg-[rgba(255,214,10,0.28)]" aria-hidden />
+      {/* Các thanh ngang xen kẽ trái/phải đường dọc */}
+      <div className="relative flex flex-col py-5">
         {cards.map((c, i) => (
-          <div key={c.teamId} className="r2-row-in" style={{ animationDelay: `${i * 280}ms` }}>
-            <StaggeredRow
-              team={c.team}
-              index={i}
-              answer={c.answer}
-              elapsed={c.elapsed}
-              submitted={c.submitted}
-              ok={c.ok}
-              ng={c.ng}
-              pts={c.pts}
-              revealed={c.revealed}
-            />
-          </div>
+          <R2TimelineRow key={c.teamId} c={c} i={i} />
         ))}
+      </div>
+    </div>
+  );
+}
+
+// Một mốc trên timeline: node tròn nhỏ (điểm nối với đường dọc) + thanh ngang xen kẽ
+// trái/phải. Hai nửa cùng độ rộng (flex-1) nên căn luôn đối xứng quanh đường trung tâm.
+function R2TimelineRow({ c, i }) {
+  const left = i % 2 === 0;
+  return (
+    <div className="r2-row-in relative flex min-h-[76px] items-center" style={{ animationDelay: `${i * 220}ms` }}>
+      {/* Node nối đường timeline — xanh nhạt viền vàng, chỉ phát sáng khi đúng */}
+      <span className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2">
+        <span
+          className={`block h-[11px] w-[11px] rounded-full border ${
+            c.ok
+              ? "border-gold bg-ok shadow-[0_0_8px_rgba(128,237,153,0.5)]"
+              : "border-[rgba(255,214,10,0.35)] bg-[#31415f]"
+          }`}
+        />
+      </span>
+      {left ? (
+        <>
+          <div className="flex min-w-0 flex-1 justify-end pr-8">
+            <R2TimelineBar c={c} />
+          </div>
+          <span className="flex-1" aria-hidden />
+        </>
+      ) : (
+        <>
+          <span className="flex-1" aria-hidden />
+          <div className="flex min-w-0 flex-1 justify-start pl-8">
+            <R2TimelineBar c={c} />
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// Thanh thông tin một người chơi: tên đội + đáp án bên trái, thời gian trả lời đến mili
+// giây (giây cỡ lớn trắng, phần lẻ nhỏ mờ) bên phải. Chỉ nhấn mạnh bằng viền vàng + glow
+// xanh nhạt khi ĐÚNG — các trạng thái còn lại màu trung tính, không thêm màu rực.
+function R2TimelineBar({ c }) {
+  const { team, submitted, answer, elapsed, ok, ng, pts, revealed } = c;
+  const answered = revealed && !!answer && answer !== "";
+  const time = answered && elapsed != null ? formatAnswerTime(elapsed) : null;
+
+  let status;
+  if (!submitted) {
+    status = <span className="text-mist/55">Không nộp bài</span>;
+  } else if (!revealed) {
+    status = <span className="text-mist">Đã nộp</span>;
+  } else if (ok) {
+    status = <span className="text-white">“{answer}”</span>;
+  } else if (ng) {
+    status = <span className="text-[#ffb3c1]">“{answer}”</span>;
+  } else {
+    status = <span className="text-white/85">“{answer}”</span>;
+  }
+
+  const frame = ok
+    ? "border-gold/70 bg-[#121b33] r2-tl-glow"
+    : ng
+      ? "border-[rgba(255,77,109,0.35)] bg-[#131024]"
+      : submitted
+        ? "border-line bg-[#121b33]"
+        : "border-white/10 bg-[#0d1424]/80";
+
+  return (
+    <div className="w-full max-w-[460px]">
+      <div className={`rounded-xl border px-4 py-2.5 ${frame}`}>
+        <div className="flex items-baseline gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-baseline gap-2">
+              <span className="truncate text-[clamp(12px,1.3vw,16px)] font-bold leading-tight text-white">
+                {team?.name || ""}
+              </span>
+              {ok && pts > 0 && (
+                <span className="shrink-0 text-[clamp(12px,1.3vw,15px)] font-bold text-gold">+{pts}đ</span>
+              )}
+            </div>
+            <div className="mt-0.5 truncate text-[clamp(13px,1.5vw,18px)] leading-snug">{status}</div>
+          </div>
+          {time ? (
+            <span className="shrink-0 whitespace-nowrap font-mono tabular-nums">
+              <span className="text-[clamp(14px,1.5vw,18px)] font-bold leading-tight text-white">{time.ss}</span>
+              <span className="text-[clamp(9px,1vw,11px)] font-semibold text-mist">.{time.cs}s</span>
+            </span>
+          ) : (
+            <span className="shrink-0 text-sm text-white/25">—</span>
+          )}
+        </div>
       </div>
     </div>
   );

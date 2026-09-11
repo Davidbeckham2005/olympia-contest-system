@@ -1219,6 +1219,10 @@ function TimerBuzzerTab({ state, timer: liveTimer, setMsg }) {
   const [seconds, setSeconds] = useState(() => Number(t.remaining) || 15);
   const remaining = t.remaining ?? 0;
   const running = !!t.running;
+  // Vòng 2 đang mở nhận bài: đồng hồ chung ở tab này là nguồn gốc gây lệch cờ mở nộp
+  // bài (bấm "Bắt đầu giờ"/"Dừng" ở đây không đồng bộ với màn điều khiển Vòng 2).
+  // Khóa các nút này và ép MC dùng nút "▶ Bắt đầu giờ" / "Bỏ chọn" trên màn Vòng 2.
+  const cnvAccepting = g.round === "vuot_cnv" && g.puzzle?.rowPhase === "open";
   const winner = state.teams.find((x) => x.id === g.buzzer?.winner);
   const act = async (action, body) => {
     try {
@@ -1235,21 +1239,29 @@ function TimerBuzzerTab({ state, timer: liveTimer, setMsg }) {
       </span>
       <div className="flex flex-wrap items-center gap-2 mt-3">
         <input type="number" value={seconds} onChange={(e) => setSeconds(e.target.value)} className="w-20!" />
-        <button type="button" className="btn" onClick={() => act("timer.set", { seconds: Number(seconds), running: true })}>
-          Bắt đầu giờ
-        </button>
-        <button type="button" className="btn btn-ghost" disabled={!running} onClick={() => act("timer.pause")}>
-          Dừng
-        </button>
-        <button
-          type="button"
-          className="btn btn-ghost"
-          disabled={!!running || !(remaining > 0)}
-          onClick={() => act("timer.resume")}
-        >
-          Tiếp
-        </button>
-        <span className="text-mist text-xs">{running ? "Đang chạy" : "Đã dừng"}</span>
+        {cnvAccepting ? (
+          <span className="text-xs text-[#ffb3c1]">
+            Vòng 2 đang mở nhận bài — dùng nút <b className="text-white">▶ Bắt đầu giờ</b> trên màn điều khiển Vòng 2 (đồng hồ chung tạm khóa để không lệch cờ nộp bài).
+          </span>
+        ) : (
+          <>
+            <button type="button" className="btn" onClick={() => act("timer.set", { seconds: Number(seconds), running: true })}>
+              Bắt đầu giờ
+            </button>
+            <button type="button" className="btn btn-ghost" disabled={!running} onClick={() => act("timer.pause")}>
+              Dừng
+            </button>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              disabled={!!running || !(remaining > 0)}
+              onClick={() => act("timer.resume")}
+            >
+              Tiếp
+            </button>
+            <span className="text-mist text-xs">{running ? "Đang chạy" : "Đã dừng"}</span>
+          </>
+        )}
       </div>
 
       <div className="text-xs tracking-[0.18em] text-mist uppercase mt-6 mb-2">Chuông</div>

@@ -31,10 +31,14 @@ export function registerSockets(io) {
       game.submitKhoiDong(payload.teamId, payload.answer);
     });
 
-    socket.on("vuotcnv:submit", (payload) => {
+    socket.on("vuotcnv:submit", (payload, ack) => {
       if (!payload?.teamId) return;
-      if (!teamOk(payload)) return;
-      game.submitRowAnswer(payload.teamId, payload.answer);
+      if (!teamOk(payload)) {
+        ack?.({ ok: false, reason: "auth" });
+        return;
+      }
+      const r = game.submitRowAnswer(payload.teamId, payload.answer);
+      ack?.(r || { ok: false, reason: "not-open" });
     });
   });
 }

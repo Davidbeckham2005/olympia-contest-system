@@ -96,8 +96,10 @@ export default function RoundVuotCnv({ ctx }) {
                 {formatTime(remaining)}
               </span>
             )}
-            {/* Nút bắt đầu giờ — CHỈ hiện khi đang chọn 1 câu (rowPhase === "open") và chưa chạy */}
-            {cnvRowPhase && p.rowPhase === "open" && !p.timingStarted && (
+            {/* Nút bắt đầu giờ — CHỈ hiện khi đang chọn 1 câu (rowPhase === "open") và
+                đồng hồ chưa chạy. Ngược lại với đồng hồ state.game (g.timer, cập nhật
+                theo từng broadcast), `running` ở đây là game:timer realtime 250ms. */}
+            {cnvRowPhase && p.rowPhase === "open" && !running && (
               <button
                 type="button"
                 className="btn btn-ok text-sm! py-1.5! px-3!"

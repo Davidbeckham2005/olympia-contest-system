@@ -13,6 +13,16 @@ import { KhoiDongAudience } from "./Audience.jsx";
 
 const SESSION_KEY = "team_session";
 
+// Lý do server từ chối bài nộp hàng ngang Vòng 2 (ack vuotcnv:submit) → thông báo
+// rõ cho thí sinh thay vì im lặng mất bài.
+const CNV_REASON_MSG = {
+  closed: "Đã đóng nhận bài — không gửi được nữa.",
+  "row-banned": "Đội bạn đã mất quyền trả lời hàng ngang.",
+  "not-open": "Câu hỏi chưa mở — chờ MC hiện câu hỏi.",
+  "not-started": "MC chưa chạy đồng hồ — chờ bấm ▶ Bắt đầu giờ.",
+  auth: "Phiên đăng nhập hết hạn — hãy đăng nhập lại.",
+}
+
 function loadSession() {
   try {
     return JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
@@ -28,6 +38,7 @@ export default function Team() {
   const [pass, setPass] = useState("");
   const [err, setErr] = useState("");
   const [answer, setAnswer] = useState("");
+  const [cnvMsg, setCnvMsg] = useState("");
 
   const g = state?.game || {};
   const d = g.display || {};
@@ -167,8 +178,22 @@ export default function Team() {
   function submitCnv(e) {
     e.preventDefault();
     if (!answer.trim()) return;
-    socket.emit("vuotcnv:submit", { teamId: session.teamId, pass: session.pass, answer });
-    setAnswer("");
+    const val = answer;
+    setCnvMsg("");
+    // Chỉ được gửi khi server xác nhận (ack) — không xóa ô đáp án nếu bị từ chối,
+    // để thí sinh giữ nguyên bài khi MC đóng nhận bài / chưa chạy giờ.
+    socket.emit(
+      "vuotcnv:submit",
+      { teamId: session.teamId, pass: session.pass, answer: val },
+      (res) => {
+        if (res && res.ok !== false) {
+          setAnswer("");
+          setCnvMsg("");
+        } else {
+          setCnvMsg(CNV_REASON_MSG[res?.reason] || "Bài chưa được gửi — thử lại.");
+        }
+      }
+    );
   }
 
   function quit() {
@@ -461,12 +486,17 @@ export default function Team() {
     // Bắt đầu đếm giờ (MC bấm "Bắt đầu giờ") thì mới được nhập đáp án tự luận.
     // Đội đoán từ khóa SAI (MC chấm Sai) đã mất quyền → không gõ được nữa.
     const cnvBanned = (g.puzzle?.rowBanned || []).includes(team.id);
+    // Cửa nộp bài mở = ô ĐANG MỞ + câu đang hiện + ĐỒNG HỒ ĐANG CHẠY. Dùng timer.running
+    // (luồng game:timer realtime) làm nguồn sự thật duy nhất — không còn cờ
+    // timingStarted riêng nên MC bấm đồng hồ bằng nút nào cũng đồng bộ với thí sinh
+    // (Admin "Bắt đầu giờ"/"Tiếp", nút "▶ Bắt đầu giờ" Vòng 2, hết giờ tự đóng).
+    const timerRunning = !!(timer?.running ?? g.timer?.running);
     const r2CanType =
       !cnvBanned &&
       !g.puzzle?.keywordSolved &&
       g.questionStatus === "showing" &&
       g.puzzle?.rowPhase === "open" &&
-      !!g.puzzle?.timingStarted;
+      timerRunning;
     const r2Submitted = g.puzzle?.submissions?.[team.id];
     const cnvClaimOpen =
       !g.puzzle?.keywordSolved &&
@@ -491,6 +521,11 @@ export default function Team() {
           />
           <button className="btn" type="submit" disabled={!r2CanType || !answer.trim()}>Gửi</button>
         </form>
+        {cnvMsg && (
+          <div className="mt-2 rounded-xl border border-danger/40 bg-danger/10 px-3 py-2 text-center text-sm font-semibold text-danger">
+            {cnvMsg}
+          </div>
+        )}
         {r2Submitted && (
           <div className="text-center text-mist text-sm mt-2">
             Đã gửi: <span className="text-gold">{r2Submitted.answer}</span>

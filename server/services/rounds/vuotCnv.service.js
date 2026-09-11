@@ -148,13 +148,12 @@ export function selectRow(rowIndex) {
   p.lastResult = null;
   // Mở ô mới → chuẩn bị nhận bài tự luận của các đội. KHÔNG tự đếm giờ: MC cần thời
   // gian đọc câu hỏi trước, rồi mới bấm nút "Bắt đầu giờ" (startRowTimer). Trước khi
-  // MC bấm giờ (p.timingStarted === false) các đội chưa thể nộp đáp án.
+  // đồng hồ chạy (timer.running === false) các đội chưa thể nộp đáp án.
   p.rowPhase = "open";
   p.submissions = {};
   p.corrections = {};
   p.ranked = [];
   p.revealedRows = 0;
-  p.timingStarted = false;
   game.buzzer = { open: false, locked: false, winner: null, order: [], blocked: [] };
   game.questionStatus = "idle";
   game.display.answerRevealed = false;
@@ -200,7 +199,6 @@ export function deselectRow() {
   p.corrections = {};
   p.ranked = [];
   p.revealedRows = 0;
-  p.timingStarted = false;
   game.buzzer = { open: false, locked: false, winner: null, order: [], blocked: [] };
   setTimer(0, false);
   resetDisplayToBoard();
@@ -209,15 +207,18 @@ export function deselectRow() {
   emit();
 }
 
-// MC bấm "Bắt đầu giờ" cho ô đang mở: bắt đầu đếm thời gian cho bài nộp tự luận.
-// Đến lúc này các đội mới có thể gửi đáp án (xem submitRowAnswer).
+// MC bấm "Bắt đầu giờ" cho ô đang mở: bắt đầu/cố đếm thời gian cho bài nộp tự luận.
+// Đến lúc này các đội mới có thể gửi đáp án (xem submitRowAnswer — gate bằng
+// timer.running, nguồn sự thật duy nhất, không còn cờ timingStarted riêng).
 export function startRowTimer() {
   const game = g();
   const p = game.puzzle;
   if (game.round !== "vuot_cnv" || p.keywordSolved) return;
   if (p.rowPhase !== "open") return;
-  p.timingStarted = true;
-  setTimer(game.vuotCnv?.answerSeconds || 30, true);
+  // MC "Dừng" đồng hồ giữa chừng rồi bấm lại → tiếp tục từ giây còn lại, không quay
+  // về mốc 0; chưa từng bắt đầu → chạy đủ answerSeconds.
+  const sec = game.timer?.remaining > 0 ? game.timer.remaining : game.vuotCnv?.answerSeconds || 30;
+  setTimer(sec, true);
 }
 
 // Đội trả lời đúng: mở đúng 1 mảnh góc tương ứng hàng ngang
@@ -328,8 +329,10 @@ export function submitRowAnswer(teamId, answer) {
   if (!active.includes(teamId)) return { ok: false, reason: "not-open" };
   if (p.rowPhase !== "open") return { ok: false, reason: "closed" };
   if (game.questionStatus !== "showing") return { ok: false, reason: "not-open" };
-  // Chỉ được nộp đáp án sau khi MC đã bấm "Bắt đầu giờ" (timingStarted).
-  if (!p.timingStarted) return { ok: false, reason: "not-started" };
+  // Chỉ nộp được đáp án khi đồng hồ ĐANG CHẠY (timer.running) — nguồn sự thật duy
+  // nhất. MC bấm "Bắt đầu giờ" (puzzle.startTimer / timer.set/resume) đều bật; dừng
+  // (timer.pause), hết giờ hoặc đóng nhận bài đều khóa nộp bài.
+  if (!game.timer.running) return { ok: false, reason: "not-started" };
   // Cho phép gửi NHIỀU lần: nếu đội đã nộp trước đó thì ghi đè bằng đáp án mới nhất
   // (thí sinh có thể sửa/làm rõ đáp án nhiều lần trong cửa sổ trả lời).
   p.submissions[teamId] = {
@@ -361,6 +364,9 @@ export function closeRowSubmissions() {
   const p = game.puzzle;
   if (p.rowPhase !== "open") return;
   p.rowPhase = "closed";
+  // Đóng nhận bài → DỪNG đồng hồ: nếu không, giờ vẫn đếm ngược trên mọi màn hình dù
+  // thí sinh đã bị khóa (gây chữ "đôi khi" — MC tưởng cửa nộp còn mở).
+  pauseTimer();
   // Đóng nhận bài → tự chuyển màn hình lớn + thí sinh sang MÀN ĐÁP ÁN để MC chấm
   // và mở dần từng đáp án (MC vẫn chuyển tay sang Câu hỏi/Bảng mảnh được).
   game.display.mode = "answers";

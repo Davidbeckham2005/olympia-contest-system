@@ -164,6 +164,14 @@
     0% { transform: translateY(18px); opacity: 0; }
     100% { transform: translateY(0); opacity: 1; }
   }
+  /* Thanh đáp án ĐÚNG trên màn Đáp án Vòng 2: viền vàng + glow xanh nhạt thở nhẹ */
+  .r2-tl-glow {
+    animation: r2TlGlow 3s ease-in-out infinite;
+  }
+  @keyframes r2TlGlow {
+    0%, 100% { box-shadow: 0 0 6px rgba(128, 237, 153, 0.25); }
+    50% { box-shadow: 0 0 18px rgba(128, 237, 153, 0.45); }
+  }
   .kd-ring {
     position: absolute;
     inset: 0;
