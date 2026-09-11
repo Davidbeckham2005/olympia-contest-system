@@ -192,9 +192,13 @@
       err.status = 400;
       throw err;
     }
+    // Lưu TRỰC TIẾP vào CSDL (data URL base64) để âm thanh không mất khi server
+    // rerender/deploy lại — không phụ thuộc thư mục uploads tạm.
+    const mime = req.file.mimetype || "audio/mpeg";
+    const url = `data:${mime};base64,${req.file.buffer.toString("base64")}`;
     const db = getDb();
     db.sounds = { ...emptySounds(), ...(db.sounds || {}) };
-    db.sounds[slot] = { name: req.file.originalname, url: `/uploads/${req.file.filename}` };
+    db.sounds[slot] = { name: req.file.originalname, url };
     saveDb();
     game.emit();
     emitEvent("prelim:update", publicState());

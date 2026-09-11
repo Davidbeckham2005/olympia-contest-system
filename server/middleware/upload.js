@@ -26,6 +26,13 @@ export const uploadMemory = multer({
   limits: { fileSize: 80 * 1024 * 1024 },
 });
 
+// Âm thanh lưu TRỰC TIẾP vào CSDL (base64) để không mất khi deploy lại → giới hạn
+// nhỏ hơn để không phình file DB và payload socket mỗi lần gửi trạng thái.
+export const uploadSoundMemory = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 20 * 1024 * 1024 },
+});
+
 export const uploadImport = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 2 * 1024 * 1024 },

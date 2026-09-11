@@ -256,6 +256,13 @@ async function migrate() {
     } catch {
       /* cột đã tồn tại */
     }
+    // v4: âm thanh lưu trực tiếp dạng base64 trong CSDL → url phải chứa được chuỗi lớn
+    try {
+      await conn.query("ALTER TABLE sounds MODIFY COLUMN url MEDIUMTEXT NOT NULL DEFAULT ''");
+      console.log("Đã nâng cấp CSDL: sounds.url → MEDIUMTEXT");
+    } catch {
+      /* SQLite/Postgres dùng TEXT đã đủ, hoặc cột đã là MEDIUMTEXT */
+    }
     // Đội nào chưa có mật khẩu thì gán mặc định theo TEAM_DEFS
     for (const def of TEAM_DEFS) {
       if (!def.pass) continue;
