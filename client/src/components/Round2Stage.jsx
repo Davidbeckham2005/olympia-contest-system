@@ -178,9 +178,6 @@ export function RowResults({ state, g }) {
   return (
     <div className="w-full max-w-[1100px] mx-auto">
       <Round2Context g={g} state={state} title={title} showStatus={false} />
-      {p.rowPhase === "scored" && p.lastResult && (
-        <ResultBanner lastResult={p.lastResult} />
-      )}
       <R2AnswersTimeline cards={cards} />
     </div>
   );
@@ -452,46 +449,6 @@ export function Round2Question({ state, d, g, strip = true, children }) {
       </div>
 
       {strip && <Round2QuestionStrip state={state} d={d} g={g}>{children}</Round2QuestionStrip>}
-    </div>
-  );
-}
-
-// Tên hiển thị của mảnh vừa xử lý: 4 hàng ngang → số 1..4, câu hỏi cuối → MẢNH TRUNG TÂM.
-function pieceLabel(row) {
-  return (row ?? 0) === 4 ? "MẢNH TRUNG TÂM" : `MẢNH ${(row ?? 0) + 1}`;
-}
-
-// Banner hệ quả ngay trên MÀN ĐÁP ÁN sau khi MC "Chốt điểm" (Nhịp 1): khán giả đã thấy
-// từng đội Đúng/Sai + bao nhiêu điểm, giờ biết ô vừa được MỞ hay bị KHÓA — chưa cần
-// chuyển sang bảng mảnh. Chỉ hiện khi ô đã chốt (rowPhase "scored") và tồn tại đến khi
-// MC chọn ô kế tiếp (lastResult bị xóa).
-function ResultBanner({ lastResult }) {
-  const ok = !!lastResult.correct;
-  return (
-    <div className={`mx-auto w-[min(560px,92%)] mb-4 rounded-xl border px-5 py-3 flex items-center justify-center gap-3 ${
-      ok
-        ? "border-[#80ed99]/40 bg-[#80ed99]/10"
-        : "border-[#ff8fa3]/40 bg-[#ff8fa3]/10"
-    }`}>
-      <span
-        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full font-display font-black text-xl ${
-          ok ? "bg-[#80ed99]/25 text-[#80ed99]" : "bg-[#ff8fa3]/25 text-[#ff8fa3]"
-        }`}
-      >
-        {ok ? "✓" : "✕"}
-      </span>
-      <div className="text-left">
-        <div className={`font-display font-black text-[clamp(18px,2.6vw,28px)] leading-none tracking-wide ${
-          ok ? "text-[#80ed99]" : "text-[#ff8fa3]"
-        }`}>
-          {ok ? `MỞ ${pieceLabel(lastResult.row)}` : `KHÓA ${pieceLabel(lastResult.row)}`}
-        </div>
-        <div className="text-mist text-xs mt-1">
-          {ok
-            ? "Ô vừa được mở — sang bảng mảnh xem mảnh ghép mới."
-            : "Không đội nào đúng — mảnh đã bị khóa."}
-        </div>
-      </div>
     </div>
   );
 }
