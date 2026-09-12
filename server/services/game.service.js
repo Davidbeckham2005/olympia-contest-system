@@ -83,6 +83,13 @@
     if (db.game.round === "vuot_cnv") {
       state.cnv = cnv.cnvView(db);
     }
+    // B5: KHÔNG gửi đáp án qua display.answer trước khi lật (answerRevealed) — chỉ che
+    // client-side thì thí sinh "mổ bụng" state socket vẫn đọc được đáp án hàng ngang và
+    // từ khóa (vòng 2 ra đề tự luận, rủi ro chép bài). Bàn MC vẫn thấy đáp án qua
+    // state.questions.main.vuotCnv.rows[].answer nên không phụ thuộc display.answer.
+    if (db.game.round === "vuot_cnv" && !db.game.display?.answerRevealed) {
+      state.game = { ...state.game, display: { ...state.game.display, answer: "" } };
+    }
     return state;
   }
 

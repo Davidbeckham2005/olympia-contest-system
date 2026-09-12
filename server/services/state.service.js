@@ -53,6 +53,11 @@ export function publicState() {
   if (d.game.round === "vuot_cnv") {
     state.cnv = cnvView(d);
   }
+  // B5: giống game.publicGame — không gửi display.answer cho vòng 2 trước khi lật đáp án
+  // (answerRevealed), tránh thí sinh đọc được đáp án qua state socket.
+  if (d.game.round === "vuot_cnv" && !d.game.display?.answerRevealed) {
+    state.game = { ...state.game, display: { ...state.game.display, answer: "" } };
+  }
   return state;
 }
 
