@@ -84,6 +84,7 @@ const actions = {
   "buzzer.press": (p) => game.pressBuzzer(p.teamId, p.intent),
   "puzzle.piece": (p) => game.revealPiece(p.index, p.value !== false),
   "puzzle.select": (p) => game.selectRow(p.row),
+  "puzzle.centerEarly": (p) => game.setCenterEarly(p.value !== false),
   "puzzle.deselect": () => game.deselectRow(),
   "puzzle.startTimer": () => game.startRowTimer(),
   "puzzle.row": (p) => game.revealRow(p.row),

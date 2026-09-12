@@ -27,6 +27,10 @@ export default function RoundVuotCnv({ ctx }) {
   if (![0, 1, 2, 3, 4].some((i) => solved[i])) r2TileAnimated.clear();
   // Index 4 không phải hàng ngang — là CÂU HỎI MẢNH GHÉP TRUNG TÂM (câu hỏi cuối mở mảnh giữa).
   const isCenterActive = p.currentRow === 4;
+  // LUẬT: mảnh trung tâm chỉ mở được khi 4 mảnh GÓC đã xử lý xong (mở hoặc khóa), trừ
+  // khi MC bật "Mở sớm ô trung tâm" (cnv.centerEarly = toàn quyền, nút riêng).
+  const cornersDone = [0, 1, 2, 3].every((i) => solved[i] || locked[i]);
+  const centerUnlockable = cornersDone || !!cnv?.centerEarly;
   // Đang có 1 ô được chọn/xử lý (khác "idle") — dùng để hiện khối "Bài nộp" + "Bỏ chọn".
   const rowActive = p.currentRow != null && (p.rowPhase === "open" || p.rowPhase === "closed" || p.rowPhase === "scored");
   // Đang THỰC SỰ nhận bài: cần ô mở + đồng hồ đang chạy (timer.running là nguồn sự thật
@@ -224,8 +228,14 @@ export default function RoundVuotCnv({ ctx }) {
             <button
               type="button"
               onClick={() => !solved[4] && act("puzzle.piece", { index: 4 })}
-              title={!solved[4] ? "Mở ô trung tâm — mở qua câu hỏi mảnh ghép trung tâm" : "Ô trung tâm đã mở"}
-              disabled={locked[4] || p.keywordSolved}
+              title={
+                !solved[4]
+                  ? centerUnlockable
+                    ? "Mở ô trung tâm — mở qua câu hỏi mảnh ghép trung tâm"
+                    : "Chưa đủ 4 mảnh góc — mở ô trung tâm cần cả 4 góc đã mở hoặc khóa (hoặc bấm “Mở sớm” ở danh sách bên dưới)"
+                  : "Ô trung tâm đã mở"
+              }
+              disabled={locked[4] || p.keywordSolved || (!centerUnlockable && !solved[4])}
               className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[52%] h-[60%] rounded border-2 grid place-items-center font-display font-bold text-xl transition ${
                 cnv?.media?.url && cnv.media.type !== "video" && solved[4]
                   ? `pointer-events-none bg-transparent border-transparent ${tileOpenAnimated(4) ? "r2-tile-open" : ""}`
@@ -349,6 +359,9 @@ export default function RoundVuotCnv({ ctx }) {
             // chỉ lộ sân khấu khi MC bấm nút "Mở câu hỏi" riêng.
             const occupied = p.currentRow != null && (p.rowPhase === "open" || p.rowPhase === "closed");
             const otherBusy = occupied && !isCurrent;
+            // LUẬT "đủ 4 góc mới mở trung tâm": chưa đủ góc + chưa bật "Mở sớm" → nút
+            // mở bị khóa với lý do rõ ràng (server cũng chặn như là lớp an toàn cuối).
+            const centerBlocked = i === 4 && !canOpen ? false : i === 4 && !centerUnlockable;
             const label = solved[i] ? "Đã mở" : locked[i] ? "Đã khóa" : isCurrent ? "Đang thi" : "Chưa mở";
             return (
               <div
@@ -391,14 +404,37 @@ export default function RoundVuotCnv({ ctx }) {
                   >
                     {locked[i] ? "✕" : 5}
                   </span>
+                  {/* Nút "Mở sớm ô trung tâm" (toàn quyền MC): chỉ hiện khi CHƯA đủ 4 góc
+                      và ô trung tâm chưa xử lý. Bật → cho phép mở câu hỏi trung tâm từ
+                      đầu vòng (lệch luật "đủ 4 góc"), tắt → quay về đúng luật. */}
+                  {!cornersDone && !solved[4] && !locked[4] && (
+                    <button
+                      type="button"
+                      className={`btn text-xs! py-1! px-2.5! justify-center ${
+                        cnv?.centerEarly
+                          ? "bg-[#ffd60a] text-[#1a1400] ring-1 ring-[#ffd60a]"
+                          : "btn-ghost ring-1 ring-white/30"
+                      }`}
+                      title={
+                        cnv?.centerEarly
+                          ? "Đang mở sớm: câu hỏi trung tâm mở được dù chưa đủ 4 góc. Bấm để tắt và quay về đúng luật."
+                          : "Bạn đang can với luật “đủ 4 góc mới mở trung tâm”: cho phép mở câu hỏi mảnh ghép trung tâm ngay từ đầu vòng (toàn quyền MC)."
+                      }
+                      onClick={() => act("puzzle.centerEarly", { value: !cnv?.centerEarly })}
+                    >
+                      {cnv?.centerEarly ? "Mở sớm: BẬT" : "Mở sớm: TẮT"}
+                    </button>
+                  )}
                   {canOpen && !isCurrent && (
                     <button
                       type="button"
-                      disabled={otherBusy}
+                      disabled={otherBusy || centerBlocked}
                       title={
-                        otherBusy
-                          ? "Đang nhận bài/chấm ô khác — hãy Bỏ chọn hoặc Chốt điểm ô đó trước khi mở câu hỏi này"
-                          : "Mở CÂU HỎI MẢNH GHÉP TRUNG TÂM (câu hỏi cuối) cho các đội cùng trả lời tự luận (chỉ mở khi bấm nút này)"
+                        centerBlocked
+                          ? "Chưa đủ 4 mảnh góc đã xử lý — mở ô trung tâm cần cả 4 góc đã mở hoặc khóa. Bấm “Mở sớm ô trung tâm” để bỏ qua luật này."
+                          : otherBusy
+                            ? "Đang nhận bài/chấm ô khác — hãy Bỏ chọn hoặc Chốt điểm ô đó trước khi mở câu hỏi này"
+                            : "Mở CÂU HỎI MẢNH GHÉP TRUNG TÂM (câu hỏi cuối) cho các đội cùng trả lời tự luận (chỉ mở khi bấm nút này)"
                       }
                       onClick={() => act("puzzle.select", { row: i })}
                       className="btn text-xs! py-1! px-2.5! justify-center bg-gold/15 text-gold ring-1 ring-gold/50 hover:bg-gold/25 disabled:opacity-40 disabled:cursor-not-allowed"

@@ -102,6 +102,9 @@ export function cnvView(db) {
     // bức ảnh; từ khóa chỉ nhìn hình, không có câu hỏi riêng).
     currentRow: p.currentRow ?? 0,
     rowPhase: p.rowPhase || "idle",
+    // MC đã bật "Mở sớm ô trung tâm" (bỏ qua điều kiện đủ 4 góc) hay chưa — UI dùng
+    // để hiện nút bỏ qua và cho phép mở câu hỏi mảnh trung tâm từ đầu vòng.
+    centerEarly: !!p.centerEarly,
     question: p.rowPhase === "open" && cnv.rows?.[p.currentRow]
       ? (cnv.rows[p.currentRow].question || "")
       : "",
@@ -111,6 +114,13 @@ export function cnvView(db) {
 // 5 mảnh đã được xử lý hết (4 hàng ngang mở mảnh góc + câu hỏi cuối mở mảnh trung tâm)
 export function cornersResolved(p = g().puzzle) {
   return [0, 1, 2, 3, 4].every((i) => p.rowsSolved?.[i] || p.rowsLocked?.[i]);
+}
+
+// 4 mảnh GÓC (hàng 0-3) đã được xử lý xong (mở hoặc khóa) — điều kiện LUẬT để được mở
+// câu hỏi mảnh ghép TRUNG TÂM (index 4): "Mở đủ 4 góc mới được câu hỏi ô trung tâm".
+// MC có thể bỏ qua bằng puzzle.centerEarly (nút "Mở sớm"/toàn quyền MC).
+export function cornersSettled(p = g().puzzle) {
+  return [0, 1, 2, 3].every((i) => p.rowsSolved?.[i] || p.rowsLocked?.[i]);
 }
 
 export function keywordPoints() {
@@ -153,6 +163,10 @@ export function revealPiece(index, value = true) {
   const game = g();
   const i = Number(index);
   if (!(i >= 0 && i <= 4)) return;
+  // LUẬT: mảnh TRUNG TÂM (index 4) chỉ mở được khi đã xử lý xong 4 mảnh góc (mở hoặc
+  // khóa), hoặc MC đã bật "Mở sớm" (puzzle.centerEarly = toàn quyền). Không cho thao
+  // tác đóng/mở mảnh trung tâm tay trước khi đủ điều kiện — giữ nguyên làm im lặng.
+  if (i === 4 && value && !cornersSettled(game.puzzle) && !game.puzzle.centerEarly) return;
   game.puzzle.rowsSolved[i] = !!value;
   if (value) game.puzzle.rowsLocked[i] = false;
   // Mỗi mốc vừa mở mảnh → mở cửa sổ đoán từ khóa (không xóa danh sách đội đã đoán sai)
@@ -167,6 +181,14 @@ export function selectRow(rowIndex) {
   const i = Number(rowIndex);
   if (!(i >= 0 && i <= 4)) return;
   if (p.rowsSolved?.[i] || p.rowsLocked?.[i] || p.keywordSolved) return;
+  // LUẬT: câu hỏi MẢNH GHÉP TRUNG TÂM (index 4) chỉ mở được sau khi xử lý xong 4 mảnh
+  // góc (mở hoặc khóa) — "Mở đủ 4 góc mới được câu hỏi ô trung tâm". MC bật "Mở sớm"
+  // (puzzle.centerEarly, toàn quyền) thì bỏ qua điều kiện này.
+  if (i === 4 && !cornersSettled(p) && !p.centerEarly) {
+    const err = new Error(`Chưa đủ 4 mảnh góc đã xử lý — mở ô trung tâm cần cả 4 góc đã mở hoặc khóa. Nếu muốn bỏ qua luật này, bấm "Mở sớm ô trung tâm".`);
+    err.status = 400;
+    throw err;
+  }
   // An toàn dữ liệu: đang XỬ LÝ một ô (nhận bài "open" hoặc đang chấm "closed") thì cú
   // bấm chọn ô khác KHÔNG được phép ngắt ngang — nếu không sẽ xóa sạch submissions/
   // corrections/ranked còn dở của ô đang thi, làm mất bài đã nộp + hiệu ứng lastResult.
@@ -289,6 +311,17 @@ export function revealAllPuzzle() {
   openKeywordWindow();
   saveDb();
   emit();
+}
+
+// MC "Mở sớm ô trung tâm": bật/tắt quyền mở câu hỏi MẢNH GHÉP TRUNG TÂM khi chưa đủ
+// 4 mảnh góc đã xử lý (chủ đích toàn quyền MC, lệch luật mặc định "đủ 4 góc mới mở").
+export function setCenterEarly(value) {
+  const game = g();
+  if (game.round !== "vuot_cnv") return false;
+  game.puzzle.centerEarly = !!value;
+  saveDb();
+  emit();
+  return !!game.puzzle.centerEarly;
 }
 
 export function solveKeyword(teamId, correct) {

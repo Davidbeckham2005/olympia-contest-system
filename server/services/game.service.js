@@ -1172,6 +1172,7 @@ if (game.round === "khoi_dong") {
   export const startRowTimer = () => cnv.startRowTimer();
   export const revealRow = (rowIndex) => cnv.revealRow(rowIndex);
   export const revealAllPuzzle = () => cnv.revealAllPuzzle();
+  export const setCenterEarly = (value) => cnv.setCenterEarly(value);
   export const solveKeyword = (teamId, correct) => cnv.solveKeyword(teamId, correct);
   export const showPuzzle = () => cnv.showPuzzle();
   export const submitRowAnswer = (teamId, answer) => cnv.submitRowAnswer(teamId, answer);
