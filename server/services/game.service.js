@@ -74,6 +74,7 @@
         subtitle: db.settings.subtitle,
         audienceBg: db.settings.audienceBg || "dark",
         audienceBgUrl: db.settings.audienceBgUrl || "",
+        vuotCnvAutoAnswerSeconds: db.settings.vuotCnvAutoAnswerSeconds,
       },
       sounds: db.sounds || { buzz: { url: "", name: "" } },
       // Luật thi từng vòng — ưu tiên bản admin đã chỉnh trong DB (roundsView)

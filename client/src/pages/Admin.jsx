@@ -491,7 +491,7 @@ function QuestionsTab({ state, reload, setMsg }) {
             key={id}
             type="button"
             onClick={() => setSub(id)}
-            className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
+            className={`rounded-md border px-4 py-2 text-sm font-semibold transition ${
               sub === id ? "bg-gold text-[#1a1400] border-gold" : "border-line text-mist hover:border-gold/60"
             }`}
           >
@@ -804,8 +804,6 @@ function TangTocEditor({ draft, setDraft }) {
 function VeDichEditor({ draft, setDraft, setMsg }) {
   const m = draft.main;
   const qs0 = Array.isArray(m.veDich) ? m.veDich : [];
-  const levels = [10, 20, 30];
-  const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [visible, setVisible] = useState(50);
   const [importing, setImporting] = useState(false);
@@ -865,10 +863,9 @@ function VeDichEditor({ draft, setDraft, setMsg }) {
   const kw = search.trim().toLowerCase();
   const matched = all.filter(
     (q) =>
-      (filter === "all" || Number(q.points) === filter) &&
-      (!kw ||
-        String(q.question || "").toLowerCase().includes(kw) ||
-        String(q.answer || "").toLowerCase().includes(kw))
+      !kw ||
+      String(q.question || "").toLowerCase().includes(kw) ||
+      String(q.answer || "").toLowerCase().includes(kw)
   );
   const shown = matched.slice(0, visible);
   const autoInMatched = matched.filter((q) => !!q.auto).length;
@@ -876,13 +873,13 @@ function VeDichEditor({ draft, setDraft, setMsg }) {
   return (
     <div>
       {/* THỐNG KÊ + IMPORT — gọn một dòng */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mb-4">
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-2 mb-3">
         <span className="text-sm">
-          <b>10đ: {qs0.filter((q) => Number(q.points) === 10).length}</b>
-          {" · "}
-          <b>20đ: {qs0.filter((q) => Number(q.points) === 20).length}</b>
-          {" · "}
-          <b>30đ: {qs0.filter((q) => Number(q.points) === 30).length}</b>
+          10đ: <b>{qs0.filter((q) => Number(q.points) === 10).length}</b>
+          {" | "}
+          20đ: <b>{qs0.filter((q) => Number(q.points) === 20).length}</b>
+          {" | "}
+          30đ: <b>{qs0.filter((q) => Number(q.points) === 30).length}</b>
         </span>
         <span className="ml-auto flex items-center gap-2">
           <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={onImport} />
@@ -901,25 +898,7 @@ function VeDichEditor({ draft, setDraft, setMsg }) {
         </span>
       </div>
 
-      {/* LỌC THEO ĐIỂM */}
-      <div className="flex flex-wrap items-center gap-2 mb-2.5">
-        {["all", ...levels].map((lv) => (
-          <button
-            key={lv}
-            type="button"
-            onClick={() => setFilter(lv)}
-            className={`border px-3 py-1 text-xs font-semibold transition ${
-              filter === lv
-                ? "border-gold bg-gold/15 text-gold"
-                : "border-line/60 text-mist hover:border-gold/50 hover:text-white"
-            }`}
-          >
-            {lv === "all" ? "Tất cả" : `${lv}đ`}
-          </button>
-        ))}
-      </div>
-
-      {/* TÌM KIẾM + THÊM */}
+      {/* TÌM KIẾM + thao tác số lượng */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
         <input
           value={search}
@@ -927,25 +906,13 @@ function VeDichEditor({ draft, setDraft, setMsg }) {
           placeholder="Tìm theo nội dung câu hỏi / đáp án…"
           className="min-w-0 flex-1!"
         />
-        <button
-          type="button"
-          className="btn btn-ok text-xs py-1.5! ml-auto"
-          title={filter === "all" ? "Thêm câu 10 điểm" : `Thêm câu ${filter} điểm`}
-          onClick={() => addQ(filter === "all" ? 10 : filter)}
-        >
-          {filter === "all" ? "+ Thêm" : `+ Thêm ${filter}đ`}
-        </button>
-      </div>
-
-      {/* DANH SÁCH */}
-      <div className="flex flex-wrap items-center gap-2 mb-2">
-        <span className="text-sm text-mist">
+        <span className="text-sm text-mist whitespace-nowrap">
           Hiện {shown.length}/{matched.length} câu
         </span>
         {autoInMatched > 0 && (
           <button
             type="button"
-            className="btn btn-ghost text-xs py-1! px-2!"
+            className="border border-line/60 px-2 py-1 text-xs text-mist transition hover:border-gold/40 hover:text-white"
             onClick={() => {
               if (confirm(`Xóa ${autoInMatched} câu tự tạo (auto) đang hiển thị sau bộ lọc?`)) {
                 delQs(matched.filter((q) => q.auto).map((q) => q.id));
@@ -955,9 +922,10 @@ function VeDichEditor({ draft, setDraft, setMsg }) {
             Dọn {autoInMatched} câu tự tạo
           </button>
         )}
-        {matched.length > 0 && (<button
+        {matched.length > 0 && (
+          <button
             type="button"
-            className="btn btn-danger text-xs py-1! px-2! ml-auto"
+            className="border border-line/60 px-2 py-1 text-xs text-mist transition hover:border-danger/60 hover:text-danger"
             onClick={() => {
               if (confirm(`Xóa ${matched.length} câu Về đích đang hiển thị sau bộ lọc?`)) {
                 delQs(matched.map((q) => q.id));
@@ -969,43 +937,69 @@ function VeDichEditor({ draft, setDraft, setMsg }) {
         )}
       </div>
 
-      <div className="grid gap-2">
-        {shown.map((qd, i) => {
-          const incomplete =
-            !String(qd.question || "").trim() || !String(qd.answer || "").trim();
+      {/* 3 CỘT 10 / 20 / 30 — màn nhỏ xếp dọc */}
+      <div className="grid gap-4 lg:grid-cols-3 items-start">
+        {[10, 20, 30].map((lv) => {
+          const items = matched.filter((q) => Number(q.points) === lv).slice(0, visible);
+          const total = qs0.filter((q) => Number(q.points) === lv).length;
           return (
-            <div
-              key={qd.id}
-              className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 rounded-lg border border-line/60 bg-night/30 px-3 py-2"
-            >
-              <span className="shrink-0 w-6 text-right text-xs text-mist tabular-nums">{i + 1}</span>
-              <span className="shrink-0 w-9 text-xs font-bold text-gold">{qd.points}đ</span>
-              <input
-                value={qd.question || ""}
-                placeholder={`Câu hỏi ${qd.points} điểm`}
-                onChange={(e) => setQ(qd.id, { question: e.target.value, auto: false })}
-                className="min-w-[180px] flex-1 basis-72!"
-              />
-              <input
-                value={qd.answer || ""}
-                placeholder="Đáp án"
-                onChange={(e) => setQ(qd.id, { answer: e.target.value, auto: false })}
-                className="w-56 shrink-0!"
-              />
-              {incomplete && <span className="shrink-0 text-[11px] text-mist/70">Chưa nhập nội dung</span>}
-              <button
-                type="button"
-                title="Xóa câu"
-                onClick={() => delQ(qd.id)}
-                className="grid h-9 w-9 shrink-0 place-items-center rounded-md border border-line/60 text-mist transition hover:border-danger/60 hover:text-danger"
-              >
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <polyline points="3 6 5 6 21 6" />
-                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                  <line x1="10" y1="11" x2="10" y2="17" />
-                  <line x1="14" y1="11" x2="14" y2="17" />
-                </svg>
-              </button>
+            <div key={lv} className="min-w-0">
+              <div className="flex items-baseline gap-2 mb-2 px-0.5">
+                <b className="text-gold">{lv}đ</b>
+                <span className="text-xs text-mist tabular-nums">({total})</span>
+                <button
+                  type="button"
+                  className="ml-auto text-xs font-semibold text-mist transition hover:text-gold"
+                  title={`Thêm câu ${lv} điểm`}
+                  onClick={() => addQ(lv)}
+                >
+                  + Thêm
+                </button>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                {items.length === 0 ? (
+                  <p className="px-0.5 text-sm text-mist/80">Không có câu hỏi.</p>
+                ) : items.map((qd, i) => {
+                  const incomplete =
+                    !String(qd.question || "").trim() || !String(qd.answer || "").trim();
+                  return (
+                    <div
+                      key={qd.id}
+                      className="flex flex-wrap items-center gap-x-2 gap-y-1 px-2 py-1.5 rounded bg-night/25 hover:bg-night/50 transition"
+                    >
+                      <span className="shrink-0 w-5 text-right text-xs text-mist/70 tabular-nums">{i + 1}</span>
+                      <input
+                        value={qd.question || ""}
+                        placeholder={`Câu hỏi ${qd.points} điểm`}
+                        onChange={(e) => setQ(qd.id, { question: e.target.value, auto: false })}
+                        className="min-w-[120px] flex-1"
+                      />
+                      <input
+                        value={qd.answer || ""}
+                        placeholder="Đáp án"
+                        onChange={(e) => setQ(qd.id, { answer: e.target.value, auto: false })}
+                        className="w-32 shrink-0"
+                      />
+                      <span className="min-w-[30px] text-right shrink-0">
+                        {incomplete && <span className="text-[11px] text-mist/70">Chưa nhập nội dung</span>}
+                      </span>
+                      <button
+                        type="button"
+                        title="Xóa câu"
+                        onClick={() => delQ(qd.id)}
+                        className="shrink-0 text-mist/70 transition hover:text-danger"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <polyline points="3 6 5 6 21 6" />
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                          <line x1="10" y1="11" x2="10" y2="17" />
+                          <line x1="14" y1="11" x2="14" y2="17" />
+                        </svg>
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           );
         })}
@@ -1014,7 +1008,7 @@ function VeDichEditor({ draft, setDraft, setMsg }) {
       {shown.length < matched.length && (
         <button
           type="button"
-          className="mt-2.5 w-full border border-line/60 px-3 py-1.5 text-xs text-mist transition hover:border-gold/40 hover:text-white"
+          className="mt-3 w-full border border-line/60 px-3 py-1.5 text-xs text-mist transition hover:border-gold/40 hover:text-white"
           onClick={() => setVisible((v) => v + 50)}
         >
           Hiện thêm ({matched.length - shown.length} câu)
@@ -1291,6 +1285,7 @@ function SettingsTab({ state, reload, setMsg }) {
   const [kdAnswerSec, setKdAnswerSec] = useState(() => Number(state.game?.khoiDong?.answerSeconds) || 4);
   const [kdTimerSec, setKdTimerSec] = useState(() => Number(state.game?.khoiDong?.timerSeconds) || 60);
   const [vedAutoSec, setVedAutoSec] = useState(() => Number(state.settings?.veDichAutoAnswerSeconds) || 5);
+  const [cnvAutoSec, setCnvAutoSec] = useState(() => Number(state.settings?.vuotCnvAutoAnswerSeconds) || 6);
   // Bộ điểm thưởng theo độ nhanh Vòng 2 (Vượt CNV) & Vòng 3 (Tăng tốc) — admin thay đổi được.
   const [r2Pts, setR2Pts] = useState(() => (state.game?.round2Points || [40, 30, 20, 10]).map((n) => String(Number(n) || 0)));
   const [r3Pts, setR3Pts] = useState(() => (state.game?.round3Points || [40, 30, 20, 10]).map((n) => String(Number(n) || 0)));
@@ -1356,6 +1351,10 @@ function SettingsTab({ state, reload, setMsg }) {
         Về đích — tự bắt đầu giờ trả lời sau (giây, 0 = tắt, chờ MC bấm)
         <input type="number" min={0} value={vedAutoSec} onChange={(e) => setVedAutoSec(Number(e.target.value))} />
       </label>
+      <label className="label-grid">
+        Vượt CNV — tự bắt đầu giờ trả lời sau khi mở câu hỏi (giây, 0 = tắt, chờ MC bấm)
+        <input type="number" min={0} value={cnvAutoSec} onChange={(e) => setCnvAutoSec(Number(e.target.value))} />
+      </label>
       <div className="rounded-xl border border-line bg-night/40 p-3.5">
         <div className="text-xs tracking-[0.18em] text-mist uppercase mb-1">Điểm thưởng theo độ nhanh</div>
         <p className="text-mist text-xs mb-3">
@@ -1402,7 +1401,15 @@ function SettingsTab({ state, reload, setMsg }) {
         </button>
       </div>
       <div className="flex gap-2">
-        <button type="button" className="btn" onClick={async () => { await saveSettings(s); setMsg("Đã lưu cài đặt"); reload(); }}>Lưu</button>
+        <button type="button" className="btn" onClick={async () => {
+            await saveSettings({
+              ...s,
+              veDichAutoAnswerSeconds: Math.max(0, Number(vedAutoSec) || 0),
+              vuotCnvAutoAnswerSeconds: Math.max(0, Number(cnvAutoSec) || 0),
+            });
+            setMsg("Đã lưu cài đặt");
+            reload();
+          }}>Lưu</button>
         <button type="button" className="btn btn-ghost" onClick={async () => { await setKhoiDongAnswerSeconds(kdAnswerSec || 0); await setKhoiDongTimerSeconds(kdTimerSec || 60); setMsg("Đã lưu cấu hình khởi động"); reload(); }}>Lưu thời gian khởi động</button>
         <button
           type="button"

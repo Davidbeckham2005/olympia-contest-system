@@ -150,5 +150,8 @@ export function defaultSettings() {
     // Số giây MC được phép đọc câu hỏi trước khi hệ thống TỰ bắt đầu đếm giờ trả lời
     // ở Vòng Về đích (0 = tắt, bắt buộc MC bấm thủ công "Bắt đầu tính giờ").
     veDichAutoAnswerSeconds: 5,
+    // Số giây hệ thống TỰ bắt đầu đếm giờ trả lời ở Vòng 2 (Vượt CNV) sau khi MC mở
+    // xong câu hỏi — để MC kịp đọc câu hỏi/chuẩn bị (0 = tắt, chờ MC bấm thủ công).
+    vuotCnvAutoAnswerSeconds: 6,
   };
 }

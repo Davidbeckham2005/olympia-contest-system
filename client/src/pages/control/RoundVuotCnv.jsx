@@ -19,11 +19,14 @@ export default function RoundVuotCnv({ ctx }) {
 
   const screenMode = showing ? "question" : d.mode === "answers" ? "answers" : "puzzle";
 
+  // Số giây hệ thống TỰ bắt đầu đếm giờ sau khi MC mở câu hỏi (0 = tắt, chờ MC bấm).
+  const autoStartSec = Number(state?.settings?.vuotCnvAutoAnswerSeconds) || 0;
+
   const rows = state.questions?.main?.vuotCnv?.rows || [];
   // Vòng bị reset (chưa mảnh nào mở) → quên hiệu ứng đã phát.
   if (![0, 1, 2, 3, 4].some((i) => solved[i])) r2TileAnimated.clear();
   // Index 4 không phải hàng ngang — là CÂU HỎI MẢNH GHÉP TRUNG TÂM (câu hỏi cuối mở mảnh giữa).
-  const isCenterActive = (p.currentRow ?? 0) === 4;
+  const isCenterActive = p.currentRow === 4;
   // Đang có 1 ô được chọn/xử lý (khác "idle") — dùng để hiện khối "Bài nộp" + "Bỏ chọn".
   const rowActive = p.currentRow != null && (p.rowPhase === "open" || p.rowPhase === "closed" || p.rowPhase === "scored");
   // Đang THỰC SỰ nhận bài: cần ô mở + đồng hồ đang chạy (timer.running là nguồn sự thật
@@ -117,13 +120,20 @@ export default function RoundVuotCnv({ ctx }) {
                 theo từng broadcast), `running` ở đây là game:timer realtime 250ms.
                 Bấm khi đã từng Tạm dừng (còn giây dư) sẽ TIẾP TỤC từ giây còn lại. */}
             {cnvRowPhase && p.currentRow != null && p.rowPhase === "open" && !running && (
-              <button
-                type="button"
-                className="btn btn-ok text-sm! py-1.5! px-3!"
-                onClick={() => act("puzzle.startTimer")}
-              >
-                ▶ Bắt đầu giờ
-              </button>
+              <>
+                {autoStartSec > 0 && (
+                  <span className="text-mist text-xs" title="Sau thời gian này nếu MC chưa bấm, hệ thống tự bắt đầu đếm giờ">
+                    Tự bắt đầu sau {autoStartSec}s
+                  </span>
+                )}
+                <button
+                  type="button"
+                  className="btn btn-ok text-sm! py-1.5! px-3!"
+                  onClick={() => act("puzzle.startTimer")}
+                >
+                  ▶ Bắt đầu giờ
+                </button>
+              </>
             )}
             {/* Đồng hồ đang chạy: Tạm dừng (giữ ô, khóa nộp bài nhất thời) tách biệt với
                 "Đóng nhận bài" (dừng hẳn + sang màn chấm). Hai đường "dừng" không lẫn
@@ -229,6 +239,8 @@ export default function RoundVuotCnv({ ctx }) {
 
       {/* MỞ Ô — list dọc: TÁCH RÕ 4 HÀNG NGANG (có số kí tự) với CÂU HỎI MẢNH GHÉP
           TRUNG TÂM (câu hỏi cuối — KHÔNG số kí tự, nổi bật riêng). Tránh MC lẫn 2 loại.
+          AN TOÀN: bấm vào DÒNG không còn mở câu hỏi lên sân khấu nữa (dễ bấm nhầm làm
+          lộ câu hỏi sớm) — mỗi câu hỏi có nút riêng "Mở câu hỏi" để MC chủ động chiếu.
           NHÓM CHỌN HÀNG này luôn hiển thị (mọi màn hình: Câu hỏi / Bảng mảnh / Đáp án)
           để MC mở ô kế tiếp ngay sau khi chốt điểm, không phải quay về màn Câu hỏi. */}
       <div className="rounded-lg border border-[rgba(255,214,10,0.2)] bg-[#2a3d63] px-3 py-2.5 shadow-[0_10px_40px_rgba(0,0,0,0.45)]">
@@ -238,17 +250,19 @@ export default function RoundVuotCnv({ ctx }) {
         </div>
         <div className="flex flex-col gap-1.5">
           {rows.slice(0, 4).map((row, i) => {
-            const isCurrent = i === (p.currentRow ?? 0);
+            const isCurrent = i === p.currentRow;
             const count = row.letterCount || String(row.answer || "").replace(/\s/g, "").length;
             const canOpen = !solved[i] && !locked[i] && !p.keywordSolved;
+            // AN TOÀN: bấm vào DÒNG không còn tự mở câu hỏi nữa (dễ bấm nhầm làm lộ
+            // câu hỏi lên sân khấu sớm). Mỗi câu hỏi có nút riêng "Mở câu hỏi" — MC phải
+            // bấm đúng nút đó thi câu hỏi mới hiện ra. Đang xử lý 1 ô khác (open/closed)
+            // thì nút mở của các ô còn lại bị khóa (server cũng chặn, tránh lỗi bấm nhầm).
+            const occupied = p.currentRow != null && (p.rowPhase === "open" || p.rowPhase === "closed");
+            const otherBusy = occupied && !isCurrent;
             const label = solved[i] ? "Đã mở" : locked[i] ? "Đã khóa" : isCurrent ? "Đang thi" : "Chưa mở";
             return (
-              <button
+              <div
                 key={row.id}
-                type="button"
-                disabled={!canOpen}
-                title={canOpen ? "Mở câu hỏi hàng ngang cho các đội cùng trả lời tự luận" : undefined}
-                onClick={() => act("puzzle.select", { row: i })}
                 className={`flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-left transition ${
                   isCurrent
                     ? "border-gold bg-gold/15"
@@ -256,8 +270,8 @@ export default function RoundVuotCnv({ ctx }) {
                       ? "border-[rgba(255,214,10,0.6)] bg-[#ffd60a]/15"
                       : locked[i]
                         ? "border-[rgba(255,70,94,0.4)] bg-[#ff465e]/10 opacity-70"
-                        : "border-[rgba(255,214,10,0.2)] bg-[#1d2c4a] hover:border-gold hover:bg-gold/10"
-                } disabled:opacity-40 disabled:cursor-not-allowed`}
+                        : "border-[rgba(255,214,10,0.2)] bg-[#1d2c4a]"
+                }`}
               >
                 <div className="flex flex-col min-w-0">
                   <div className="flex items-baseline gap-1.5">
@@ -290,8 +304,23 @@ export default function RoundVuotCnv({ ctx }) {
                   >
                     {locked[i] ? "✕" : i + 1}
                   </span>
+                  {canOpen && !isCurrent && (
+                    <button
+                      type="button"
+                      disabled={otherBusy}
+                      title={
+                        otherBusy
+                          ? "Đang nhận bài/chấm ô khác — hãy Bỏ chọn hoặc Chốt điểm ô đó trước khi mở câu hỏi này"
+                          : "Mở câu hỏi hàng ngang cho các đội cùng trả lời tự luận (chỉ mở khi bấm nút này)"
+                      }
+                      onClick={() => act("puzzle.select", { row: i })}
+                      className="btn text-xs! py-1! px-2.5! justify-center bg-gold/15 text-gold ring-1 ring-gold/50 hover:bg-gold/25 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      Mở câu hỏi
+                    </button>
+                  )}
                 </div>
-              </button>
+              </div>
             );
           })}
         </div>
@@ -310,14 +339,14 @@ export default function RoundVuotCnv({ ctx }) {
             if (!row) return null;
             const isCurrent = isCenterActive;
             const canOpen = !solved[i] && !locked[i] && !p.keywordSolved;
+            // Đồng bộ quy tắc an toàn với 4 hàng ngang: dòng chỉ là trạng thái, câu hỏi
+            // chỉ lộ sân khấu khi MC bấm nút "Mở câu hỏi" riêng.
+            const occupied = p.currentRow != null && (p.rowPhase === "open" || p.rowPhase === "closed");
+            const otherBusy = occupied && !isCurrent;
             const label = solved[i] ? "Đã mở" : locked[i] ? "Đã khóa" : isCurrent ? "Đang thi" : "Chưa mở";
             return (
-              <button
+              <div
                 key={row.id}
-                type="button"
-                disabled={!canOpen}
-                title={canOpen ? "Mở CÂU HỎI MẢNH GHÉP TRUNG TÂM (câu hỏi cuối) cho các đội cùng trả lời tự luận" : undefined}
-                onClick={() => act("puzzle.select", { row: i })}
                 className={`flex items-center justify-between gap-3 rounded-md border-2 px-3 py-2.5 text-left transition ${
                   isCurrent
                     ? "border-gold bg-gold/20 shadow-[0_0_18px_rgba(255,214,10,0.25)]"
@@ -325,8 +354,8 @@ export default function RoundVuotCnv({ ctx }) {
                       ? "border-[rgba(255,214,10,0.7)] bg-[#ffd60a]/15"
                       : locked[i]
                         ? "border-[rgba(255,70,94,0.4)] bg-[#ff465e]/10 opacity-70"
-                        : "border-[rgba(255,214,10,0.35)] bg-[#1d2c4a] hover:border-gold hover:bg-gold/10"
-                } disabled:opacity-40 disabled:cursor-not-allowed`}
+                        : "border-[rgba(255,214,10,0.35)] bg-[#1d2c4a]"
+                }`}
               >
                 <div className="flex flex-col min-w-0">
                   <span className="text-sm font-bold text-white">Mảnh ghép trung tâm</span>
@@ -356,8 +385,23 @@ export default function RoundVuotCnv({ ctx }) {
                   >
                     {locked[i] ? "✕" : 5}
                   </span>
+                  {canOpen && !isCurrent && (
+                    <button
+                      type="button"
+                      disabled={otherBusy}
+                      title={
+                        otherBusy
+                          ? "Đang nhận bài/chấm ô khác — hãy Bỏ chọn hoặc Chốt điểm ô đó trước khi mở câu hỏi này"
+                          : "Mở CÂU HỎI MẢNH GHÉP TRUNG TÂM (câu hỏi cuối) cho các đội cùng trả lời tự luận (chỉ mở khi bấm nút này)"
+                      }
+                      onClick={() => act("puzzle.select", { row: i })}
+                      className="btn text-xs! py-1! px-2.5! justify-center bg-gold/15 text-gold ring-1 ring-gold/50 hover:bg-gold/25 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      Mở câu hỏi
+                    </button>
+                  )}
                 </div>
-              </button>
+              </div>
             );
           })()}
         </div>

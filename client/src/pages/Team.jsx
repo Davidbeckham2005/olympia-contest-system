@@ -505,24 +505,24 @@ export default function Team() {
       !cnvBanned &&
       g.questionStatus !== "showing";
     const answerBar = cnvBanned ? (
-      <div className="rounded-2xl border border-danger/40 bg-danger/10 px-4 py-3 text-center">
+      <div className="bg-danger/10 px-4 py-3 text-center">
         <p className="text-sm font-semibold text-danger">Đoán từ khóa chưa đúng — đội bạn đã mất quyền trả lời hàng ngang.</p>
       </div>
     ) : (
       <div>
-        <form onSubmit={submitCnv} className={`flex items-center gap-2 rounded-2xl border px-4 py-3 ${r2CanType ? "border-gold/40" : "border-line"}`}>
+        <form onSubmit={submitCnv} className="flex items-center gap-2">
           <input
             value={answer}
             onChange={(e) => setAnswer(e.target.value)}
             placeholder={r2CanType ? "Gõ đáp án của đội bạn… (Enter để gửi)" : "Chờ MC bắt đầu đếm giờ…"}
             readOnly={!r2CanType}
             disabled={!r2CanType}
-            className="flex-1"
+            className={`flex-1 ${r2CanType ? "!border-gold/50" : ""}`}
           />
           <button className="btn" type="submit" disabled={!r2CanType || !answer.trim()}>Gửi</button>
         </form>
         {cnvMsg && (
-          <div className="mt-2 rounded-xl border border-danger/40 bg-danger/10 px-3 py-2 text-center text-sm font-semibold text-danger">
+          <div className="bg-danger/10 px-3 py-2 mt-2 text-center text-sm font-semibold text-danger">
             {cnvMsg}
           </div>
         )}
@@ -653,26 +653,20 @@ function Round2Layout({ state, timerCaption, timerRunning, timerRemaining, onLog
             onClick={insertEnabled ? onInsert : undefined}
             disabled={!insertEnabled}
             title={insertEnabled ? "Giành quyền trả lời chướng ngại vật" : "Chưa thể giành quyền lúc này"}
-            className={`flex items-center gap-2.5 rounded-xl border px-3 py-2.5 transition active:scale-95 ${
+            className={`flex items-center gap-2 text-sm font-bold transition ${
               insertEnabled
-                ? "border-gold/60 bg-gold/15 cursor-pointer"
-                : "border-white/15 bg-[#0b1120]/85 cursor-not-allowed opacity-60"
+                ? "bg-gold text-[#1a1400] cursor-pointer"
+                : "bg-white/10 text-white/45 cursor-not-allowed"
             }`}
           >
-            <span className={`inline-grid h-8 w-8 place-items-center rounded-md border text-[11px] font-bold ${
-              insertEnabled
-                ? "border-white/25 bg-gold text-[#1a1400] shadow-[0_0_14px_rgba(255,214,10,0.45)]"
-                : "border-white/20 bg-[#13203a] text-white/60"
-            }`}>
+            <span className="bg-black/25 px-3 py-2.5 font-display text-[11px] font-black tracking-widest">
               INSERT
             </span>
-            <span className={`text-sm font-semibold ${insertEnabled ? "text-gold" : "text-white/60"}`}>Giành quyền trả lời</span>
+            <span className={`px-3 pr-4 py-2.5 ${insertEnabled ? "text-[#1a1400]" : "text-white/45"}`}>Giành quyền trả lời</span>
           </button>
         </div>
       )}
       <TeamsSidebar teams={state?.teams || []} currentTeamId={currentTeamId} />
-      <div className="pointer-events-none absolute inset-y-0 left-0 z-50 w-px bg-gradient-to-b from-transparent via-white/25 to-transparent" />
-      <div className="pointer-events-none absolute inset-y-0 right-0 z-50 w-px bg-gradient-to-b from-transparent via-white/25 to-transparent" />
     </div>
   );
 }
@@ -700,29 +694,29 @@ function Round2BellFrame({ bell }) {
 
   return (
     <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-40 w-[min(560px,94vw)]">
-      <div className={`flex items-center gap-4 rounded-2xl border px-5 py-4 ${
+      <div className={`flex items-center gap-4 px-5 py-3.5 ${
         bell.enabled
-          ? "bg-gold/15 border-gold/50"
-          : "bg-panel-solid border-line"
+          ? "bg-gold/10"
+          : ""
       }`}>
         <button
           type="button"
           onClick={bell.enabled ? bell.onPress : undefined}
           disabled={!bell.enabled}
           aria-label="Giành quyền trả lời chướng ngại vật"
-          className={`grid h-16 w-16 shrink-0 place-items-center rounded-full text-3xl transition active:scale-90 ${
+          className={`grid h-12 w-12 shrink-0 place-items-center text-2xl transition ${
             bell.enabled
-              ? "bg-gold text-[#1a1400] shadow-[0_0_28px_rgba(255,214,10,0.55)] animate-pulse"
-              : "bg-panel-solid text-mist/45 border border-line cursor-not-allowed"
+              ? "bg-gold text-[#1a1400] cursor-pointer"
+              : "bg-white/10 text-white/40 cursor-not-allowed"
           }`}
         >
           🔔
         </button>
         <div className="min-w-0 flex-1 text-left">
-          <div className={`font-display font-bold tracking-wide ${bell.enabled ? "text-gold" : "text-mist"}`}>
+          <div className={`font-display font-bold tracking-wide text-sm ${bell.enabled ? "text-gold" : "text-mist"}`}>
             {label}
           </div>
-          <div className="text-mist text-sm mt-0.5">{hint}</div>
+          <div className="text-mist text-xs mt-0.5">{hint}</div>
         </div>
       </div>
     </div>
@@ -755,23 +749,23 @@ function TeamsSidebar({ teams, currentTeamId }) {
   const live = (teams || []).filter((t) => !t.eliminated);
   return (
     <div className="absolute right-4 top-1/2 -translate-y-1/2 z-40 min-w-[130px] max-w-[180px]">
-      <div className="rounded-xl border border-white/20 bg-[#0b1120]/80 px-2.5 py-1.5">
+      <div className="px-2.5 py-2">
         {live.map((t) => {
           const isMe = t.id === currentTeamId;
           return (
             <div
               key={t.id}
-              className={`flex items-center gap-2 py-1.5 px-2 -mx-2 text-sm whitespace-nowrap rounded transition ${
+              className={`flex items-center gap-2 py-1.5 px-2 text-sm whitespace-nowrap ${
                 isMe
-                  ? "bg-white text-black my-0.5"
-                  : "border-b border-white/10 last:border-b-0"
+                  ? "bg-white text-black"
+                  : "text-white/75"
               }`}
             >
               <span className={`h-2 w-2 rounded-full shrink-0 ${isMe ? "bg-black" : "bg-white/40"}`} />
-              <span className={`font-semibold truncate leading-tight ${isMe ? "text-black" : "text-white/85"}`}>
+              <span className={`font-semibold truncate leading-tight ${isMe ? "text-black" : ""}`}>
                 {t.name}
               </span>
-              <span className={`ml-auto tabular-nums leading-tight ${isMe ? "text-black font-bold" : "text-white/65"}`}>
+              <span className={`ml-auto tabular-nums leading-tight ${isMe ? "text-black font-bold" : "text-white/70"}`}>
                 {t.score}
               </span>
             </div>

@@ -466,21 +466,31 @@ function pieceLabel(row) {
 // chuyển sang bảng mảnh. Chỉ hiện khi ô đã chốt (rowPhase "scored") và tồn tại đến khi
 // MC chọn ô kế tiếp (lastResult bị xóa).
 function ResultBanner({ lastResult }) {
+  const ok = !!lastResult.correct;
   return (
-    <div className={`mx-auto w-[min(680px,92%)] mb-4 rounded-2xl border-2 px-6 py-3.5 text-center ${
-      lastResult.correct
-        ? "border-[rgba(128,237,153,0.6)] bg-[rgba(128,237,153,0.14)]"
-        : "border-[rgba(255,77,109,0.6)] bg-[rgba(255,77,109,0.14)]"
+    <div className={`mx-auto w-[min(560px,92%)] mb-4 rounded-xl border px-5 py-3 flex items-center justify-center gap-3 ${
+      ok
+        ? "border-[#80ed99]/40 bg-[#80ed99]/10"
+        : "border-[#ff8fa3]/40 bg-[#ff8fa3]/10"
     }`}>
-      <div className={`font-display font-black text-[clamp(26px,3.8vw,46px)] leading-none tracking-wide ${
-        lastResult.correct ? "text-[#80ed99]" : "text-[#ff8fa3]"
-      }`}>
-        {lastResult.correct ? `MỞ ${pieceLabel(lastResult.row)}` : `KHÓA ${pieceLabel(lastResult.row)}`}
-      </div>
-      <div className="text-mist text-[clamp(13px,1.6vw,17px)] mt-1.5 font-semibold">
-        {lastResult.correct
-          ? "Ô vừa được mở — MC chuyển sang bảng mảnh để xem mảnh ghép mới."
-          : "Không đội nào đúng — mảnh vừa bị khóa vĩnh viễn."}
+      <span
+        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full font-display font-black text-xl ${
+          ok ? "bg-[#80ed99]/25 text-[#80ed99]" : "bg-[#ff8fa3]/25 text-[#ff8fa3]"
+        }`}
+      >
+        {ok ? "✓" : "✕"}
+      </span>
+      <div className="text-left">
+        <div className={`font-display font-black text-[clamp(18px,2.6vw,28px)] leading-none tracking-wide ${
+          ok ? "text-[#80ed99]" : "text-[#ff8fa3]"
+        }`}>
+          {ok ? `MỞ ${pieceLabel(lastResult.row)}` : `KHÓA ${pieceLabel(lastResult.row)}`}
+        </div>
+        <div className="text-mist text-xs mt-1">
+          {ok
+            ? "Ô vừa được mở — sang bảng mảnh xem mảnh ghép mới."
+            : "Không đội nào đúng — mảnh đã bị khóa."}
+        </div>
       </div>
     </div>
   );

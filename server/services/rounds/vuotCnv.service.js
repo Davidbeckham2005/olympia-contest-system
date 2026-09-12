@@ -42,6 +42,34 @@ export function init(deps) {
   if (deps.resetBuzzer) resetBuzzer = deps.resetBuzzer;
 }
 
+// Lên lịch TỰ BẮT ĐẦU GIỜ (Vòng 2): sau khi MC mở câu hỏi (selectRow) để khoảng vài
+// giây đọc câu hỏi; nếu MC chưa kịp bấm "▶ Bắt đầu giờ" thì hệ thống tự bắt đầu đếm giờ.
+// Thời gian chờ đặt ở settings.vuotCnvAutoAnswerSeconds (mặc định 6s; 0 = tắt).
+let cnvAutoStartTimer = null;
+function clearCnvAutoStart() {
+  if (cnvAutoStartTimer) {
+    clearTimeout(cnvAutoStartTimer);
+    cnvAutoStartTimer = null;
+  }
+}
+function scheduleCnvAutoStart() {
+  clearCnvAutoStart();
+  const sec = Number(getDb().settings?.vuotCnvAutoAnswerSeconds) || 0;
+  if (sec <= 0) return;
+  const handle = setTimeout(() => {
+    cnvAutoStartTimer = null;
+    const game = g();
+    const p = game.puzzle;
+    // Chỉ tự chạy khi ô vẫn đang mở nhận bài, đồng hồ CHƯA chạy (MC bấm sớm → bỏ qua)
+    // và chưa giải từ khóa.
+    if (game.round !== "vuot_cnv" || !p || p.keywordSolved || p.rowPhase !== "open") return;
+    if (game.timer?.running) return;
+    startRowTimer();
+  }, sec * 1000);
+  // unref: không giữ process test/proxy treo chỉ vì timer chờ; app thật vẫn chạy bình thường.
+  if (handle && typeof handle.unref === "function") handle.unref();
+}
+
 function g() {
   return getDb().game;
 }
@@ -188,6 +216,9 @@ export function selectRow(rowIndex) {
   // CHỈ PHÁT MỘT LẦN DUY NHẤT ở cuối — trước đây phát 2 lần (lần đầu TRƯỚC khi
   // showQuestion) khiến khán giả/MC nhận trạng thái trung gian (câu cũ + highlight cũ)
   // rồi mới tới trạng thái thật → vẽ 2 lần liền → màn hình BỊ GIẬT khi chuyển câu.
+  // Hẹn giờ TỰ bắt đầu đếm giờ sau ~X giây (MC đọc câu hỏi) nếu MC chưa bấm
+  // "▶ Bắt đầu giờ"; MC bấm sớm sẽ hủy lịch này (xem startRowTimer).
+  scheduleCnvAutoStart();
   saveDb();
   emit();
 }
@@ -201,6 +232,8 @@ export function deselectRow() {
   const p = game.puzzle;
   if (game.round !== "vuot_cnv") return;
   if (p.rowPhase !== "open" && p.rowPhase !== "closed") return;
+  // Bỏ chọn → hủy lịch tự bắt đầu giờ của ô đang mở.
+  clearCnvAutoStart();
   // Giữ nguyên màn hình người dùng đang xem (câu hỏi hoặc bảng mảnh)
   const prevMode = game.display.mode;
   p.currentRow = null;
@@ -226,6 +259,8 @@ export function startRowTimer() {
   const p = game.puzzle;
   if (game.round !== "vuot_cnv" || p.keywordSolved) return;
   if (p.rowPhase !== "open") return;
+  // MC bấm "Bắt đầu giờ" (hoặc hệ thống tự bắt đầu) → hủy lịch tự bắt đầu còn treo.
+  clearCnvAutoStart();
   // MC "Dừng" đồng hồ giữa chừng rồi bấm lại → tiếp tục từ giây còn lại, không quay
   // về mốc 0; chưa từng bắt đầu → chạy đủ answerSeconds.
   const sec = game.timer?.remaining > 0 ? game.timer.remaining : game.vuotCnv?.answerSeconds || 30;
@@ -375,6 +410,8 @@ export function closeRowSubmissions() {
   const p = game.puzzle;
   if (p.rowPhase !== "open") return;
   p.rowPhase = "closed";
+  // Đóng nhận bài → hủy lịch tự bắt đầu giờ (giờ đã sang giai đoạn chấm).
+  clearCnvAutoStart();
   // Đóng nhận bài → DỪNG đồng hồ: nếu không, giờ vẫn đếm ngược trên mọi màn hình dù
   // thí sinh đã bị khóa (gây chữ "đôi khi" — MC tưởng cửa nộp còn mở).
   pauseTimer();
