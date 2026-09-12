@@ -482,6 +482,15 @@ export function resetKhoiDong(teamId = null) {
       err.status = 400;
       throw err;
     }
+    // Vòng 2: KHÔNG cho lật đáp án khi đang còn nhận bài (rowPhase "open") — nếu không
+    // toàn bộ thí sinh/khán giả thấy đáp án đúng giữa lúc thu bài, bài nộp còn lại chỉ là
+    // "chép". Chỉ lật sau khi đã đóng nhận bài (closed/scored); chuỗi tự động sau Chốt
+    // điểm vẫn chạy (set trực tiếp, rowPhase "scored", không đi qua hàm này).
+    if (game.round === "vuot_cnv" && game.puzzle?.rowPhase === "open") {
+      const err = new Error("Các đội vẫn đang nộp bài — hãy đóng nhận bài trước khi lật đáp án.");
+      err.status = 400;
+      throw err;
+    }
     game.display.answerRevealed = true;
     game.questionStatus = "revealed";
     saveDb();

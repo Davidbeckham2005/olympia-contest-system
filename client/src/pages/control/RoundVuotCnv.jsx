@@ -94,7 +94,13 @@ export default function RoundVuotCnv({ ctx }) {
             Đang hiện: <b className="text-gold">{SCREEN_LABEL[screenMode]}</b>
           </span>
           {showing && !revealed && (
-            <button type="button" className="btn btn-ghost text-sm! py-1.5!" onClick={() => act("question.reveal")}>
+            <button
+              type="button"
+              className="btn btn-ghost text-sm! py-1.5!"
+              disabled={p.rowPhase === "open"}
+              title={p.rowPhase === "open" ? "Các đội vẫn đang nộp bài — đóng nhận bài trước khi lật đáp án." : undefined}
+              onClick={() => act("question.reveal")}
+            >
               Lật đáp án
             </button>
           )}
