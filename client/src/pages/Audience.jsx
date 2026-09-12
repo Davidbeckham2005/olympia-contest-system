@@ -123,12 +123,29 @@ export default function Audience() {
   // "Chờ giữa các câu hỏi" (vòng 2) — đồng hồ hiển thị chữ CHỜ khi không đếm giờ.
   const p = g.puzzle || {};
 
-  // Khi đang chiếu video round 3: màn hình chỉ còn MỖI video, chiếm trọn màn hình.
+  // Khi đang chiếu video round 3: màn hình chỉ còn MỖI khung TV, với background ĐỒNG BỘ
+  // với màn khán giả (navy #070b16 + ảnh blur nếu cài) — không phải nền đen đặc kẻ hở.
   if (ttVideoOnly) {
+    const bg = state.settings?.audienceBg || "dark";
+    const bgUrl = state.settings?.audienceBgUrl || "";
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center overflow-hidden">
-        <Stage state={state} timer={timer} />
-        <AudioUnlock audioOn={audioOn} onEnable={enableAudio} />
+      <div className="relative min-h-screen flex items-center justify-center overflow-hidden isolate">
+        <div className="fixed inset-0 z-0 bg-[#070b16]" />
+        {bg === "blur" && bgUrl && (
+          <>
+            <div
+              className="fixed inset-0 z-0 bg-cover bg-center scale-110"
+              style={{ backgroundImage: `url(${bgUrl})`, filter: "blur(14px) brightness(0.5)" }}
+            />
+            <div className="fixed inset-0 z-0 bg-[#070b16]/45" />
+          </>
+        )}
+        <div className="relative z-10">
+          <Stage state={state} timer={timer} />
+        </div>
+        <div className="relative z-10">
+          <AudioUnlock audioOn={audioOn} onEnable={enableAudio} />
+        </div>
       </div>
     );
   }
@@ -1230,24 +1247,81 @@ function TangTocStage({ state, g, timer }) {
   }
 
   return (
-    <div className="w-full">
-      {hasVideo ? (
-        <video
-          ref={vidRef}
-          src={optimizeVideoUrl(d.mediaUrl)}
-          muted
-          playsInline
-          preload="auto"
-          className="w-full h-[100vh] object-contain bg-black"
-        />
-      ) : (
-        <div className="w-full aspect-video rounded-2xl bg-panel-solid border border-line grid place-items-center">
-          <div className="text-center">
-            <div className="text-6xl text-mist/40">▶</div>
-            <div className="text-mist mt-2">Chưa có video cho câu này</div>
+    <div className="w-full min-h-screen flex flex-col items-center justify-center px-[4vw] py-[3vh]">
+      {/* Tiêu đề vòng — biển hiệu đỏ truyền hình, đúng phong cách trang HƯỚNG DẪN (RulesBoard) */}
+      <div className="inline-flex items-stretch rounded-xl overflow-hidden border border-white/40 shadow-[0_14px_40px_rgba(0,0,0,0.55)] mb-[3vh]">
+        <div className="w-[14px] bg-gradient-to-b from-[#9aa4b0] via-[#6b7480] to-[#3e454f]" />
+        <div className="relative bg-gradient-to-b from-[#ff7a45] via-[#e8442f] to-[#b91c1c] px-8 py-1.5">
+          <div className="absolute inset-x-0 top-0 h-1/2 bg-white/20" />
+          <span className="relative font-display font-black text-white text-[clamp(14px,1.8vw,24px)] tracking-[0.18em] whitespace-nowrap drop-shadow-[0_2px_0_rgba(0,0,0,0.35)]">
+            VÒNG 3 — TĂNG TỐC
+          </span>
+        </div>
+        <div className="w-[14px] bg-gradient-to-b from-[#9aa4b0] via-[#6b7480] to-[#3e454f]" />
+      </div>
+
+      {/* KHUNG TV — video như đang được chiếu trên chiếc tivi, halo cyan giống khung
+          câu hỏi trang HƯỚNG DẪN, viền bezel kim loại tối, chân đế phía dưới.
+          Bề rộng khung giới hạn theo CẢ CHIỀU NGANG lẫn CHIỀU CAO màn hình (16:9) để
+          không bao giờ tràn ra ngoài màn hình. */}
+      <div
+        className="relative"
+        style={{ width: "min(1560px, 94vw, calc((100vh - 250px) * 16 / 9))" }}
+      >
+        <div className="absolute -inset-[6px] rounded-[32px] border-2 border-[#4cc9f0]/55 blur-[10px]" />
+        <div className="absolute -inset-[2px] rounded-[28px] bg-[#4cc9f0]/20" />
+
+        {/* Bezel TV */}
+        <div
+          className="relative rounded-[26px] p-[clamp(10px,1.2vw,18px)] shadow-[0_30px_80px_rgba(0,0,0,0.6)]"
+          style={{ background: "linear-gradient(180deg,#2b3648,#101a28 52%,#060a12)" }}
+        >
+          <div className="absolute inset-[3px] rounded-[23px] border border-white/15 pointer-events-none" />
+
+          {/* Màn hình */}
+          <div className="relative aspect-video w-full overflow-hidden rounded-[14px] bg-black ring-1 ring-black/70">
+            {hasVideo ? (
+              <video
+                ref={vidRef}
+                src={optimizeVideoUrl(d.mediaUrl)}
+                muted
+                playsInline
+                preload="auto"
+                className="h-full w-full object-contain"
+              />
+            ) : (
+              <div className="h-full w-full grid place-items-center">
+                <div className="text-center">
+                  <div className="text-6xl text-mist/40">▶</div>
+                  <div className="text-mist mt-2">Chưa có video cho câu này</div>
+                </div>
+              </div>
+            )}
+
+            {/* Nhãn câu hỏi đang chiếu góc dưới trái */}
+            <div className="absolute bottom-3 left-3 rounded-md bg-black/55 px-2.5 py-1 backdrop-blur-sm">
+              <span className="text-[11px] font-bold tracking-[0.18em] text-cyan-200 uppercase">
+                Câu {(g.questionIndex || 0) + 1}
+              </span>
+            </div>
+          </div>
+
+          {/* Thương hiệu nhỏ trên cạnh bezel dưới — như logo tivi */}
+          <div className="mt-[clamp(6px,1vh,10px)] flex items-center justify-between px-1 text-[9px] tracking-[0.3em] text-white/25 uppercase">
+            <span>Olympia</span>
+            <span>• • •</span>
           </div>
         </div>
-      )}
+
+        {/* Chân đế TV */}
+        <div className="mx-auto mt-[clamp(8px,1vh,14px)] flex w-[clamp(200px,26vw,340px)] flex-col items-center">
+          <div
+            className="h-[clamp(12px,1.6vh,20px)] w-full rounded-t-md"
+            style={{ background: "linear-gradient(180deg,#3a4455,#141a26)" }}
+          />
+          <div className="h-[8px] w-[70%] rounded-b-lg bg-black/60" />
+        </div>
+      </div>
     </div>
   );
 }
