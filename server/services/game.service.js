@@ -1455,13 +1455,20 @@ if (game.round === "khoi_dong") {
     }
   }
 
-  // MC chấm đúng/sai "tay" từng đội. KHÔNG phụ thuộc phase: không chờ video chiếu xong
-  // (phase "answers") nữa — cứ có bài nộp là MC chấm được luôn. Đúng → tính điểm theo
+  // MC chấm đúng/sai "tay" từng đội. Audit TT-3 (mở rộng): KHÔNG chấm sớm khi video còn
+  // chiếu (phase "video" + đồng hồ chạy) — các đội vẫn đang nộp theo độ nhanh; chấm lúc
+  // này dễ lộ kết quả + điểm dự kiến lên màn hình trong khi còn thay đổi. Chỉ chấm sau
+  // khi video hết (phase "answers") hoặc sau khi MC Dừng video. Đúng → tính điểm theo
   // hạng độ nhanh (sẽ cộng khi Chốt điểm); sai → 0 điểm, không trừ.
   export function tangTocMark(teamId, correct) {
     const game = g();
     if (game.round !== "tang_toc" || game.tangToc.settled) {
       return;
+    }
+    if (game.tangToc?.phase === "video" && game.timer?.running) {
+      const err = new Error("Video Tăng tốc đang chiếu — các đội chưa nộp xong. Chỉ chấm Đúng/Sai sau khi hết video (hoặc Dừng video).");
+      err.status = 400;
+      throw err;
     }
     if (!game.tangToc.submissions?.[teamId]) return;
     if (game.tangToc.corrections[teamId] !== undefined) {

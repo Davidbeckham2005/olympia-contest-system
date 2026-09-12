@@ -299,6 +299,12 @@ export default function RoundTangToc({ ctx }) {
                     <button
                       type="button"
                       className={`btn px-2! py-1! text-xs! ${ok ? "btn-ok" : ""}`}
+                      disabled={answersLocked}
+                      title={
+                        answersLocked
+                          ? "Video đang chiếu — các đội vẫn đang nộp bài. Chỉ chấm Đúng/Sai sau khi hết video (hoặc Dừng video)."
+                          : undefined
+                      }
                       onClick={() => act("tangtoc.mark", { teamId: r.teamId, correct: true })}
                     >
                       Đúng {ok ? "✓" : ""}
@@ -306,6 +312,12 @@ export default function RoundTangToc({ ctx }) {
                     <button
                       type="button"
                       className={`btn px-2! py-1! text-xs! ${bad ? "btn-danger" : ""}`}
+                      disabled={answersLocked}
+                      title={
+                        answersLocked
+                          ? "Video đang chiếu — các đội vẫn đang nộp bài. Chỉ chấm Đúng/Sai sau khi hết video (hoặc Dừng video)."
+                          : undefined
+                      }
                       onClick={() => act("tangtoc.mark", { teamId: r.teamId, correct: false })}
                     >
                       Sai {bad ? "✕" : ""}
