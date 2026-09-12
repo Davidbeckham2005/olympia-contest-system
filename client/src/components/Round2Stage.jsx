@@ -469,23 +469,13 @@ export function Round2QuestionStrip({ state, d, g, children }) {
 export function Round2Question({ state, d, g, strip = true, children }) {
   const p = g.puzzle || {};
   const cnv = state.cnv || {};
-  const isCenter = (p.currentRow ?? 0) === 4;
   return (
     <div className="w-full max-w-[1200px] min-h-[60vh] mx-auto text-center flex flex-col items-center">
       <div className="flex-1 w-full flex flex-col items-center justify-center">
-        <Round2Context g={g} state={state} hideScored />
-        {isCenter ? (
-          <div className="mb-6 flex flex-col items-center gap-2.5">
-            <div className="relative grid place-items-center w-[clamp(88px,12vw,130px)] aspect-square rounded-2xl border-2 border-gold bg-night text-gold shadow-[0_0_30px_rgba(255,214,10,0.5)] animate-pulse">
-              <span className="font-display font-black text-[clamp(40px,6vw,64px)] leading-none">5</span>
-            </div>
-            <div className="text-[11px] font-bold tracking-[0.22em] uppercase text-mist">Mảnh ghép trung tâm — câu hỏi cuối</div>
-          </div>
-        ) : (
-          <div className="r2-rows mb-6 rounded-2xl border border-[rgba(255,214,10,0.28)] px-6 py-4">
-            <CnvRowsFrame state={state} g={g} />
-          </div>
-        )}
+        <Round2Context g={g} state={state} hideScored showStatus={false} />
+        <div className="r2-rows mb-6 rounded-2xl border border-[rgba(255,214,10,0.28)] px-6 py-4">
+          <CnvRowsFrame state={state} g={g} />
+        </div>
         {d.mediaUrl && d.mediaType === "image" && (
           <img src={d.mediaUrl} alt="" className="max-h-[30vh] mx-auto rounded-2xl object-contain border border-line shadow-[0_10px_40px_rgba(0,0,0,0.4)]" />
         )}
