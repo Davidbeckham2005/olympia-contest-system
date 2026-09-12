@@ -396,7 +396,9 @@ export function Round2QuestionStrip({ state, d, g, children }) {
   return (
     <div className="border-t border-[rgba(255,214,10,0.15)] flex items-stretch">
       <div className="flex-1 min-w-0 px-5 py-4 flex items-center justify-center">
-        <div className="w-full">
+        {/* text-center: câu hỏi Vòng 2 căn giữa ngang trên cả màn Khán giả lẫn Thí sinh —
+            đồng trục với khung ô chữ/ảnh ở giữa phía trên, không tràn lệch trái như trước. */}
+        <div className="w-full text-center">
           {question && (
             <div className="stage-q text-[clamp(20px,2.6vw,32px)]">{question}</div>
           )}
