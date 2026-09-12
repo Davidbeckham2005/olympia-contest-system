@@ -374,10 +374,13 @@ export function submitRowAnswer(teamId, answer) {
   const active = activeOrder();
   if (!active.includes(teamId)) return { ok: false, reason: "not-open" };
   if (p.rowPhase !== "open") return { ok: false, reason: "closed" };
-  if (game.questionStatus !== "showing") return { ok: false, reason: "not-open" };
   // Chỉ nộp được đáp án khi đồng hồ ĐANG CHẠY (timer.running) — nguồn sự thật duy
   // nhất. MC bấm "Bắt đầu giờ" (puzzle.startTimer / timer.set/resume) đều bật; dừng
   // (timer.pause), hết giờ hoặc đóng nhận bài đều khóa nộp bài.
+  // KHÔNG dựa vào questionStatus: MC bấm "Ẩn câu hỏi" (hideQuestion) giữa lúc nhận bài
+  // sẽ đưa questionStatus về "idle" (màn hình về bảng mảnh) trong khi rowPhase vẫn
+  // "open" + đồng hồ vẫn chạy — các đội phải NỘP ĐƯỢC bình thường; chặn là "chặn nộp
+  // bài không rõ lý do" khiến thí sinh tưởng MC chưa chạy giờ. Gate = rowPhase + timer.
   if (!game.timer.running) return { ok: false, reason: "not-started" };
   // Cho phép gửi NHIỀU lần: nếu đội đã nộp trước đó thì ghi đè bằng đáp án mới nhất
   // (thí sinh có thể sửa/làm rõ đáp án nhiều lần trong cửa sổ trả lời).
