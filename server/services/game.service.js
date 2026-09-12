@@ -535,6 +535,15 @@ export function resetKhoiDong(teamId = null) {
   export function setScreenMode(mode) {
     const game = g();
     if (game.round !== "vuot_cnv" && game.round !== "tang_toc") return;
+    // RÒ RỈ (audit TT-1): Vòng 3, màn "Đáp án các đội" KHÔNG được mở trong lúc video
+    // Tăng tốc đang chiếu (phase "video", đồng hồ chạy) — các đội vẫn đang nộp bài theo
+    // độ nhanh, hiện màn này = khán giả + mọi đội đọc được đáp án của nhau realtime → "chép".
+    // Hết video (phase tự chuyển "answers") hoặc sau khi MC Dừng video mới mở được màn này.
+    if (game.round === "tang_toc" && mode === "answers" && game.tangToc?.phase === "video" && game.timer?.running) {
+      const err = new Error("Đang chiếu video Tăng tốc — các đội chưa nộp xong. Màn “Đáp án các đội” chỉ mở được sau khi hết video (hoặc Dừng video).");
+      err.status = 400;
+      throw err;
+    }
     game.display.mode =
       mode === "question" || mode === "answers"
         ? mode

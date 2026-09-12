@@ -56,6 +56,10 @@ export default function RoundTangToc({ ctx }) {
   const screenMode = g.display?.mode === "answers" ? "answers" : "question";
   const remaining = timer.remaining ?? 0;
   const subCount = Object.keys(subs).length;
+  // RÒ RỈ (audit TT-1): tab "Đáp án các đội" bị KHÓA trong lúc video đang chiếu & đồng hồ
+  // chạy (phase "video" + running) — mở ra là cả sân khấu + mọi đội đọc đáp án của nhau
+  // realtime. Chỉ mở được khi video hết (phase "answers") hoặc sau khi Dừng (running false).
+  const answersLocked = phase === "video" && running;
   // ĐỒNG BỘ VIDEO + THỜI GIAN với màn hình khán giả: mọi màn hình SnAP video theo cùng
   // đồng hồ server (duration - remaining) mỗi 250ms → cùng vị trí, cùng lúc.
   useEffect(() => {
@@ -148,8 +152,16 @@ export default function RoundTangToc({ ctx }) {
             className={`flex items-center justify-center h-10 rounded-lg border text-sm font-semibold transition ${
               screenMode === "answers"
                 ? "border-gold bg-gold/15 text-gold"
-                : "border-line bg-night/40 text-mist hover:border-gold/40 hover:text-white"
+                : answersLocked
+                  ? "border-[rgba(255,70,94,0.4)] bg-[#ff465e]/10 text-[#ffb3c1] opacity-80"
+                  : "border-line bg-night/40 text-mist hover:border-gold/40 hover:text-white"
             }`}
+            disabled={answersLocked}
+            title={
+              answersLocked
+                ? "Đang chiếu video — các đội vẫn đang nộp bài. Màn “Đáp án các đội” chỉ mở được sau khi hết video (hoặc Dừng video) để tránh lộ đáp án."
+                : "Chuyển màn hình khán giả sang liệt kê đáp án các đội"
+            }
             onClick={() => act("screen.set", { mode: "answers" })}
           >
             Đáp án các đội
