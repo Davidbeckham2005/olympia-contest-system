@@ -1472,6 +1472,15 @@ if (game.round === "khoi_dong") {
     const game = g();
     if (game.round !== "tang_toc") return;
     if (game.tangToc.settled) return; // tránh cộng điểm trùng
+    // Audit TT-3: KHÔNG được "Chốt điểm" giữa lúc video còn chiếu (phase "video" + đồng hồ
+    // chạy) — các đội vẫn đang nộp bài theo độ nhanh; khóa điểm sớm = đội cuối nộp mất
+    // cơ hội + trạng thái rối (nút Đúng/Sai biến mất giữa chừng). Chốt khi video hết
+    // (phase tự chuyển "answers") hoặc sau khi MC Dừng video.
+    if (game.tangToc?.phase === "video" && game.timer?.running) {
+      const err = new Error("Video Tăng tốc đang chiếu — các đội chưa nộp xong. Chỉ chốt điểm sau khi hết video (hoặc Dừng video).");
+      err.status = 400;
+      throw err;
+    }
     if (!game.tangToc.ranked || game.tangToc.ranked.length === 0) {
       game.tangToc.ranked = computeTangTocRanked();
     }

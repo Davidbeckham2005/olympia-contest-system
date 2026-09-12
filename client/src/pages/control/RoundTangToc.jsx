@@ -325,7 +325,12 @@ export default function RoundTangToc({ ctx }) {
           <button
             type="button"
             className="btn btn-ok text-sm! py-1.5!"
-            disabled={settled || Object.keys(corrections).length === 0}
+            disabled={settled || answersLocked || Object.keys(corrections).length === 0}
+            title={
+              answersLocked
+                ? "Đang chiếu video — các đội vẫn đang nộp bài. Chỉ chốt điểm sau khi hết video (hoặc Dừng video)."
+                : undefined
+            }
             onClick={() => act("tangtoc.settle")}
           >
             {settled ? "Đã chốt điểm ✓" : "Chốt điểm Tăng tốc"}
