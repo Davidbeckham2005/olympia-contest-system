@@ -437,9 +437,12 @@ export function resetKhoiDong(teamId = null) {
       }
     }
     if (game.round === "tang_toc") {
-      // Không tự phát — chỉ "sẵn sàng chiếu": MC bấm "Chiếu video" để chạy đếm ngược
-      // 3 giây rồi mới phát (tangTocPlay).
-      game.tangToc = freshTangToc();
+      // Audit TT-5: KHÔNG reset tangToc ở đây! Trước đây freshTangToc() ở đây xóa sạch
+      // submissions/ranked/reveal/settled nếu showQuestion bị gọi lúc video đang chiếu
+      // (ngòi nổ im lặng — chưa có nút UI bấm nhưng question.show trong controller gọi
+      // thẳng). Chỉ reset tangToc khi THẬT SỰ đổi câu (jumpToQuestion/nextQuestion/prev).
+      // Ở đây chỉ đảm bảo đối tượng tồn tại và setup "sẵn sàng chiếu", giữ nguyên bài nộp.
+      game.tangToc = game.tangToc || freshTangToc();
       const ttDur = q.duration || q.timeLimit || 120;
       game.display.note = `Câu ${game.questionIndex + 1} — bấm “Bắt đầu đếm giờ” để chiếu video (đếm ngược ${TANG_TOC_PREP_SECONDS}s rồi phát).`;
       setTimer(ttDur, false);
@@ -772,9 +775,13 @@ if (game.round === "khoi_dong") {
     } else if (game.round === "vuot_cnv") {
       // Hàng ngang do đội chọn trực tiếp (puzzle.select), không tự tăng
     } else if (game.round === "tang_toc") {
-      game.questionIndex = Math.min(3, game.questionIndex + 1);
-      game.tangToc = freshTangToc();
-      setTimer(0, false);
+      // Audit TT-4: trước đây tự tăng questionIndex + reset tangToc mà KHÔNG tải lại màn
+      // hình → khán giả thấy video/đáp án CÂU CŨ trong khi trạng thái là câu mới (lệch
+      // nhịp). Chuyển qua jumpToQuestion = logic chuẩn duy nhất để đổi câu Tăng tốc
+      // (tải display.question/mediaUrl/answer + reset tangToc đúng cách). return để
+      // tránh saveDb/emit kép (jumpToQuestion tự lưu + phát).
+      jumpToQuestion(game.currentTeam, Math.min(3, game.questionIndex + 1));
+      return;
     } else if (game.round === "ve_dich") {
       clearVedichAuto();
       // Cửa sổ cướp quyền còn treo chưa được chấm (không đội nào giành/trả lời) → áp luật
@@ -880,12 +887,10 @@ if (game.round === "khoi_dong") {
     } else if (game.round === "vuot_cnv") {
       if (game.puzzle.currentRow > 0) game.puzzle.currentRow -= 1;
     } else if (game.round === "tang_toc") {
-      game.questionIndex = Math.max(0, game.questionIndex - 1);
-      // Reset trạng thái Tăng tốc khi quay về câu trước — đồng bộ với jump/next:
-      // nếu không, submissions/phase/settled của câu cũ còn sót lại, thí sinh
-      // không trả lời lại được cho câu đang chọn.
-      game.tangToc = freshTangToc();
-      setTimer(0, false);
+      // Audit TT-4 (đối xứng với nextQuestion): quay câu TRƯỚC cũng phải tải lại display
+      // qua jumpToQuestion, KHÔNG tự giảm index + reset tangToc rồi bỏ mặc màn hình cũ.
+      jumpToQuestion(game.currentTeam, Math.max(0, game.questionIndex - 1));
+      return;
     } else if (game.round === "ve_dich") {
       if ((game.veDich.pickIndex || 0) > 0) game.veDich.pickIndex -= 1;
     }
