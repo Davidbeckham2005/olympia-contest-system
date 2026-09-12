@@ -180,7 +180,7 @@
     return db.media;
   }
 
-  export function uploadSound(req) {
+  export async function uploadSound(req) {
     const slot = req.params.slot;
     if (!SOUND_SLOTS.includes(slot)) {
       const err = new Error("Slot âm thanh không hợp lệ.");
@@ -192,13 +192,17 @@
       err.status = 400;
       throw err;
     }
-    // Lưu TRỰC TIẾP vào CSDL (data URL base64) để âm thanh không mất khi server
-    // rerender/deploy lại — không phụ thuộc thư mục uploads tạm.
-    const mime = req.file.mimetype || "audio/mpeg";
-    const url = `data:${mime};base64,${req.file.buffer.toString("base64")}`;
+    // Lưu URL (Cloudinary khi cấu hình, fallback file /uploads) thay vì base64 trong DB
+    // → payload state mỗi lần broadcast chỉ là vài trăm byte thay vì hàng MB base64.
+    const up = await uploadToCloudinary(req.file.buffer, {
+      folder: "cuoc-thi/sounds",
+      resourceType: "audio",
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+    });
     const db = getDb();
     db.sounds = { ...emptySounds(), ...(db.sounds || {}) };
-    db.sounds[slot] = { name: req.file.originalname, url };
+    db.sounds[slot] = { name: req.file.originalname, url: up.url };
     saveDb();
     game.emit();
     emitEvent("prelim:update", publicState());

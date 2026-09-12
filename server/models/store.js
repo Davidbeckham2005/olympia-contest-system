@@ -19,6 +19,7 @@ import * as Media from "./Media.js";
 import * as Sound from "./Sound.js";
 import * as RoundRules from "./RoundRules.js";
 import * as GameState from "./GameState.js";
+import { migrateSoundsToUrls } from "../middleware/upload.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = path.join(__dirname, "../data");
@@ -208,6 +209,8 @@ export async function loadDb() {
   const existing = await assemble();
   if (existing) {
     db = existing;
+    db.sounds = await migrateSoundsToUrls(db.sounds);
+    saveDb();
     return db;
   }
   if (fs.existsSync(DB_JSON_PATH)) {
@@ -227,6 +230,7 @@ export async function loadDb() {
   } else {
     db = defaultDb();
   }
+  db.sounds = await migrateSoundsToUrls(db.sounds);
   await persist(db);
   return db;
 }

@@ -59,7 +59,7 @@ async function getCloudinary() {
   return cloudinaryClient;
 }
 
-// Upload một buffer lên Cloudinary (image/video). Trả về URL HTTPS trực tiếp.
+// Upload một buffer lên Cloudinary (image/video/audio). Trả về URL HTTPS trực tiếp.
 // Nếu Cloudinary chưa cấu hình, ghi file local và trả về đường dẫn /uploads/...
 export async function uploadToCloudinary(buffer, { folder, publicId, resourceType, filename, originalname, mimetype }) {
   const cloudinary = await getCloudinary();
@@ -69,13 +69,45 @@ export async function uploadToCloudinary(buffer, { folder, publicId, resourceTyp
     fs.writeFileSync(path.join(UPLOAD_DIR, name), buffer);
     return { cloudinary: false, url: `/uploads/${name}` };
   }
-  const mime = mimetype || (resourceType === "video" ? "video/mp4" : "image/png");
+  const mime = mimetype || (resourceType === "video" ? "video/mp4" : resourceType === "audio" ? "audio/mpeg" : "image/png");
   const b64 = `data:${mime};base64,${buffer.toString("base64")}`;
+  const ct = resourceType === "video" || resourceType === "audio" ? "video" : "image";
   const result = await cloudinary.uploader.upload(b64, {
     folder: folder || "cuoc-thi",
     public_id: publicId,
-    resource_type: resourceType === "video" ? "video" : "image",
+    resource_type: ct,
     overwrite: true,
   });
   return { cloudinary: true, url: result.secure_url, publicId: result.public_id };
+}
+
+// SOUND_SLOTS tương tự SOUND_SLOTS bên models/Sound.js — khai báo lại để tránh vòng
+// import. Chỉ dùng để migrate âm thanh base64 cũ (trước bản "lưu URL") thành file/URL.
+const SOUND_SLOTS = ["correct", "wrong", "bg", "wait", "buzz", "answers", "khoi_dong", "result"];
+
+// Khi DB còn âm thanh dạng data:...;base64 (bản cũ trước khi chuyển sang lưu URL),
+// upload lại thành file/Cloudinary một lần rồi trả về pack mới. Tránh phải gửi hàng
+// MB base64 đi theo mọi broadcast.
+export async function migrateSoundsToUrls(sounds) {
+  if (!sounds || typeof sounds !== "object") return sounds;
+  const out = {};
+  for (const slot of SOUND_SLOTS) {
+    const s = sounds[slot] || { url: "", name: "" };
+    let url = String(s.url || "");
+    if (url.startsWith("data:")) {
+      const mime = (url.match(/^data:([^;]+);/) || [])[1] || "audio/mpeg";
+      const b64 = url.slice(url.indexOf(",") + 1);
+      const buf = Buffer.from(b64, "base64");
+      const ext = mime.includes("wav") ? ".wav" : mime.includes("ogg") ? ".ogg" : mime.includes("mp3") ? ".mp3" : ".mpeg";
+      const up = await uploadToCloudinary(buf, {
+        folder: "cuoc-thi/sounds",
+        resourceType: "audio",
+        originalname: `sound-${slot}${ext}`,
+        mimetype: mime,
+      });
+      url = up.url;
+    }
+    out[slot] = { url, name: s.name || "" };
+  }
+  return out;
 }
