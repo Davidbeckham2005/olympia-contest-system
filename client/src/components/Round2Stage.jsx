@@ -1,4 +1,4 @@
-import { Fragment } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { isOpen, isLocked } from "../lib/cnv.js";
 import { activeTeamIds } from "../lib/teams.js";
 import { optimizeVideoUrl } from "../lib/media.js";
@@ -178,7 +178,53 @@ export function RowResults({ state, g }) {
   return (
     <div className="w-full max-w-[1100px] mx-auto">
       <Round2Context g={g} state={state} title={title} showStatus={false} />
+      <ScoredToast lastResult={p.lastResult} />
       <R2AnswersTimeline cards={cards} />
+    </div>
+  );
+}
+
+// Thông báo gọn nhất ngay khi MC "Chốt điểm" (Nhịp 1): mảnh được MỞ hay bị KHÓA.
+// Tự ẩn sau ~2.5s — không chiếm chỗ lâu như banner. Mỗi lần chốt điểm (lastResult.at
+// thay đổi) lại hiện lại từ đầu; còn ẩn hẳn khi MC chọn ô kế tiếp.
+function ScoredToast({ lastResult }) {
+  const [visible, setVisible] = useState(false);
+  const timerRef = useRef(null);
+  const lastAtRef = useRef(null);
+
+  useEffect(() => {
+    if (!lastResult) {
+      setVisible(false);
+      return undefined;
+    }
+    const at = lastResult.at ?? 0;
+    if (at !== lastAtRef.current) {
+      lastAtRef.current = at;
+      setVisible(true);
+      clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => setVisible(false), 2500);
+    }
+    return () => clearTimeout(timerRef.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastResult]);
+
+  if (!visible || !lastResult) return null;
+  const ok = !!lastResult.correct;
+  const name = (lastResult.row ?? 0) === 4 ? "mảnh trung tâm" : `mảnh ${(lastResult.row ?? 0) + 1}`;
+  return (
+    <div className="mx-auto mb-3 flex w-fit items-center gap-2 rounded bg-[#0e1830] px-4 py-1.5">
+      <span
+        className={`h-3 w-3 shrink-0 rounded-full border-2 ${
+          ok ? "border-[#80ed99] bg-[#80ed99]/30" : "border-[#ff8fa3] bg-[#ff8fa3]/30"
+        }`}
+      />
+      <span
+        className={`text-[clamp(13px,1.5vw,17px)] font-bold tracking-wide ${
+          ok ? "text-[#80ed99]" : "text-[#ff8fa3]"
+        }`}
+      >
+        {ok ? `MỞ ${name.toUpperCase()}` : `KHÓA ${name.toUpperCase()}`}
+      </span>
     </div>
   );
 }
