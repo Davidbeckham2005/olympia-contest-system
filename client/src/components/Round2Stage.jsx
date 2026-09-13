@@ -516,6 +516,24 @@ export function Round2Board({ state, g, minimal }) {
         </div>
       )}
       <div className="flex flex-col items-center justify-center gap-4">
+        {!!cnv?.hint && (
+          <div className="w-full max-w-[680px] mx-auto">
+            <div className="relative rounded-lg bg-[#0e1830]/90 border border-gold/40 px-4 py-2.5 shadow-[0_6px_24px_rgba(0,0,0,0.45)]">
+              <div className="absolute inset-x-0 top-0 h-4 bg-gradient-to-b from-white/[0.11] to-transparent rounded-t-lg" />
+              <div className="flex items-start gap-2.5">
+                <span className="kicker mt-0.5 shrink-0">GỢI Ý</span>
+                <span className="text-sm sm:text-base text-mist leading-snug break-words flex-1">
+                  {cnv.hint}
+                </span>
+              </div>
+              {cnv.keywordLetterCount ? (
+                <div className="mt-1.5 text-[10px] tracking-[0.2em] uppercase text-mist/70">
+                  Từ khóa: {cnv.keywordLetterCount} chữ cái (không tính dấu cách)
+                </div>
+              ) : null}
+            </div>
+          </div>
+        )}
         <div className="relative w-[clamp(300px,40vw,680px)] aspect-[16/10] rounded-2xl overflow-hidden ring-1 ring-line bg-night">
           {media?.url && media.type !== "video" && (
             <img src={media.url} alt="" className="absolute inset-0 w-full h-full object-cover" />

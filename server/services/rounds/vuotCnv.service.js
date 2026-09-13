@@ -96,6 +96,7 @@ export function cnvView(db) {
     })),
     keywordLetterCount: cnv.letterCount || String(cnv.keyword || "").replace(/\s/g, "").length,
     keyword: p.keywordSolved ? cnv.keyword : "",
+    hint: cnv.hint || "",
     media: cnv.media && cnv.media.url ? { type: cnv.media.type || "image", url: cnv.media.url } : null,
     // Câu hỏi hiện tại hiển thị CÙNG bảng mảnh (vòng 2: 4 câu hỏi hàng ngang mở 4 mảnh góc
     // + CÂU HỎI MẢNH GHÉP TRUNG TÂM (index 4) mở mảnh giữa; mở đủ 5 mảnh → hiện nguyên
