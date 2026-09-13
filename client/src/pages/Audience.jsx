@@ -159,66 +159,90 @@ export default function Audience() {
     );
   }
 
+  // === VÒNG PHỤ (tie_break) ===
+  // KẾ THỪA CƠ CHẾ CHUÔNG BẤM từ round trước (Về đích): MC mở chuông (openBuzzer) →
+  // các đội trong vòng phụ bấm chuông giành quyền (buzzer:press) → đội bấm nhanh nhất
+  // (buzzer.winner) được TỰ TRẢ LỜI với đồng hồ riêng → MC chấm Đúng/Sai → đáp án lật.
+  // GIAO DIỆN theo chuẩn gameshow "câu hỏi – đáp án" giống các vòng khác: khung panel to
+  // + media lớn + câu hỏi (stage-q) + đáp án lật (stage-answer) + badge giành quyền.
   if (g.round === "tie_break") {
     const tb = g.tieBreak || {};
     const tbTeams = (tb.teams || []).map((id) => state.teams.find((t) => t.id === id)).filter(Boolean);
     const showing = g.questionStatus === "showing" && !!g.display?.question;
     const exhausted = tb.phase === "exhausted";
+    const d = g.display || {};
+    const winnerTeam = state.teams.find((t) => t.id === tb.winner);
+    const buzzTeam = g.buzzer?.winner ? state.teams.find((t) => t.id === g.buzzer.winner) : null;
+    const bg = state.settings?.audienceBg || "dark";
+    const bgUrl = state.settings?.audienceBgUrl || "";
     return (
-      <div className="relative min-h-screen flex flex-col items-center justify-center px-6 py-4 gap-6">
-        <div className="round-badge">VÒNG PHỤ</div>
-        {exhausted && (
-          <div className="panel w-full max-w-3xl text-center">
-            <p className="text-mist text-[clamp(16px,2.4vw,28px)]">Hết câu hỏi vòng phụ — MC cần chọn tay công để xác định đội thắng.</p>
-          </div>
-        )}
-        {g.buzzer?.winner && !exhausted && (
-          <div className="round-badge">
-            Quyền trả lời: {state.teams.find((t) => t.id === g.buzzer.winner)?.name}
-          </div>
-        )}
-        {g.buzzer?.winner && timer?.running && !exhausted && (
-          <div className="flex flex-col items-center gap-1">
-            <span className="kicker tracking-[0.3em]">TỰ TRẢ LỜI</span>
-            <span className="font-display font-black text-gold text-[clamp(24px,4vw,38px)] drop-shadow-[0_2px_0_rgba(0,0,0,0.5)]">
-              {formatTime(remaining)}
-            </span>
-          </div>
-        )}
-        {showing && !exhausted ? (
+      <div className="relative min-h-screen flex flex-col items-center justify-center px-6 py-4 gap-6 overflow-hidden isolate">
+        {/* Nền đồng bộ với các vòng khác: navy #070b16 + ảnh blur nếu MC cài màn khán giả */}
+        <div className="fixed inset-0 z-0 bg-[#070b16]" />
+        {bg === "blur" && bgUrl && (
           <>
-            <div className="panel w-full max-w-3xl text-center">
-              <p className="text-ink text-2xl font-semibold">{g.display.question}</p>
-              {g.display?.mediaUrl ? (
-                <img src={g.display.mediaUrl} alt="" className="mt-4 max-h-64 mx-auto object-contain" />
-              ) : (
-                <NoMediaFallback className="w-[min(320px,54vw)] aspect-[4/3] mt-4" />
-              )}
-            </div>
-            {g.display?.answerRevealed && (
-              <div className="panel w-full max-w-3xl text-center">
-                <p className="text-gold text-xl font-semibold">Dap an: {g.display.answer}</p>
+            <div
+              className="fixed inset-0 z-0 bg-cover bg-center scale-110"
+              style={{ backgroundImage: `url(${bgUrl})`, filter: "blur(14px) brightness(0.5)" }}
+            />
+            <div className="fixed inset-0 z-0 bg-[#070b16]/45" />
+          </>
+        )}
+        <div className="relative z-10 flex flex-col items-center gap-6">
+        <div className="round-badge">VÒNG PHỤ</div>
+        {exhausted ? (
+          <div className="panel w-full max-w-3xl text-center">
+            <p className="text-mist text-[clamp(16px,2.4vw,28px)]">Hết câu hỏi vòng phụ — MC cần chọn đội thắng.</p>
+          </div>
+        ) : (
+          <>
+            {buzzTeam ? (
+              <div className="flex flex-col items-center gap-4">
+                <div className="round-badge bg-[#ffd60a]/15">
+                  Chuông giành quyền: <b style={{ color: buzzTeam.color }}>{buzzTeam.name}</b>
+                </div>
+                {timer?.running && (
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="kicker tracking-[0.3em]">ĐANG TỰ TRẢ LỜI</span>
+                    <span className="font-display font-black text-gold text-[clamp(26px,4vw,44px)] drop-shadow-[0_2px_0_rgba(0,0,0,0.5)]">
+                      {formatTime(remaining)}
+                    </span>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-mist text-[clamp(16px,2.2vw,26px)]">
+                {tbTeams.length > 0 ? "Đang chờ MC chiếu câu hỏi — chuông sẽ được mở khi bắt đầu." : "Đang chờ MC chọn đội tham gia vòng phụ…"}
+              </div>
+            )}
+            {showing && (
+              <div className="panel w-full max-w-4xl text-center">
+                {d.mediaUrl ? (
+                  <img src={d.mediaUrl} alt="" className="max-h-[40vh] max-w-[78vw] mx-auto object-contain" />
+                ) : (
+                  <NoMediaFallback className="w-[min(320px,54vw)] aspect-[4/3]" />
+                )}
+                {d.answerRevealed ? (
+                  <div className="stage-answer">{d.answer}</div>
+                ) : (
+                  d.question && <div className="stage-q">{d.question}</div>
+                )}
               </div>
             )}
           </>
-        ) : !exhausted ? (
-          // MÀN CHỜ VÒNG PHỤ: chưa có câu hỏi nào được mở — chưa trao quyền bấm chuông
-          // (server chỉ mở chuông khi showTieBreakQuestion).
-          <div className="flex flex-col items-center gap-3">
-            <div className="kicker tracking-[0.35em] text-[#ffd60a]">VÒNG PHỤ</div>
-            <div className="text-mist text-[clamp(16px,2.4vw,28px)] text-center">
-              Đang chờ MC chọn đội và mở câu hỏi…
-            </div>
-          </div>
-        ) : null}
+        )}
         {tb.winner && (
           <div className="panel w-full max-w-3xl text-center">
-            <p className="text-mist">Thang: <b style={{ color: state.teams.find((t) => t.id === tb.winner)?.color }}>{state.teams.find((t) => t.id === tb.winner)?.name}</b></p>
+            <div className="kicker">ĐỘI THẮNG VÒNG PHỤ</div>
+            <p className="font-display font-black text-[clamp(30px,4.5vw,52px)] mt-1" style={{ color: winnerTeam?.color }}>
+              {winnerTeam?.name || tb.winner}
+            </p>
           </div>
         )}
         {!exhausted && <TeamsRow teams={tbTeams} state={state} flash={flash} currentTeam={g.buzzer?.winner} />}
         {!exhausted && <BuzzOverlay state={state} flash={flash} />}
         <AudioUnlock audioOn={audioOn} onEnable={enableAudio} />
+        </div>
       </div>
     );
   }

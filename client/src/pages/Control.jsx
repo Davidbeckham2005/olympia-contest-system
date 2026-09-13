@@ -324,8 +324,9 @@ export default function Control() {
           )}
 
         {/* NHÓM 4 · NGUY HIỂM — Khóa/Mở khóa đội (LOẠI VĨNH VIỄN), tách khỏi nút chọn
-            đội để tránh bấm nhầm. Mặc định ĐÓNG sẵn + mọi thao tác có hộp xác nhận. */}
-        {isKd && (
+            đội để tránh bấm nhầm. Mặc định ĐÓNG sẵn + mọi thao tác có hộp xác nhận.
+            Hiện khi Vòng 1 (tuyển 4 đội) và Vòng phụ (chốt top-4 cuối sau vòng phụ). */}
+        {(isKd || g.round === "tie_break") && (
           <SideGroup
             title="Quản lý loại đội — vĩnh viễn"
             danger

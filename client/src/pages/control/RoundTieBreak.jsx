@@ -12,6 +12,7 @@ export default function RoundTieBreak({ ctx }) {
   const phase = tb.phase || "setup";
   const winner = tb.winner;
   const exhausted = phase === "exhausted";
+  const running = phase === "running";
   const currentQ = questions[g.questionIndex];
 
   const [newQuestion, setNewQuestion] = useState("");
@@ -45,6 +46,7 @@ export default function RoundTieBreak({ ctx }) {
       {/* Header */}
       <div className="flex items-center justify-between gap-2">
         <h3 className="text-sm font-semibold text-mist uppercase tracking-wider">Vòng phụ</h3>
+        <span className="text-[10px] text-mist/70 uppercase tracking-wider">Không tính điểm — chỉ Đúng/Sai</span>
         {phase === "done" && winner && (
           <span className="badge badge-ok">
             Thắng: {teams.find((t) => t.id === winner)?.name || winner}
@@ -53,6 +55,11 @@ export default function RoundTieBreak({ ctx }) {
         {exhausted && (
           <span className="badge badge-warn">
             Hết câu — chọn tay công
+          </span>
+        )}
+        {running && (
+          <span className="badge badge-ok">
+            Đang thi
           </span>
         )}
         {phase === "setup" && selectedTeams.length > 0 && (
@@ -91,6 +98,19 @@ export default function RoundTieBreak({ ctx }) {
           onClick={() => act("tiebreak.show")}
         >
           Bắt đầu vòng phụ
+        </button>
+      )}
+      {!canStart && phase !== "setup" && (
+        <button
+          type="button"
+          className="btn btn-ghost w-full"
+          onClick={() => {
+            if (window.confirm("Bắt đầu lại vòng phụ từ đầu? (giữ đội + câu hỏi đã chọn)")) {
+              act("tiebreak.reset");
+            }
+          }}
+        >
+          ↺ Bắt đầu lại vòng phụ
         </button>
       )}
 
@@ -196,42 +216,6 @@ export default function RoundTieBreak({ ctx }) {
                 className="w-24 bg-panel border border-line px-2 py-1.5 text-xs text-white placeholder:text-mist/50"
               />
               <button type="button" className="btn btn-ghost text-xs py-1!" onClick={addQuestion}>+</button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Quản lý đội vĩnh viện */}
-      <div className="border-t border-line pt-3">
-        <div className="text-xs text-danger mb-1.5">Loại đội (vĩnh viễn)</div>
-        <div className="flex flex-wrap gap-1.5">
-          {teams.filter((t) => !t.eliminated).map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              className="px-2.5 py-1 text-xs font-semibold border border-line bg-panel hover:bg-danger/20 hover:text-danger transition"
-              style={{ borderColor: t.color, color: t.color }}
-              onClick={() => act("tiebreak.eliminate", { teamId: t.id })}
-            >
-              Khóa {t.name}
-            </button>
-          ))}
-        </div>
-        {teams.filter((t) => t.eliminated).length > 0 && (
-          <div className="mt-2">
-            <div className="text-xs text-gold mb-1.5">Đã khóa</div>
-            <div className="flex flex-wrap gap-1.5">
-              {teams.filter((t) => t.eliminated).map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  className="px-2.5 py-1 text-xs font-semibold border border-line bg-panel hover:bg-white/10 transition"
-                  style={{ borderColor: t.color, color: t.color }}
-                  onClick={() => act("tiebreak.restore", { teamId: t.id })}
-                >
-                  Mở khóa {t.name}
-                </button>
-              ))}
             </div>
           </div>
         )}

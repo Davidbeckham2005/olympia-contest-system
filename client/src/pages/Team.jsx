@@ -412,6 +412,8 @@ export default function Team() {
     const hasBuzzer = g.buzzer?.open && !g.buzzer?.locked && !g.buzzer?.blocked?.includes(team.id) && !g.buzzer?.winner;
     const isWinner = g.buzzer?.winner === team.id;
     const exhausted = tb.phase === "exhausted";
+    const tbWinner = state.teams.find((t) => t.id === tb.winner);
+    const buzzTeam = state.teams.find((t) => t.id === g.buzzer?.winner);
     body = (
       <div className="flex flex-col items-center gap-5 w-full max-w-lg">
         <div className="round-badge">VÒNG PHỤ</div>
@@ -420,38 +422,41 @@ export default function Team() {
         ) : exhausted ? (
           <p className="text-mist">Hết câu hỏi vòng phụ — chờ MC chọn đội thắng.</p>
         ) : g.questionStatus !== "showing" ? (
-          <p className="text-mist">Đang chờ MC mở câu hỏi…</p>
+          <p className="text-mist">Đang chờ MC mở câu hỏi (chuông bấm được mở khi chiếu câu)…</p>
         ) : (
           <>
-            <div className="panel w-full text-left">
-              <p className="text-ink text-lg">{g.display?.question}</p>
-              {g.display?.mediaUrl && (
-                <img src={g.display.mediaUrl} alt="" className="mt-2 max-h-48 object-contain" />
-              )}
-            </div>
+            {g.display?.mediaUrl && (
+              <img src={g.display.mediaUrl} alt="" className="max-h-52 max-w-full object-contain rounded-xl" />
+            )}
+            {g.display?.answerRevealed ? (
+              <div className="panel w-full text-center">
+                <div className="kicker text-xs tracking-[0.25em]">ĐÁP ÁN</div>
+                <p className="text-gold text-[clamp(18px,2.4vw,26px)] font-semibold mt-1">{g.display.answer}</p>
+              </div>
+            ) : (
+              <div className="panel w-full text-center">
+                <p className="stage-q text-[clamp(18px,2.4vw,28px)]">{g.display?.question}</p>
+              </div>
+            )}
             {hasBuzzer && (
-              <button type="button" className="btn" onClick={() => buzz("row")}>
-                BAM CHUONG
+              <button type="button" className="buzz-btn" onClick={() => buzz("row")}>
+                🛎 BẤM CHUÔNG GIÀNH QUYỀN
               </button>
             )}
-            {isWinner && <p className="badge badge-ok">Ban da bam truoc — cho MC cham</p>}
+            {isWinner && <p className="badge badge-ok">Bạn đã bấm trước — chờ MC chấm.</p>}
             {isWinner && timer?.running && (
-              <div className="flex items-center gap-2 text-gold font-display font-black text-[clamp(18px,2.6vw,28px)]">
-                <span>⏱</span>
-                <span>{formatTime(remaining)}</span>
+              <div className="flex flex-col items-center gap-1">
+                <span className="kicker tracking-[0.3em]">ĐANG TRẢ LỜI</span>
+                <span className="font-display font-black text-gold text-[clamp(26px,4vw,38px)]">{formatTime(remaining)}</span>
               </div>
             )}
             {g.buzzer?.winner && !isWinner && (
-              <p className="text-mist">Doi <b style={{ color: state.teams.find((t) => t.id === g.buzzer.winner)?.color }}>{state.teams.find((t) => t.id === g.buzzer.winner)?.name}</b> da bam truoc.</p>
-            )}
-            {g.display?.answerRevealed && (
-              <div className="panel w-full">
-                <p className="text-mist text-sm">Dap an: <b className="text-gold">{g.display.answer}</b></p>
-              </div>
+              <p className="text-mist">Đội <b style={{ color: buzzTeam?.color }}>{buzzTeam?.name}</b> đã bấm trước.</p>
             )}
             {tb.winner && (
-              <div className="panel w-full">
-                <p className="text-mist text-sm">Thang: <b style={{ color: state.teams.find((t) => t.id === tb.winner)?.color }}>{state.teams.find((t) => t.id === tb.winner)?.name}</b></p>
+              <div className="panel w-full text-center">
+                <div className="kicker">ĐỘI THẮNG VÒNG PHỤ</div>
+                <p className="font-display font-black text-[clamp(22px,3vw,34px)] mt-1" style={{ color: tbWinner?.color }}>{tbWinner?.name || tb.winner}</p>
               </div>
             )}
           </>
