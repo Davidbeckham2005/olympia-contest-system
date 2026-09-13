@@ -191,7 +191,6 @@ export default function Audience() {
           </>
         )}
         <div className="relative z-10 flex flex-col items-center gap-6 w-full max-w-[1200px]">
-        <div className="round-badge">VÒNG PHỤ</div>
         {exhausted ? (
           <div className="panel w-full max-w-3xl text-center">
             <p className="text-mist text-[clamp(16px,2.4vw,28px)]">Hết câu hỏi vòng phụ — MC cần chọn đội thắng.</p>
