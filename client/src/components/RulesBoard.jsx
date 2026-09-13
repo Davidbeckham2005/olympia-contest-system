@@ -14,7 +14,7 @@ export default function RulesBoard({ state, g, className = "" }) {
   return (
     <div className={`w-[min(1200px,94vw)] mx-auto text-center ${className}`}>
       {/* Thanh tiêu đề vòng — giống biển hiệu truyền hình: đỏ, hai đầu nối xám tròn */}
-      <div className="inline-flex items-stretch rounded-xl overflow-hidden border border-white/40 shadow-[0_14px_40px_rgba(0,0,0,0.55)]">
+      <div className="inline-flex items-stretch rounded-xl overflow-hidden border border-white/40 shadow-[0_14px_40px_rgba(0,0,0,0.55)] rules-banner-in">
         <div className="w-[18px] bg-gradient-to-b from-[#9aa4b0] via-[#6b7480] to-[#3e454f]" />
         <div className="relative bg-gradient-to-b from-[#ff7a45] via-[#e8442f] to-[#b91c1c] px-10 py-2">
           <div className="absolute inset-x-0 top-0 h-1/2 bg-white/20" />
@@ -26,7 +26,7 @@ export default function RulesBoard({ state, g, className = "" }) {
       </div>
 
       {/* Khung câu hỏi chính */}
-      <div className="relative mt-5">
+      <div className="relative mt-5 rules-frame-in">
         {/* Halo ngoài: viền cyan mờ phát sáng nhẹ */}
         <div className="absolute -inset-[5px] rounded-[28px] border-2 border-[#4cc9f0]/60 blur-[9px]" />
         <div className="absolute -inset-[2px] rounded-[28px] bg-[#4cc9f0]/25" />
@@ -39,11 +39,16 @@ export default function RulesBoard({ state, g, className = "" }) {
           {/* Nội dung luật — các đoạn không đánh số, giãn line thoáng, vừa khung */}
           <div className="relative px-8 py-8 max-h-[calc(100vh-260px)] overflow-hidden flex flex-col items-center justify-center gap-4">
             {rules.length === 0 ? (
-              <p className="text-white/75 text-[clamp(16px,1.8vw,26px)]">Đang cập nhật luật chơi…</p>
+              <p
+                className="rules-line-in text-white/75 text-[clamp(16px,1.8vw,26px)]"
+                style={{ animationDelay: "640ms" }}
+              >
+                Đang cập nhật luật chơi…
+              </p>
             ) : rules.length === 1 ? (
               <p
-                className="max-w-[860px] text-center text-[clamp(18px,2vw,28px)] leading-relaxed text-white/95"
-                style={{ whiteSpace: "pre-line" }}
+                className="rules-line-in max-w-[860px] text-center text-[clamp(18px,2vw,28px)] leading-relaxed text-white/95"
+                style={{ whiteSpace: "pre-line", animationDelay: "640ms" }}
               >
                 {rules[0]}
               </p>
@@ -51,8 +56,8 @@ export default function RulesBoard({ state, g, className = "" }) {
               rules.map((line, i) => (
                 <p
                   key={i}
-                  className="w-full max-w-[880px] text-left text-[clamp(16px,1.8vw,26px)] leading-relaxed text-white/95"
-                  style={{ whiteSpace: "pre-line" }}
+                  className="rules-line-in w-full max-w-[880px] text-left text-[clamp(16px,1.8vw,26px)] leading-relaxed text-white/95"
+                  style={{ whiteSpace: "pre-line", animationDelay: `${640 + i * 150}ms` }}
                 >
                   {line}
                 </p>

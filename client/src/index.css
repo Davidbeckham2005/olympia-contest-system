@@ -164,6 +164,31 @@
     0% { transform: translateY(18px); opacity: 0; }
     100% { transform: translateY(0); opacity: 1; }
   }
+  .rules-banner-in {
+    opacity: 0;
+    animation: rulesBannerIn 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  @keyframes rulesBannerIn {
+    0% { opacity: 0; transform: scale(0.94); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+  .rules-frame-in {
+    opacity: 0;
+    animation: rulesFrameIn 0.48s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: 160ms;
+  }
+  @keyframes rulesFrameIn {
+    0% { opacity: 0; transform: translateY(24px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  .rules-line-in {
+    opacity: 0;
+    animation: rulesLineIn 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  @keyframes rulesLineIn {
+    0% { opacity: 0; transform: translateY(14px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
   /* Thanh đáp án ĐÚNG trên màn Đáp án Vòng 2: viền vàng + glow xanh nhạt thở nhẹ */
   .r2-tl-glow {
     animation: r2TlGlow 3s ease-in-out infinite;
