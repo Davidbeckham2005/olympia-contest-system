@@ -10,6 +10,8 @@
   export const VEDICH_COUNTDOWN_SECONDS = 3;
   // Số giây đếm ngược "3-2-1" trước TỪNG lượt thi của đội ở Vòng 1 (Bắt đầu & Sang đội).
   export const KHOI_DONG_PREP_SECONDS = 3;
+  // Thời gian trả lời của đội vừa bấm chuông Vòng phụ (hết giờ → tự khóa chuông).
+  export const TIEBREAK_ANSWER_SECONDS = 10;
 
   // Trạng thái mặc định cho mỗi câu hỏi vòng 3 (reset khi đổi câu / vào vòng).
   // startedAt: thời điểm đoạn chiếu hiện tại bắt đầu — mốc 0s để ghi nhận đáp án.
@@ -32,6 +34,14 @@
 
   let timerHandle = null;
   let khoiDongTimer = null;
+  // Timer tạm dừng/khôi phục đồng hồ 60s của thí sinh trong lúc MÀN HÌNH hiện đáp án
+  // (answerSeconds) trước khi tự sang ảnh kế — không ăn thời gian thi của đội.
+  function clearKhoiDongAdvance() {
+    if (khoiDongTimer) {
+      clearTimeout(khoiDongTimer);
+      khoiDongTimer = null;
+    }
+  }
   // Handle tự động bắt đầu tính giờ trả lời Vòng Về đích (nếu MC không bấm kịp trong X giây).
   let vedichAutoTimer = null;
   let broadcast = () => {};
@@ -170,6 +180,10 @@
             if (!game.buzzer.blocked.includes(game.currentTeam)) game.buzzer.blocked.push(game.currentTeam);
             resetBuzzer(true);
           }
+        } else if (game.round === "tie_break") {
+          // Hết thời gian trả lời của đội vừa bấm chuông → tự khóa chuông.
+          // MC sẽ chấm trả lời (đúng → thắng, sai → mở lại chuông cho đội khác).
+          closeBuzzer();
         } else if (
           game.round === "vuot_cnv" &&
           !game.puzzle.keywordSolved &&
@@ -365,7 +379,13 @@ export function resetKhoiDong(teamId = null) {
       game.veDich.answeringTeam = first;
     }
     if (roundId === "tie_break") {
-      game.tieBreak = { teams: [], questionIndex: 0, questions: [], phase: "setup", winner: null };
+      game.tieBreak = {
+        teams: [],
+        questionIndex: 0,
+        questions: [...(getDb().questions.main.tieBreak || [])],
+        phase: "setup",
+        winner: null,
+      };
     }
     saveDb();
     emit();
@@ -691,16 +711,29 @@ export function resetKhoiDong(teamId = null) {
       const mi = game.khoiDong.memberIndex ?? 0;
       game.khoiDong.history[tid][mi] = game.khoiDong.history[tid][mi] || {};
       game.khoiDong.history[tid][mi][game.questionIndex] = !!correct;
-      // Báo màn hình Khán giả: hiệu ứng stamp ĐÚNG/SAI ngay khi MC vừa chấm điểm.
-      broadcast("khoi_dong:mark", { teamId: tid, correct: !!correct });
+      // Báo màn hình Khán giả: hiệu ứng stamp ĐÚNG/SAI + đáp án flash (gửi kèm answer vì
+      // advance NGAY → state answerRevealed không kịp render trên màn hình khán giả).
+      broadcast("khoi_dong:mark", {
+        teamId: tid,
+        correct: !!correct,
+        answer: game.display?.answer || "",
+        mediaUrl: game.display?.mediaUrl || "",
+      });
       // Vòng 1: câu ĐÚNG được cộng điểm (10 điểm/ảnh); câu SAI không trừ.
       // Guard chống cộng trùng đã xử lý ở đầu branch, nên mỗi ảnh chỉ cộng đúng 1 lần.
       if (correct) addScore(tid, points);
-      // Chấm xong → chuyển NGAY sang ảnh kế. Không hiện/giữ màn hình đáp án
-      // (thí sinh có tổng 1 phút cho cả 5 ảnh, không chờ đáp án).
-      const before = `${game.currentTeam}:${game.questionIndex}`;
+      // Hiện đáp án lóe lên cùng hiệu ứng ring rồi sang ảnh kế NGAY.
+      game.display.answerRevealed = true;
+      game.questionStatus = "revealed";
+      saveDb();
+      emit();
+      // Không pause đồng hồ 60s — thí sinh phải trả lời trong 1 phút, và không chờ
+      // answerSeconds nữa: tự sang ảnh kế ngay sau khi MC vừa chấm.
+      const cur = g();
+      if (cur.round !== "khoi_dong" || cur.khoiDong?.phase !== "play" || !currentQuestion()) return;
+      const before = `${cur.currentTeam}:${cur.questionIndex}`;
       nextQuestion();
-      const moved = `${game.currentTeam}:${game.questionIndex}` !== before;
+      const moved = `${g().currentTeam}:${g().questionIndex}` !== before;
       if (moved && currentQuestion()) {
         showQuestion();
       }
@@ -760,6 +793,7 @@ export function resetKhoiDong(teamId = null) {
 
   export function nextQuestion() {
     const game = g();
+    clearKhoiDongAdvance();
     resetDisplayToBoard();
     resetBuzzer();
 if (game.round === "khoi_dong") {
@@ -838,6 +872,7 @@ if (game.round === "khoi_dong") {
 
   export function continueKhoiDong() {
     const game = g();
+    clearKhoiDongAdvance();
     // Nếu đang thi mà MC bấm "Kết thúc thí sinh này" → chuyển thẳng sang thí sinh kế.
     // Đánh dấu các ảnh chưa trả lời của thí sinh này là sai rồi đặt vào break member
     // để dòng "Tiếp tục" phía dưới xử lý nhất quán (giữ nguyên đội).
@@ -875,6 +910,7 @@ if (game.round === "khoi_dong") {
 
   export function prevQuestion() {
     const game = g();
+    clearKhoiDongAdvance();
     resetDisplayToBoard();
     if (game.round === "khoi_dong") {
       const mi = game.khoiDong?.memberIndex ?? 0;
@@ -900,6 +936,7 @@ if (game.round === "khoi_dong") {
 
   export function setCurrentTeam(teamId) {
     const game = g();
+    clearKhoiDongAdvance();
     // Chỉ các đội còn thi (chưa bị MC khóa vĩnh viễn) được chọn làm đội đang thi.
     if (game.round && game.round !== "khoi_dong" && !isTopTeam(teamId)) {
       saveDb();
@@ -936,6 +973,7 @@ if (game.round === "khoi_dong") {
   // tự chuyển phase "play" + showQuestion() để hiện ảnh đầu và chạy đồng hồ thật.
   function kdCountdown(teamId, memberIndex = 0) {
     const game = g();
+    clearKhoiDongAdvance();
     const timerSec = game.khoiDong?.timerSeconds || 60;
     const history = game.khoiDong?.history || {};
     game.currentTeam = teamId;
@@ -965,6 +1003,7 @@ if (game.round === "khoi_dong") {
 
   export function jumpToQuestion(teamId, questionIndex, memberIndex = undefined) {
     const game = g();
+    clearKhoiDongAdvance();
     const prevTeam = game.currentTeam;
     game.currentTeam = teamId;
     game.questionIndex = Math.max(0, questionIndex);
@@ -1134,6 +1173,10 @@ if (game.round === "khoi_dong") {
       emit();
       return { winner: teamId, kind: "keyword" };
     }
+    // Vòng phụ: chỉ các đội MC chọn (game.tieBreak.teams) mới được bấm chuông trả lời.
+    if (game.round === "tie_break" && !game.tieBreak?.teams?.includes(teamId)) {
+      return { ignored: true, blocked: true };
+    }
     // === CHUÔNG TRẢ LỜI HÀNG NGANG / giành quyền cướp (nút CHUÔNG to) ===
     // Chuông này CHỈ dành cho hàng ngang: chỉ có hiệu lực khi MC mở chuông
     // (game.buzzer.open). Hoàn toàn tách biệt với nút TỪ KHÓA (keywordClaim).
@@ -1155,6 +1198,10 @@ if (game.round === "khoi_dong") {
       // Cướp quyền trả lời vòng Về đích → đếm ngược THIẾT LẬP LẠI TỪ ĐẦU cho đội mới.
       if (game.round === "ve_dich" && game.veDich?.stealOpen) {
         setTimer(vedich.getAnswerSeconds(game), true);
+      }
+      // Vòng phụ: đội vừa giành quyền bấm — bật đồng hồ trả lời (tự khóa nếu hết giờ).
+      if (game.round === "tie_break") {
+        setTimer(TIEBREAK_ANSWER_SECONDS, true);
       }
     }
     saveDb();
@@ -1608,6 +1655,7 @@ if (game.round === "khoi_dong") {
       answerRevealed: false,
       note: q.note || "",
     };
+    setTimer(0, false);
     resetBuzzer();
     openBuzzer();
     saveDb();
@@ -1626,11 +1674,33 @@ if (game.round === "khoi_dong") {
   export function markTieBreakAnswer(teamId, correct) {
     const game = g();
     if (game.round !== "tie_break") return { ignored: true };
+    setTimer(0, false);
     if (correct) {
       game.tieBreak.winner = teamId;
       game.tieBreak.phase = "done";
       game.display.answerRevealed = true;
       game.display.answer = game.tieBreak.questions[game.questionIndex]?.answer || "";
+      saveDb();
+      emit();
+      return;
+    }
+    if (game.questionIndex + 1 < game.tieBreak.questions.length) {
+      game.questionIndex += 1;
+      const q = game.tieBreak.questions[game.questionIndex];
+      game.display = {
+        mode: "question",
+        title: `Vòng phụ — Câu ${game.questionIndex + 1}`,
+        question: q?.question || "",
+        options: q?.options || [],
+        mediaUrl: q?.mediaUrl || "",
+        mediaType: q?.mediaType || "",
+        answer: "",
+        answerRevealed: false,
+        note: q?.note || "",
+      };
+      openBuzzer();
+    } else {
+      game.tieBreak.phase = "exhausted";
     }
     saveDb();
     emit();

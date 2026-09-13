@@ -121,7 +121,31 @@ export function normalizeMainVeDich(main) {
   return fixed;
 }
 
-export { normalizeMainKhoiDong };
+function normalizeMainTieBreak(main) {
+  if (!main) return main;
+  const fixed = { ...main };
+  const raw = main.tieBreak;
+  if (Array.isArray(raw)) {
+    fixed.tieBreak = raw.map((q) => {
+      const base = (q && typeof q === "object") ? q : {};
+      return {
+        id: base.id || `tb-migrate-${Math.random().toString(36).slice(2, 8)}`,
+        question: base.question || "",
+        answer: base.answer || "",
+        options: Array.isArray(base.options) ? base.options : [],
+        mediaUrl: base.mediaUrl || "",
+        mediaType: base.mediaType || "",
+        note: base.note || "",
+        ...base,
+      };
+    });
+  } else {
+    fixed.tieBreak = [];
+  }
+  return fixed;
+}
+
+export { normalizeMainKhoiDong, normalizeMainTieBreak };
 
 // roundsView(): danh sách vòng thi HOÀN CHỈNH dùng để gửi client. Luật của từng vòng
 // ưu tiên bản admin đã chỉnh (db.rules), không có thì lấy mặc định từ ROUNDS.
@@ -191,10 +215,10 @@ async function assemble() {
       settings: { ...fallback.settings, ...settings },
       teams: mergedTeams,
       contestants,
-      questions: {
-        soKhao: soKhao.length ? soKhao : fallback.questions.soKhao,
-        main: normalizeMainKhoiDong(normalizeMainVeDich(mergedMain)),
-      },
+        questions: {
+          soKhao: soKhao.length ? soKhao : fallback.questions.soKhao,
+          main: normalizeMainKhoiDong(normalizeMainVeDich(normalizeMainTieBreak(mergedMain))),
+        },
       media,
       sounds,
       rules,
@@ -221,10 +245,10 @@ export async function loadDb() {
       settings: { ...defaultDb().settings, ...(json.settings || {}) },
       sounds: { ...Sound.emptySounds(), ...(json.sounds || {}) },
       rules: { ...(json.rules || {}) },
-      questions: {
-        soKhao: json.questions?.soKhao || defaultDb().questions.soKhao,
-        main: normalizeMainKhoiDong(normalizeMainVeDich(json.questions?.main || defaultDb().questions.main)),
-      },
+        questions: {
+          soKhao: soKhao.length ? soKhao : fallback.questions.soKhao,
+          main: normalizeMainKhoiDong(normalizeMainVeDich(normalizeMainTieBreak(json.questions?.main || defaultDb().questions.main))),
+        },
     };
     if (!db.game) db.game = defaultGame();
   } else {

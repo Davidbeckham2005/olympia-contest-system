@@ -1,4 +1,4 @@
-  import { getDb, saveDb, resetContest, normalizeMainKhoiDong, normalizeMainVeDich } from "../models/store.js";
+  import { getDb, saveDb, resetContest, normalizeMainKhoiDong, normalizeMainVeDich, normalizeMainTieBreak } from "../models/store.js";
   import { SOUND_SLOTS, emptySounds } from "../models/Sound.js";
   import { publicState, adminState } from "../services/state.service.js";
   import * as exam from "../services/exam.service.js";
@@ -128,7 +128,7 @@
 
   export function saveMainQuestions(req) {
     const db = getDb();
-    db.questions.main = normalizeMainKhoiDong(normalizeMainVeDich(req.body.main || db.questions.main));
+    db.questions.main = normalizeMainKhoiDong(normalizeMainVeDich(normalizeMainTieBreak(req.body.main || db.questions.main)));
     saveDb();
     // Đẩy game:state đi để mọi màn hình (đặc biệt bàn MC — danh sách câu hỏi
     // Tăng tốc 1·2·3·4) cập nhật NGAY sau khi lưu/upload câu hỏi, không cần click lại.

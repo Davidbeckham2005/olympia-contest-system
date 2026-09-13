@@ -413,6 +413,7 @@ function normalizeMain(v) {
     vuotCnv: v.vuotCnv || { keyword: "", hint: "", letterCount: "", media: { type: "image", url: "" }, rows: [] },
     tangToc: v.tangToc || [],
     veDich: v.veDich || [],
+    tieBreak: v.tieBreak || [],
   };
   for (const tid of TEAM_ORDER) {
     const raw = m.khoiDong[tid] || [];
@@ -450,6 +451,16 @@ function normalizeMain(v) {
   }));
   m.vuotCnv.rows = (m.vuotCnv.rows || []).filter((r) => r && typeof r === "object").map((r) => ({ id: r.id || uid(), question: r.question || "", answer: r.answer || "", letterCount: r.letterCount ?? "", ...r }));
   m.tangToc = (m.tangToc || []).filter((q) => q && typeof q === "object").map((q) => ({ id: q.id || uid(), answer: q.answer || "", duration: Number(q.duration) || 60, mediaUrl: q.mediaUrl || "", mediaType: "video", ...q }));
+  m.tieBreak = (m.tieBreak || []).filter((q) => q && typeof q === "object").map((q) => ({
+    id: q.id || `tb-${Math.random().toString(36).slice(2, 8)}`,
+    question: q.question || "",
+    answer: q.answer || "",
+    options: Array.isArray(q.options) ? q.options : [],
+    mediaUrl: q.mediaUrl || "",
+    mediaType: q.mediaType || "",
+    note: q.note || "",
+    ...q,
+  }));
   return m;
 }
 
@@ -480,6 +491,7 @@ function QuestionsTab({ state, reload, setMsg }) {
     ["vuot_cnv", "Vượt CNV"],
     ["tang_toc", "Tăng tốc"],
     ["ve_dich", "Về đích"],
+    ["vong_phu", "Vòng phụ"],
     ["json", "Chỉnh JSON"],
   ];
 
@@ -516,8 +528,41 @@ function QuestionsTab({ state, reload, setMsg }) {
           {sub === "vuot_cnv" && <VuotCnvEditor draft={draft} setDraft={setDraft} />}
           {sub === "tang_toc" && <TangTocEditor draft={draft} setDraft={setDraft} />}
           {sub === "ve_dich" && <VeDichEditor draft={draft} setDraft={setDraft} setMsg={setMsg} />}
+          {sub === "vong_phu" && <TieBreakEditor draft={draft} setDraft={setDraft} />}
           {sub === "json" && <JsonEditor draft={draft} setDraft={setDraft} setMsg={setMsg} />}
       </div>
+    </div>
+  );
+}
+
+function TieBreakEditor({ draft, setDraft }) {
+  const m = draft.main;
+  const list = (m.tieBreak || []).slice();
+  const setList = (next) => setDraft({ ...draft, main: { ...m, tieBreak: next } });
+  return (
+    <div>
+      <div className="flex flex-col gap-2 mb-4">
+        {list.map((q, i) => (
+          <div key={q.id || i} className="flex items-center gap-2">
+            <span className="text-mist text-xs w-6 shrink-0">{i + 1}.</span>
+            <input
+              className="flex-1 bg-panel border border-line px-2 py-1.5 text-xs text-white"
+              value={q.question}
+              onChange={(e) => setList(list.map((x, j) => (j === i ? { ...x, question: e.target.value } : x)))}
+              placeholder="Câu hỏi..."
+            />
+            <input
+              className="w-28 bg-panel border border-line px-2 py-1.5 text-xs text-white"
+              value={q.answer}
+              onChange={(e) => setList(list.map((x, j) => (j === i ? { ...x, answer: e.target.value } : x)))}
+              placeholder="Đáp án"
+            />
+            <button type="button" className="text-red-400 hover:text-red-300 shrink-0 text-xs" onClick={() => setList(list.filter((_, j) => j !== i))}>x</button>
+          </div>
+        ))}
+        {list.length === 0 && <p className="text-mist text-sm">Chưa có câu hỏi Vòng phụ.</p>}
+      </div>
+      <button type="button" className="btn btn-ghost text-xs py-1!" onClick={() => setList([...list, { id: `tb-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`, question: "", answer: "", options: [], mediaUrl: "", mediaType: "", note: "" }])}>+ Thêm câu hỏi</button>
     </div>
   );
 }

@@ -286,7 +286,7 @@ export default function Team() {
     // MC: RulesBoard giữa màn + nền đồng bộ khán giả + ONLY nút đăng xuất (không header,
     // không sidebar). Khớp 100% giao diện MC để thí sinh xem luật đúng như khán giả.
     return (
-      <div className="relative min-h-screen flex flex-col items-center justify-center px-5 py-8 text-center isolate overflow-hidden">
+      <div className="rules-screen-in relative min-h-screen flex flex-col items-center justify-center px-5 py-8 text-center isolate overflow-hidden">
         <TeamBackground settings={state?.settings} />
         <div className="absolute top-4 left-4 z-40">
           <button type="button" className="btn btn-ghost py-2! px-3! text-sm" onClick={quit}>
@@ -411,11 +411,14 @@ export default function Team() {
     const isParticipant = (tb.teams || []).includes(team.id);
     const hasBuzzer = g.buzzer?.open && !g.buzzer?.locked && !g.buzzer?.blocked?.includes(team.id) && !g.buzzer?.winner;
     const isWinner = g.buzzer?.winner === team.id;
+    const exhausted = tb.phase === "exhausted";
     body = (
       <div className="flex flex-col items-center gap-5 w-full max-w-lg">
         <div className="round-badge">VÒNG PHỤ</div>
-        {!isParticipant ? (
+        {!isParticipant && !exhausted ? (
           <p className="text-mist">Đội bạn không tham gia vòng phụ.</p>
+        ) : exhausted ? (
+          <p className="text-mist">Hết câu hỏi vòng phụ — chờ MC chọn đội thắng.</p>
         ) : g.questionStatus !== "showing" ? (
           <p className="text-mist">Đang chờ MC mở câu hỏi…</p>
         ) : (
@@ -432,6 +435,12 @@ export default function Team() {
               </button>
             )}
             {isWinner && <p className="badge badge-ok">Ban da bam truoc — cho MC cham</p>}
+            {isWinner && timer?.running && (
+              <div className="flex items-center gap-2 text-gold font-display font-black text-[clamp(18px,2.6vw,28px)]">
+                <span>⏱</span>
+                <span>{formatTime(remaining)}</span>
+              </div>
+            )}
             {g.buzzer?.winner && !isWinner && (
               <p className="text-mist">Doi <b style={{ color: state.teams.find((t) => t.id === g.buzzer.winner)?.color }}>{state.teams.find((t) => t.id === g.buzzer.winner)?.name}</b> da bam truoc.</p>
             )}

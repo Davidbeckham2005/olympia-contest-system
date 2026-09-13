@@ -90,7 +90,7 @@ export default function Audience() {
       </>
     );
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-5 py-8 relative isolate overflow-hidden">
+      <div className="rules-screen-in min-h-screen flex flex-col items-center justify-center px-5 py-8 relative isolate overflow-hidden">
         {bgLayer}
         <RulesBoard state={state} g={g} className="relative z-10" />
         <AudioUnlock audioOn={audioOn} onEnable={enableAudio} />
@@ -163,15 +163,29 @@ export default function Audience() {
     const tb = g.tieBreak || {};
     const tbTeams = (tb.teams || []).map((id) => state.teams.find((t) => t.id === id)).filter(Boolean);
     const showing = g.questionStatus === "showing" && !!g.display?.question;
+    const exhausted = tb.phase === "exhausted";
     return (
       <div className="relative min-h-screen flex flex-col items-center justify-center px-6 py-4 gap-6">
         <div className="round-badge">VÒNG PHỤ</div>
-        {g.buzzer?.winner && (
+        {exhausted && (
+          <div className="panel w-full max-w-3xl text-center">
+            <p className="text-mist text-[clamp(16px,2.4vw,28px)]">Hết câu hỏi vòng phụ — MC cần chọn tay công để xác định đội thắng.</p>
+          </div>
+        )}
+        {g.buzzer?.winner && !exhausted && (
           <div className="round-badge">
             Quyền trả lời: {state.teams.find((t) => t.id === g.buzzer.winner)?.name}
           </div>
         )}
-        {showing ? (
+        {g.buzzer?.winner && timer?.running && !exhausted && (
+          <div className="flex flex-col items-center gap-1">
+            <span className="kicker tracking-[0.3em]">TỰ TRẢ LỜI</span>
+            <span className="font-display font-black text-gold text-[clamp(24px,4vw,38px)] drop-shadow-[0_2px_0_rgba(0,0,0,0.5)]">
+              {formatTime(remaining)}
+            </span>
+          </div>
+        )}
+        {showing && !exhausted ? (
           <>
             <div className="panel w-full max-w-3xl text-center">
               <p className="text-ink text-2xl font-semibold">{g.display.question}</p>
@@ -187,7 +201,7 @@ export default function Audience() {
               </div>
             )}
           </>
-        ) : (
+        ) : !exhausted ? (
           // MÀN CHỜ VÒNG PHỤ: chưa có câu hỏi nào được mở — chưa trao quyền bấm chuông
           // (server chỉ mở chuông khi showTieBreakQuestion).
           <div className="flex flex-col items-center gap-3">
@@ -196,14 +210,14 @@ export default function Audience() {
               Đang chờ MC chọn đội và mở câu hỏi…
             </div>
           </div>
-        )}
+        ) : null}
         {tb.winner && (
           <div className="panel w-full max-w-3xl text-center">
             <p className="text-mist">Thang: <b style={{ color: state.teams.find((t) => t.id === tb.winner)?.color }}>{state.teams.find((t) => t.id === tb.winner)?.name}</b></p>
           </div>
         )}
-        <TeamsRow teams={tbTeams} state={state} flash={flash} currentTeam={g.buzzer?.winner} />
-        <BuzzOverlay state={state} flash={flash} />
+        {!exhausted && <TeamsRow teams={tbTeams} state={state} flash={flash} currentTeam={g.buzzer?.winner} />}
+        {!exhausted && <BuzzOverlay state={state} flash={flash} />}
         <AudioUnlock audioOn={audioOn} onEnable={enableAudio} />
       </div>
     );
@@ -786,16 +800,37 @@ export function KhoiDongAudience({ state, timer, flash }) {
   // Hiệu ứng ring quanh ảnh câu hỏi khi MC chấm điểm vòng 1 — tự tắt sau 1.1s.
   const [markFx, setMarkFx] = useState(null);
   const markTimer = useRef(null);
+  // Dòng "Đáp án: …" được drive bởi broadcast khoi_dong:mark (gửi kèm answer) chứ không
+  // phụ thuộc state answerRevealed — vì server advance NGAY nên answerRevealed không kịp
+  // render. Dòng này hiện xuống dưới ảnh rồi tự mờ dần trong khi ảnh kế đã xuất hiện.
+  // Luôn flash kể cả khi answer rỗng: fallback sang tên file ảnh từ mediaUrl, nếu không có
+  // thì dùng văn bản mặc định để MC/khán giả vẫn thấy phản hồi chấm điểm.
+  const [flashAnswer, setFlashAnswer] = useState(null);
+  const [flashKey, setFlashKey] = useState(0);
+  const flashTimer = useRef(null);
   useEffect(() => {
     return on("khoi_dong:mark", (p) => {
       if (markTimer.current) clearTimeout(markTimer.current);
       setMarkFx({ correct: p?.correct === true, ts: Date.now() });
       markTimer.current = setTimeout(() => setMarkFx(null), 1100);
+      const raw = String(p?.answer || "").trim();
+      const file = raw
+        || String(p?.mediaUrl || "")
+            .split("/")
+            .pop()
+            ?.split("?")[0]
+            ?.replace(/\.[a-zA-Z0-9]+$/, "")
+        || "";
+      if (flashTimer.current) clearTimeout(flashTimer.current);
+      setFlashAnswer(file || "Xem ảnh");
+      setFlashKey((k) => k + 1);
+      flashTimer.current = setTimeout(() => setFlashAnswer(null), 1800);
     });
   }, []);
   useEffect(
     () => () => {
       if (markTimer.current) clearTimeout(markTimer.current);
+      if (flashTimer.current) clearTimeout(flashTimer.current);
     },
     []
   );
@@ -878,8 +913,7 @@ export function KhoiDongAudience({ state, timer, flash }) {
       <div className="relative isolate min-h-screen overflow-hidden">
         {bgLayer}
         <div className="relative flex flex-col items-center justify-center min-h-screen px-6 z-10 text-center">
-          <div className="kicker tracking-[0.35em] text-[#ffd60a]">VÒNG 1 · KHỞI ĐỘNG</div>
-          <div className="font-display font-bold text-[clamp(26px,4vw,52px)] leading-tight text-white mt-6">{activeTeam?.name || "…"}</div>
+          <div className="font-display font-bold text-[clamp(26px,4vw,52px)] leading-tight text-white">{activeTeam?.name || "…"}</div>
           <div className="font-display font-black text-[clamp(90px,20vw,220px)] leading-none mt-3 text-[#ffd60a]">{cd}</div>
           <div className="kicker text-gold/60 mt-4">CHUẨN BỊ</div>
         </div>
@@ -998,9 +1032,11 @@ export function KhoiDongAudience({ state, timer, flash }) {
 
       {/* Giữa — khung ảnh KÍCH THƯỚC CỐ ĐỊNH (tỷ lệ 4:3) chiếm trọn chiều cao trống:
           mọi ảnh (tỉ lệ khác nhau) cùng vào MỘT ô, object-contain căn giữa bên trong, đổi
-          ảnh không làm xê dịch/đổi cỡ bố cục hay làm lệch vòng đúng-sai quanh ảnh. */}
+          ảnh không làm xê dịch/đổi cỡ bố cục hay làm lệch vòng đúng-sai quanh ảnh.
+          Khi MC chấm Đúng/Sai: dòng "Đáp án: …" hiện NGAY PHÍA DƯỚI ảnh đồng thời với
+          hiệu ứng ring rồi tự mờ dần — ảnh kế đã hiện trong lúc dòng đáp án tàn. */}
       <div className="relative flex flex-col items-center justify-center px-8 min-h-0 flex-1 z-10">
-        <div className="relative w-full h-full grid place-items-center">
+        <div className="relative w-full flex-1 min-h-0 grid place-items-center">
           <div className="relative h-full aspect-[4/3] max-w-full min-w-[260px]" style={{ aspectRatio: "4 / 3", height: "100%" }}>
             <img
               src={d.mediaUrl || fallbackImg}
@@ -1008,15 +1044,6 @@ export function KhoiDongAudience({ state, timer, flash }) {
               className="absolute inset-0 w-full h-full object-contain rounded-2xl"
             />
             <KdRing fx={markFx} />
-            {d.answerRevealed && (
-              <div className="absolute inset-x-0 bottom-0 rounded-b-2xl bg-gradient-to-t from-black/80 via-black/55 to-transparent px-4 pb-3 pt-12">
-                <div className="kicker text-[#ffd60a]">ĐÁP ÁN</div>
-                <div className="stage-answer mt-1">{d.answer}</div>
-                <div className="text-mist mt-1.5 text-sm">
-                  {activeTeam?.name || ""} • Thí sinh {memberNo}/{memberTotal} • Ảnh {(g.questionIndex || 0) + 1}/5
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -1056,11 +1083,20 @@ export function KhoiDongAudience({ state, timer, flash }) {
             })}
           </div>
           <div className="flex items-stretch border-t border-[rgba(255,214,10,0.1)]">
-            <div className="flex-1 px-4 py-1 text-center flex items-center justify-center border-r border-[rgba(255,214,10,0.1)]">
-              <div className="font-display font-bold text-[clamp(20px,2.6vw,34px)] text-white">
-                Đây là tế bào/cấu trúc/cơ quan gì?
-              </div>
+            <div className="flex-1 px-4 py-1 text-center flex flex-col items-center justify-center border-r border-[rgba(255,214,10,0.1)]">
+            <div className="font-display font-bold text-[clamp(20px,2.6vw,34px)] text-white">
+              Đây là tế bào/cấu trúc/cơ quan gì?
             </div>
+            <div className="relative flex-none w-full h-[3rem] flex items-center justify-center overflow-hidden">
+              {flashAnswer && (
+                <div key={flashKey} className="kd-answer-flash whitespace-nowrap">
+                  <span className="font-display font-bold text-[clamp(18px,2.2vw,28px)] text-[#4ade80]">
+                    Đáp án: {flashAnswer}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
             <div className="shrink-0 flex flex-col items-center justify-center gap-0.5 px-6 py-2 bg-[#ffd60a]/15">
               <div className="kicker text-[10px] tracking-[0.2em] text-white/70">{activeTeam?.name || "—"}</div>
               <div className="font-display font-black text-[clamp(28px,3.4vw,44px)] leading-none text-[#ffd60a]">

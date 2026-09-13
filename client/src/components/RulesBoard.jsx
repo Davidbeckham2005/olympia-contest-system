@@ -8,7 +8,13 @@
 // không đánh số, bo vừa khung để không tràn màn hình.
 export default function RulesBoard({ state, g, className = "" }) {
   const round = (state.rounds || []).find((r) => r.id === g.round);
-  const rules = round?.rules || [];
+  const rawRules = round?.rules || [];
+  // Vòng chỉ có 1 đoạn luật (vd vòng 1 Khởi động) → tách thành từng câu để mỗi câu
+  // trượt tuần tự, đồng bộ hiệu ứng với vòng có nhiều dòng luật.
+  const rules =
+    rawRules.length === 1
+      ? (rawRules[0].match(/[^.!?]+[.!?]+\s*/g) || [rawRules[0]]).map((s) => s.trim())
+      : rawRules;
   const title = (round?.name || g.display?.title || "").toUpperCase();
 
   return (
