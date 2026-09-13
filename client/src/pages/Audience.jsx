@@ -204,7 +204,30 @@ export default function Audience() {
           </div>
         ) : (
           <>
-            {/* GIỮA — trạng thái giành quyền / đồng hồ trả lời */}
+            {/* KHUNG ĐỘI — đặt lên phía trên (kiểu Round 1): chỉ có dải tên đội, không gạch
+                phân cách với phần bên dưới. */}
+            {showing && (
+              <div className="w-full rounded-2xl border border-[rgba(255,214,10,0.18)] bg-[#2a3d63] shadow-[0_10px_40px_rgba(0,0,0,0.45)]">
+                <div className="flex w-full">
+                  {tbTeams.map((t) => {
+                    const active = g.buzzer?.winner === t.id;
+                    return (
+                      <div
+                        key={t.id}
+                        className={`flex-1 flex items-center justify-center gap-2 py-3.5 px-2 border-r border-[rgba(255,214,10,0.1)] last:border-r-0 transition-colors ${active ? "team-buzz" : ""}`}
+                      >
+                        <span className={`font-bold text-[15px] truncate ${active ? "text-white" : "text-black/80"}`}>
+                          {t.name}
+                        </span>
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: t.color }} />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* GIỮA — badge trạng thái giành quyền / đồng hồ trả lời */}
             {buzzTeam ? (
               <div className="flex flex-col items-center gap-3">
                 <div className="round-badge bg-[#ffd60a]/15">
@@ -231,47 +254,20 @@ export default function Audience() {
                 }
               />
             ) : (
-              // Đang chiếu câu hỏi (chuông đã mở) nhưng chưa đội nào bấm → nhắc nhẹ + khung hỏi bên dưới.
+              // Đang chiếu câu hỏi (chuông đã mở) nhưng chưa đội nào bấm → nhắc nhẹ.
               <div className="text-mist text-[clamp(16px,2vw,24px)] text-center">
                 Chuông đã mở — các đội bấm chuông giành quyền trả lời.
               </div>
             )}
 
-            {/* DƯỚI — khung kiểu Vòng 1 khi đang chiếu câu: bar đội + câu hỏi + ô vàng giành quyền */}
+            {/* CÂU HỎI — đưa xuống dưới cùng, chữ to giữa màn */}
             {showing && (
-              <div className="w-full rounded-2xl border border-[rgba(255,214,10,0.18)] bg-[#2a3d63] shadow-[0_10px_40px_rgba(0,0,0,0.45)]">
-                <div className="flex w-full">
-                  {tbTeams.map((t) => {
-                    const active = g.buzzer?.winner === t.id;
-                    return (
-                      <div
-                        key={t.id}
-                        className={`flex-1 flex items-center justify-center gap-2 py-3.5 px-2 border-r border-[rgba(255,214,10,0.1)] last:border-r-0 transition-colors ${active ? "team-buzz" : ""}`}
-                      >
-                        <span className={`font-bold text-[15px] truncate ${active ? "text-white" : "text-black/80"}`}>
-                          {t.name}
-                        </span>
-                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: t.color }} />
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="flex items-stretch border-t border-[rgba(255,214,10,0.1)]">
-                  <div className="flex-1 px-6 py-4 text-center flex flex-col items-center justify-center border-r border-[rgba(255,214,10,0.1)]">
-                    {d.answerRevealed ? (
-                      <div className="stage-answer text-[clamp(17px,2.2vw,27px)]">Đáp án: {d.answer}</div>
-                    ) : (
-                      d.question && <div className="stage-q text-[clamp(20px,2.6vw,36px)]">{d.question}</div>
-                    )}
-                  </div>
-                  <div className="shrink-0 flex flex-col items-center justify-center gap-0.5 px-6 py-3 bg-[#ffd60a]/15 min-w-[130px]">
-                    <div className="kicker text-[10px] tracking-[0.2em] text-white/70 uppercase">{buzzTeam?.name || "CHUÔNG"}</div>
-                    <div className="font-display font-black text-[clamp(22px,2.6vw,38px)] leading-none text-[#ffd60a]">
-                      {timer?.running ? formatTime(remaining) : buzzTeam ? "TRẢ LỜI" : "MỞ"}
-                    </div>
-                    <div className="text-[10px] tracking-[0.2em] text-white/50">GIÀNH QUYỀN</div>
-                  </div>
-                </div>
+              <div className="w-full text-center">
+                {d.answerRevealed ? (
+                  <div className="stage-answer text-[clamp(17px,2.2vw,27px)]">Đáp án: {d.answer}</div>
+                ) : (
+                  d.question && <div className="stage-q text-[clamp(24px,3vw,42px)]">{d.question}</div>
+                )}
               </div>
             )}
           </>
