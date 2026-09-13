@@ -247,14 +247,38 @@ export default function Audience() {
           )}
         </div>
 
-        {/* KHỐI ĐÁY CỐ ĐỊNH — khung câu hỏi kiểu Round 1 nhưng cỡ nhỏ vừa, KHÔNG có dải tên đội
-            (vòng phụ thi chung). Ẩn khi phase setup (mới mở vòng phụ); từ countdown 3-2-1 trở đi
-            luôn render để kích thước khung KHÔNG thay đổi: chiều cao vùng câu hỏi cố định
-            (h-[6.5rem]), nội dung chưa chiếu hiển thị dấu "…" giữ chỗ. */}
-        {!exhausted && tb.phase !== "setup" && (
+        {/* KHỐI ĐÁY — khung câu hỏi kèm các đội được chọn (thi chung, không highlight "đội đang
+            thi" riêng lẻ; chỉ tô đội đang nắm chuông). Chỉ xuất hiện SAU khi đếm 3-2-1 xong
+            (phase running / done): khi đếm chỉ đếm. Chiều cao vùng câu hỏi cố định (h-[6.5rem])
+            để đổi câu không làm khung nhảy. */}
+        {(tb.phase === "running" || tb.phase === "done") && (
           <div className="relative z-10 flex-none px-8 pb-6">
             <div className="w-full max-w-[900px] mx-auto rounded-2xl border border-[rgba(255,214,10,0.18)] bg-[#2a3d63] shadow-[0_10px_40px_rgba(0,0,0,0.45)] overflow-hidden">
-              <div className="flex items-center justify-center h-[6.5rem] px-6 py-3 text-center overflow-hidden">
+              {/* Dải các đội được chọn vào vòng phụ */}
+              <div className="flex w-full">
+                {tbTeams.length > 0 ? (
+                  tbTeams.map((t) => {
+                    const active = g.buzzer?.winner === t.id;
+                    return (
+                      <div
+                        key={t.id}
+                        className={`flex-1 flex items-center justify-center gap-2 py-3 px-2 border-r border-[rgba(255,214,10,0.1)] last:border-r-0 transition-colors ${active ? "team-buzz" : ""}`}
+                      >
+                        <span className={`font-bold text-[15px] truncate ${active ? "text-white" : "text-black/80"}`}>
+                          {t.name}
+                        </span>
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: t.color }} />
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="flex-1 flex items-center justify-center py-3 px-2">
+                    <span className="font-bold text-[15px] text-black/70">Đang chọn đội…</span>
+                  </div>
+                )}
+              </div>
+              {/* Vùng câu hỏi — chiều cao cố định, không đổi khi đổi câu */}
+              <div className="flex items-center justify-center h-[6.5rem] px-6 py-3 text-center border-t border-[rgba(255,214,10,0.1)] overflow-hidden">
                 {showing ? (
                   d.answerRevealed ? (
                     <div className="stage-answer text-[clamp(16px,2vw,25px)]">Đáp án: {d.answer}</div>
