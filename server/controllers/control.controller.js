@@ -125,6 +125,7 @@ const actions = {
   "round.points": (p) => game.setRoundPoints(p.round, p.points),
   "tiebreak.teams": (p) => game.setTieBreakTeams(p.teams),
   "tiebreak.questions": (p) => game.setTieBreakQuestions(p.questions),
+  "tiebreak.reset": () => game.resetTieBreak(),
   "tiebreak.show": () => game.showTieBreakQuestion(),
   "tiebreak.next": () => game.nextTieBreakQuestion(),
   "tiebreak.mark": (p) => {
