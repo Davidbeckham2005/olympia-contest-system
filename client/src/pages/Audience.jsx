@@ -220,9 +220,21 @@ export default function Audience() {
                   </div>
                 )}
               </div>
+            ) : tb.phase === "setup" ? (
+              // MÀN CHỜ ĐẦU VÒNG giống hệt các vòng khác (RoundWait): hiện ngay khi MC vừa
+              // click vào VÒNG PHỤ nhưng chưa chọn đội xong / chưa bấm Bắt đầu.
+              <RoundWait
+                title="VÒNG PHỤ"
+                message={
+                  tbTeams.length > 0
+                    ? "Đã chọn đội tham gia — chờ MC bấm Bắt đầu."
+                    : "Đang chờ MC chọn đội tham gia và bắt đầu…"
+                }
+              />
             ) : (
+              // Đang chiếu câu hỏi (chuông đã mở) nhưng chưa đội nào bấm → nhắc nhẹ + khung hỏi bên dưới.
               <div className="text-mist text-[clamp(16px,2vw,24px)] text-center">
-                {tbTeams.length > 0 ? "Chuông đã mở — các đội bấm chuông giành quyền trả lời." : "Đang chờ MC chọn đội tham gia vòng phụ…"}
+                Chuông đã mở — các đội bấm chuông giành quyền trả lời.
               </div>
             )}
 
