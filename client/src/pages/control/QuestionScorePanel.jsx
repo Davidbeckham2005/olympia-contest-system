@@ -92,8 +92,9 @@ export function KdScorePanel({ ctx }) {
   const alreadyScored = isKd && typeof kdCurMark === "boolean";
   // Round 2 chấm theo bảng "Bài nộp tự luận" riêng (trong RoundVuotCnv) — ẩn nút chấm chung này.
   // Round 1 khi chưa chiếu ảnh nào (chưa Bắt đầu / đang nghỉ) cũng không cho chấm.
+  // Vòng phụ không tính điểm — chỉ Đúng/Sai (chấm qua RoundTieBreak đúng/sai riêng).
   if (isKd && g?.questionStatus === "idle") return null;
-  if (ttscoring || g?.round === "vuot_cnv" || g.round === "ve_dich") return null;
+  if (ttscoring || g?.round === "vuot_cnv" || g.round === "ve_dich" || g.round === "tie_break") return null;
   return (
     <div className="px-3 py-2.5">
       <div className="flex gap-2 w-[70%] mx-auto">
