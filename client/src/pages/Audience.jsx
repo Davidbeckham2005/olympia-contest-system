@@ -203,6 +203,17 @@ export default function Audience() {
                 {remaining > 0 ? remaining : 3}
               </div>
             </div>
+          ) : tb.phase === "setup" ? (
+            // MÀN CHỜ ĐẦU VÒNG giống Round 1 (RoundWait): chỉ dòng chữ vàng + thông báo.
+            // KHÔNG hiện bảng đội/câu hỏi khi vừa click vào vòng phụ.
+            <RoundWait
+              title="VÒNG PHỤ"
+              message={
+                tbTeams.length > 0
+                  ? "Đã chọn đội tham gia — chờ MC bấm Bắt đầu."
+                  : "Đang chờ MC chọn đội tham gia và bắt đầu…"
+              }
+            />
           ) : (
             <>
               {buzzTeam ? (
@@ -236,10 +247,11 @@ export default function Audience() {
           )}
         </div>
 
-        {/* KHỐI ĐÁY CỐ ĐỊNH — bảng đội + câu hỏi trong cùng một khung (giống Round 1). Luôn
-            render kể cả khi đang đếm 3-2-1 để kích thước khung KHÔNG thay đổi: chiều cao vùng
-            câu hỏi cố định (h-[8rem]), nội dung chưa chiếu hiển thị dấu "…" giữ chỗ. */}
-        {!exhausted && (
+        {/* KHỐI ĐÁY CỐ ĐỊNH — bảng đội + câu hỏi trong cùng một khung (giống Round 1). Ẩn khi
+            phase setup (mới mở vòng phụ); từ countdown 3-2-1 trở đi luôn render để kích thước
+            khung KHÔNG thay đổi: chiều cao vùng câu hỏi cố định (h-[8rem]), nội dung chưa chiếu
+            hiển thị dấu "…" giữ chỗ. */}
+        {!exhausted && tb.phase !== "setup" && (
           <div className="relative z-10 flex-none px-8 pb-6">
             <div className="w-full rounded-2xl border border-[rgba(255,214,10,0.18)] bg-[#2a3d63] shadow-[0_10px_40px_rgba(0,0,0,0.45)] overflow-hidden">
               {/* Dải tên các đội — highlight đội đang nắm chuông */}
