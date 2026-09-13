@@ -86,6 +86,20 @@ export async function importQuickQuestionsFile(file, round, teamId, images = [])
   return data;
 }
 
+export async function importKhoiDongImagesFile(teamId, images = []) {
+  const fd = new FormData();
+  fd.append("teamId", teamId);
+  for (const img of images) fd.append("images", img);
+  const res = await fetch("/api/admin/questions/khoi-dong/import-images", {
+    method: "POST",
+    headers: { "x-admin-pin": getPin() },
+    body: fd,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || "Tải ảnh thất bại.");
+  return data;
+}
+
 export async function importVeDichQuestionsFile(file) {
   const fd = new FormData();
   fd.append("file", file);

@@ -12,6 +12,7 @@ import {
   saveMainQuestions,
   importVeDichQuestionsFile,
   importQuickQuestionsFile,
+  importKhoiDongImagesFile,
   uploadFile,
   uploadSound,
   deleteSound,
@@ -629,7 +630,27 @@ function KhoiDongEditor({ draft, setDraft, teams, setMsg }) {
   const [importing, setImporting] = useState("");
   const fileRefs = useRef({});
   const imgRefs = useRef({});
+  const quickImgRefs = useRef({});
   const pendingImgs = useRef({}); // { tid: File[] } ảnh chọn trước, chờ chọn file Excel
+  // Nhập nhanh CHỈ bằng ảnh: cứ 5 ảnh = 1 thí sinh, đáp án lấy từ tên file.
+  async function onImportImages(tid, e) {
+    const files = Array.from(e.target.files || []);
+    e.target.value = "";
+    if (!files.length) return;
+    setImporting(tid);
+    try {
+      const r = await importKhoiDongImagesFile(tid, files);
+      const clusters = m.khoiDong?.[tid] || [];
+      const fresh = (r.clusters || []).filter((cl) => cl && cl.length);
+      const next = [...clusters, ...fresh];
+      setDraft({ ...draft, main: { ...m, khoiDong: { ...(m.khoiDong || {}), [tid]: next } } });
+      setMsg(`Đã nhập ${r.added} ảnh (${fresh.length} thí sinh) cho đội, đáp án lấy từ tên file` + (r.errors?.length ? `, ${r.errors.length} ảnh lỗi` : "") + ". Bấm Lưu vòng chính khi xong.");
+    } catch (err) {
+      setMsg(err.message);
+    } finally {
+      setImporting("");
+    }
+  }
   async function onImport(tid, e) {
     const file = e.target.files?.[0];
     e.target.value = "";
@@ -707,6 +728,23 @@ function KhoiDongEditor({ draft, setDraft, teams, setMsg }) {
             <div className="flex items-center gap-2 mb-3">
               <b style={{ color: team?.color }}>{team?.name}{clusters.length > 0 && <span className="text-mist font-normal"> — {clusters.length} thí sinh × 5 ảnh</span>}</b>
               <div className="ml-auto flex items-center gap-2">
+                <input
+                  ref={(el) => { quickImgRefs.current[tid] = el; }}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => onImportImages(tid, e)}
+                />
+                <button
+                  type="button"
+                  className="btn btn-ok text-xs py-1!"
+                  disabled={importing === tid}
+                  title="Chọn nhanh nhiều ảnh cùng lúc — cứ 5 ảnh (theo tên file) = 1 thí sinh. Đáp án lấy từ tên file (vd: 01-Pháp.png → Pháp), bỏ số thứ tự đầu tên."
+                  onClick={() => quickImgRefs.current[tid]?.click()}
+                >
+                  {importing === tid ? "Đang nhập…" : "Nhập nhanh ảnh"}
+                </button>
                 <input
                   ref={(el) => { imgRefs.current[tid] = el; }}
                   type="file"

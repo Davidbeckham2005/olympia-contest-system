@@ -188,6 +188,66 @@
     return { round, teamId, ...parsed };
   }
 
+  export async function importKhoiDongImages(req) {
+    // Nhập nhanh Vòng 1 Khởi động CHỈ bằng ảnh (không Excel): cứ 5 ảnh (theo tên
+    // file) = 1 thí sinh, đáp án lấy từ tên file. Chỉ TRẢ dữ liệu đã parse, client
+    // ghép vào bản nháp rồi Lưu vòng chính.
+    const teamId = (req.body.teamId || req.query.teamId || "").toString();
+    if (!teamId) {
+      const err = new Error("Thiếu đội cần nhập cho Vòng 1 Khởi động.");
+      err.status = 400;
+      throw err;
+    }
+    const images = req.files?.images || [];
+    if (!images.length) {
+      const err = new Error("Không có ảnh.");
+      err.status = 400;
+      throw err;
+    }
+    // Sắp xếp theo tên file (nhận biết số) để thứ tự ảnh ổn định qua các lần nhập.
+    const sorted = [...images].sort((a, b) => a.originalname.localeCompare(b.originalname, "vi", { numeric: true }));
+    const entries = [];
+    const errors = [];
+    for (const img of sorted) {
+      try {
+        const up = await uploadToCloudinary(img.buffer, {
+          folder: "cuoc-thi/media",
+          resourceType: "image",
+          originalname: img.originalname,
+          mimetype: img.mimetype || "image/png",
+        });
+        const db = getDb();
+        if (!db.media.some((m) => m.url === up.url && m.name === img.originalname)) {
+          db.media.push({
+            id: crypto.randomUUID(),
+            name: img.originalname,
+            url: up.url,
+            type: "image",
+            createdAt: Date.now(),
+          });
+          saveDb();
+        }
+        entries.push({
+          media: { mediaUrl: up.url, mediaType: "image", hint: "" },
+          answer: quickImport.answerFromImageName(img.originalname),
+        });
+      } catch {
+        // Ảnh không upload được → giữ trống ô ảnh nhưng vẫn giữ đúng vị trí thứ tự.
+        entries.push({
+          media: { mediaUrl: "", mediaType: "", hint: img.originalname },
+          answer: quickImport.answerFromImageName(img.originalname),
+        });
+        errors.push(`Ảnh "${img.originalname}" không upload được — câu này bỏ trống ảnh.`);
+      }
+    }
+    return {
+      teamId,
+      added: entries.length,
+      clusters: quickImport.buildKhoiDongImageClusters(entries, teamId),
+      errors,
+    };
+  }
+
   export function importVeDichQuestions(req) {
     if (!req.file) {
       const err = new Error("Không có tệp.");

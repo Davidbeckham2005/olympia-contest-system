@@ -124,6 +124,25 @@ export function parseKhoiDongRows(aoa) {
   return { units, errors, added };
 }
 
+// ---- Nhập nhanh chỉ bằng ảnh (không cần Excel): đáp án lấy từ TÊN FILE. ----
+// Bỏ đuôi mở rộng, bỏ số thứ tự đầu tên ("01-Pháp" / "1. Mỹ" / "(2) Ý" → "Pháp"/"Mỹ"/"Ý").
+export function answerFromImageName(name = "") {
+  const base = String(name).replace(/\\/g, "/").split("/").pop().replace(/\.[a-z0-9]+$/i, "").trim();
+  const stripped = base.replace(/^\(?\d{1,3}\)?[\s\-_.]+/, "").trim();
+  return stripped || base;
+}
+
+// Chia danh sách ảnh đã upload thành cụm 5 (mỗi 5 ảnh = 1 thí sinh), đệm đủ 5 ô.
+export function buildKhoiDongImageClusters(entries, teamId) {
+  const clusters = [];
+  for (let i = 0; i < entries.length; i += 5) {
+    const slice = entries.slice(i, i + 5);
+    while (slice.length < 5) slice.push({ media: { mediaUrl: "", mediaType: "", hint: "" }, answer: "" });
+    clusters.push(buildKhoiDongCluster(slice, teamId));
+  }
+  return clusters;
+}
+
 // ---- Vòng phụ: 1 dòng = 1 câu (Câu hỏi / Đáp án / Ảnh). ----
 export function parseTieBreakRows(aoa) {
   if (!Array.isArray(aoa) || !aoa.length) return { questions: [], errors: [], added: 0 };
