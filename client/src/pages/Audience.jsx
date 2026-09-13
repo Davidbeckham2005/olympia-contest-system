@@ -204,29 +204,6 @@ export default function Audience() {
           </div>
         ) : (
           <>
-            {/* KHUNG ĐỘI — đặt lên phía trên (kiểu Round 1): chỉ có dải tên đội, không gạch
-                phân cách với phần bên dưới. */}
-            {showing && (
-              <div className="w-full rounded-2xl border border-[rgba(255,214,10,0.18)] bg-[#2a3d63] shadow-[0_10px_40px_rgba(0,0,0,0.45)]">
-                <div className="flex w-full">
-                  {tbTeams.map((t) => {
-                    const active = g.buzzer?.winner === t.id;
-                    return (
-                      <div
-                        key={t.id}
-                        className={`flex-1 flex items-center justify-center gap-2 py-3.5 px-2 border-r border-[rgba(255,214,10,0.1)] last:border-r-0 transition-colors ${active ? "team-buzz" : ""}`}
-                      >
-                        <span className={`font-bold text-[15px] truncate ${active ? "text-white" : "text-black/80"}`}>
-                          {t.name}
-                        </span>
-                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: t.color }} />
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
             {/* GIỮA — badge trạng thái giành quyền / đồng hồ trả lời */}
             {buzzTeam ? (
               <div className="flex flex-col items-center gap-3">
@@ -260,14 +237,33 @@ export default function Audience() {
               </div>
             )}
 
-            {/* CÂU HỎI — đưa xuống dưới cùng, chữ to giữa màn */}
+            {/* DƯỚI — KHỐI ĐÁY: khung đội + câu hỏi gộp chung một khối ở cuối màn (kiểu
+                Round 1), không có đường gạch phân cách giữa dải đội và câu hỏi. */}
             {showing && (
-              <div className="w-full text-center">
-                {d.answerRevealed ? (
-                  <div className="stage-answer text-[clamp(17px,2.2vw,27px)]">Đáp án: {d.answer}</div>
-                ) : (
-                  d.question && <div className="stage-q text-[clamp(24px,3vw,42px)]">{d.question}</div>
-                )}
+              <div className="relative flex-none w-full rounded-2xl border border-[rgba(255,214,10,0.18)] bg-[#2a3d63] shadow-[0_10px_40px_rgba(0,0,0,0.45)] px-6 pt-4 pb-5">
+                <div className="flex w-full justify-center gap-x-2 mb-3">
+                  {tbTeams.map((t) => {
+                    const active = g.buzzer?.winner === t.id;
+                    return (
+                      <div
+                        key={t.id}
+                        className={`flex items-center gap-2 px-4 py-1.5 rounded-full transition-colors ${active ? "bg-[#ffd60a]/20 team-buzz" : "bg-white/5"}`}
+                      >
+                        <span className={`font-bold text-[15px] truncate ${active ? "text-white" : "text-black/80"}`}>
+                          {t.name}
+                        </span>
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: t.color }} />
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="text-center">
+                  {d.answerRevealed ? (
+                    <div className="stage-answer text-[clamp(17px,2.2vw,27px)]">Đáp án: {d.answer}</div>
+                  ) : (
+                    d.question && <div className="stage-q text-[clamp(24px,3vw,44px)]">{d.question}</div>
+                  )}
+                </div>
               </div>
             )}
           </>
