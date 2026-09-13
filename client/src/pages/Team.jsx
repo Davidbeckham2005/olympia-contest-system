@@ -425,13 +425,10 @@ export default function Team() {
           <p className="text-mist">Đang chờ MC mở câu hỏi (chuông bấm được mở khi chiếu câu)…</p>
         ) : (
           <>
-            {g.display?.mediaUrl && (
-              <img src={g.display.mediaUrl} alt="" className="max-h-52 max-w-full object-contain rounded-xl" />
-            )}
             {g.display?.answerRevealed ? (
               <div className="panel w-full text-center">
                 <div className="kicker text-xs tracking-[0.25em]">ĐÁP ÁN</div>
-                <p className="text-gold text-[clamp(18px,2.4vw,26px)] font-semibold mt-1">{g.display.answer}</p>
+                <p className="text-gold text-[clamp(18px,2.4vw,26px)] font-semibold mt-1">Đáp án: {g.display.answer}</p>
               </div>
             ) : (
               <div className="panel w-full text-center">

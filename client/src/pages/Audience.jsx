@@ -223,16 +223,11 @@ export default function Audience() {
               </div>
             )}
             {showing && (
-              <div className="panel w-full max-w-4xl text-center">
-                {d.mediaUrl ? (
-                  <img src={d.mediaUrl} alt="" className="max-h-[40vh] max-w-[78vw] mx-auto object-contain" />
-                ) : (
-                  <NoMediaFallback className="w-[min(320px,54vw)] aspect-[4/3]" />
-                )}
+              <div className="w-full text-center">
                 {d.answerRevealed ? (
-                  <div className="stage-answer">{d.answer}</div>
+                  <div className="stage-answer text-[clamp(17px,2.2vw,26px)]">Đáp án: {d.answer}</div>
                 ) : (
-                  d.question && <div className="stage-q">{d.question}</div>
+                  d.question && <div className="stage-q text-[clamp(20px,2.6vw,32px)]">{d.question}</div>
                 )}
               </div>
             )}
