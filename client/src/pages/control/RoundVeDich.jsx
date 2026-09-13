@@ -27,6 +27,14 @@ export default function RoundVeDich({ ctx }) {
   const star = g.veDich?.starQuestion === curIndex;
   const starUsed = g.veDich?.starQuestion !== null;
   const stealOpen = !!g.veDich?.stealOpen;
+  const pending = g.veDich?.stealPending || null;
+  const winner = g.buzzer?.winner || null;
+  const base = q?.points || g.veDich?.packagePoints || 20;
+  // Điểm team giành chuông NHẬN khi cướp quyền (khớp server calculateAnswerScore):
+  //   - Đúng: +P, NSHV +2P; hết giờ mở chuông (không có stealPending) chỉ +P.
+  //   - Sai: luôn −P (không nhân đôi).
+  const stealCorrectPts = stealOpen && !pending ? base : (pending?.star ? pending.base * 2 : pending.base);
+  const stealWrongPts = pending ? pending.base : base;
   const pkg = g.veDich?.packagePoints;
   const hasPackage = pkg === 60 || pkg === 80 || pkg === 100;
   const bankCounts = [10, 20, 30].map((lv) => bank.filter((x) => Number(x.points) === lv).length);
@@ -166,7 +174,7 @@ export default function RoundVeDich({ ctx }) {
             {phase === "answering" && (
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-mist text-xs flex-1">
-                  {stealOpen ? "Đội giành chuông trả lời" : `${activeTeam?.name} (${g.currentTeam?.toUpperCase()}) trả lời`}
+                  {stealOpen ? `Cửa sổ cướp quyền — ${winner ? "đội giành chuông trả lời" : "chờ đội bấm chuông"}` : `${activeTeam?.name} (${g.currentTeam?.toUpperCase()}) trả lời`}
                 </span>
                 {!revealed && !stealOpen && !running && (
                   <button type="button" className="btn btn-ok px-3!" onClick={() => act("vedich.startAnswer")}>
@@ -178,13 +186,28 @@ export default function RoundVeDich({ ctx }) {
                     Câu tiếp →
                   </button>
                 )}
-                {!revealed && (
+                {!revealed && !stealOpen && (
                   <>
                     <button type="button" className="btn btn-danger px-3!" onClick={() => act("answer.mark", { correct: false })}>
-                      Sai −{pts}
+                      Sai → mở cướp
                     </button>
                     <button type="button" className="btn btn-ok px-3!" onClick={() => act("answer.mark", { correct: true })}>
                       Đúng +{pts}
+                    </button>
+                  </>
+                )}
+                {!revealed && stealOpen && !winner && (
+                  <button type="button" className="btn btn-ghost px-3!" onClick={() => act("answer.mark", { correct: false })}>
+                    Không ai trả lời → chốt đáp án
+                  </button>
+                )}
+                {!revealed && stealOpen && winner && (
+                  <>
+                    <button type="button" className="btn btn-danger px-3!" onClick={() => act("answer.mark", { correct: false })}>
+                      Sai −{stealWrongPts}
+                    </button>
+                    <button type="button" className="btn btn-ok px-3!" onClick={() => act("answer.mark", { correct: true })}>
+                      Đúng +{stealCorrectPts}
                     </button>
                   </>
                 )}
