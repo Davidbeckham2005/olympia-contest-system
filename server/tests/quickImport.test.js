@@ -4,6 +4,7 @@
 import { connectDb } from "../config/database.js";
 import { loadDb, getDb, saveDbSync } from "../models/store.js";
 import * as quick from "../services/rounds/quickImport.service.js";
+import { utf8Name } from "../middleware/upload.js";
 
 let pass = 0;
 let fail = 0;
@@ -106,6 +107,14 @@ try {
   ok(imgClusters[0].length === 5 && imgClusters[2].length === 5, "Mỗi cụm đủ 5 ô (cụm cuối đệm trống)");
   ok(imgClusters[0][0].mediaUrl === "/uploads/a1.png" && imgClusters[0][0].answer === "A1", "Cụm 1 đúng ảnh + đáp án đầu");
   ok(imgClusters[2][0].mediaUrl === "/uploads/a11.png" && imgClusters[2][1].mediaUrl === "", "Cụm cuối: ảnh 11 ở ô 1, ô 2 trống");
+
+  // ---------- Decode tên file UTF-8 (multer/busboy decode latin1 gây mojibake) ----------
+  ok(utf8Name("Phap.png") === "Phap.png", "utf8Name: ASCII giữ nguyên");
+  const mojibake = Buffer.from("01-Pháp.png", "utf8").toString("latin1");
+  ok(utf8Name(mojibake) === "01-Pháp.png", "utf8Name: mojibake latin1 → tiếng Việt đúng");
+  const bad = "café.txt"; // é (U+00E9) đơn lẻ không hợp lệ UTF-8 → decode sinh U+FFFD → giữ nguyên
+  ok(utf8Name(bad) === bad, "utf8Name: tên latin1 thật giữ nguyên");
+  ok(!utf8Name(bad).includes("\uFFFD"), "utf8Name: không sinh ký tự lỗi");
 } catch (e) {
   console.error("ERROR:", e);
   fail += 1;

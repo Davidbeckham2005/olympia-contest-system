@@ -6,7 +6,7 @@
   import * as quickImport from "../services/rounds/quickImport.service.js";
   import * as game from "../services/game.service.js";
   import { emitEvent } from "../config/io.js";
-  import { uploadToCloudinary } from "../middleware/upload.js";
+  import { uploadToCloudinary, utf8Name } from "../middleware/upload.js";
 
   export function login(req) {
     if (req.body.pin !== getDb().settings.pin) {
@@ -157,18 +157,19 @@
     // để các ô Ảnh ghi tên file khớp với db.media.
     const picked = req.files?.images || [];
     for (const img of picked) {
+      const origName = utf8Name(img.originalname);
       try {
         const up = await uploadToCloudinary(img.buffer, {
           folder: "cuoc-thi/media",
           resourceType: "image",
-          originalname: img.originalname,
+          originalname: origName,
           mimetype: img.mimetype || "image/png",
         });
         const db = getDb();
-        if (!db.media.some((m) => m.url === up.url && m.name === img.originalname)) {
+        if (!db.media.some((m) => m.url === up.url && m.name === origName)) {
           db.media.push({
             id: crypto.randomUUID(),
-            name: img.originalname,
+            name: origName,
             url: up.url,
             type: "image",
             createdAt: Date.now(),
@@ -205,22 +206,23 @@
       throw err;
     }
     // Sắp xếp theo tên file (nhận biết số) để thứ tự ảnh ổn định qua các lần nhập.
-    const sorted = [...images].sort((a, b) => a.originalname.localeCompare(b.originalname, "vi", { numeric: true }));
+    const sorted = [...images].sort((a, b) => utf8Name(a.originalname).localeCompare(utf8Name(b.originalname), "vi", { numeric: true }));
     const entries = [];
     const errors = [];
     for (const img of sorted) {
+      const origName = utf8Name(img.originalname);
       try {
         const up = await uploadToCloudinary(img.buffer, {
           folder: "cuoc-thi/media",
           resourceType: "image",
-          originalname: img.originalname,
+          originalname: origName,
           mimetype: img.mimetype || "image/png",
         });
         const db = getDb();
-        if (!db.media.some((m) => m.url === up.url && m.name === img.originalname)) {
+        if (!db.media.some((m) => m.url === up.url && m.name === origName)) {
           db.media.push({
             id: crypto.randomUUID(),
-            name: img.originalname,
+            name: origName,
             url: up.url,
             type: "image",
             createdAt: Date.now(),
@@ -229,15 +231,15 @@
         }
         entries.push({
           media: { mediaUrl: up.url, mediaType: "image", hint: "" },
-          answer: quickImport.answerFromImageName(img.originalname),
+          answer: quickImport.answerFromImageName(origName),
         });
       } catch {
         // Ảnh không upload được → giữ trống ô ảnh nhưng vẫn giữ đúng vị trí thứ tự.
         entries.push({
-          media: { mediaUrl: "", mediaType: "", hint: img.originalname },
-          answer: quickImport.answerFromImageName(img.originalname),
+          media: { mediaUrl: "", mediaType: "", hint: origName },
+          answer: quickImport.answerFromImageName(origName),
         });
-        errors.push(`Ảnh "${img.originalname}" không upload được — câu này bỏ trống ảnh.`);
+        errors.push(`Ảnh "${origName}" không upload được — câu này bỏ trống ảnh.`);
       }
     }
     return {
@@ -267,15 +269,16 @@
       throw err;
     }
     const isVideo = req.file.mimetype.startsWith("video");
+    const origName = utf8Name(req.file.originalname);
     const up = await uploadToCloudinary(req.file.buffer, {
       folder: "cuoc-thi/media",
       resourceType: isVideo ? "video" : "image",
-      originalname: req.file.originalname,
+      originalname: origName,
       mimetype: req.file.mimetype,
     });
     const item = {
       id: crypto.randomUUID(),
-      name: req.file.originalname,
+      name: origName,
       url: up.url,
       type: isVideo ? "video" : "image",
       createdAt: Date.now(),

@@ -38,6 +38,16 @@ export const uploadImport = multer({
   limits: { fileSize: 2 * 1024 * 1024 },
 });
 
+// Busboy (đứng sau multer) decode tên file theo latin1 → tên UTF-8 (tiếng Việt)
+// bị vỡ thành mojibake. Chuyển ngược latin1 → utf8; nếu kết quả có ký tự lỗi
+// (U+FFFD — tên gốc thật sự là latin1) thì giữ nguyên tên gốc.
+export function utf8Name(name = "") {
+  const s = String(name);
+  if (!/[^\x00-\x7F]/.test(s)) return s; // thuần ASCII → không cần xử lý
+  const fixed = Buffer.from(s, "latin1").toString("utf8");
+  return fixed.includes("\uFFFD") ? s : fixed;
+}
+
 // Cloudinary sẵn sàng khi có đủ 3 biến môi trường; nếu chưa cấu hình sẽ tự
 // fallback về lưu file trên đĩa cục bộ (server/uploads) để chạy local/dev.
 export const cloudinaryConfigured = Boolean(
