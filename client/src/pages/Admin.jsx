@@ -1331,6 +1331,7 @@ function SettingsTab({ state, reload, setMsg }) {
   const [kdTimerSec, setKdTimerSec] = useState(() => Number(state.game?.khoiDong?.timerSeconds) || 60);
   const [vedAutoSec, setVedAutoSec] = useState(() => Number(state.settings?.veDichAutoAnswerSeconds) || 5);
   const [cnvAutoSec, setCnvAutoSec] = useState(() => Number(state.settings?.vuotCnvAutoAnswerSeconds) || 6);
+  const [tbAnswerSec, setTbAnswerSec] = useState(() => Number(state.settings?.tieBreakAnswerSeconds) || 10);
   // Bộ điểm thưởng theo độ nhanh Vòng 2 (Vượt CNV) & Vòng 3 (Tăng tốc) — admin thay đổi được.
   const [r2Pts, setR2Pts] = useState(() => (state.game?.round2Points || [40, 30, 20, 10]).map((n) => String(Number(n) || 0)));
   const [r3Pts, setR3Pts] = useState(() => (state.game?.round3Points || [40, 30, 20, 10]).map((n) => String(Number(n) || 0)));
@@ -1400,6 +1401,10 @@ function SettingsTab({ state, reload, setMsg }) {
         Vượt CNV — tự bắt đầu giờ trả lời sau khi mở câu hỏi (giây, 0 = tắt, chờ MC bấm)
         <input type="number" min={0} value={cnvAutoSec} onChange={(e) => setCnvAutoSec(Number(e.target.value))} />
       </label>
+      <label className="label-grid">
+        Vòng phụ — thời gian trả lời mỗi câu (giây)
+        <input type="number" min={3} value={tbAnswerSec} onChange={(e) => setTbAnswerSec(Number(e.target.value))} />
+      </label>
       <div className="rounded-xl border border-line bg-night/40 p-3.5">
         <div className="text-xs tracking-[0.18em] text-mist uppercase mb-1">Điểm thưởng theo độ nhanh</div>
         <p className="text-mist text-xs mb-3">
@@ -1451,6 +1456,7 @@ function SettingsTab({ state, reload, setMsg }) {
               ...s,
               veDichAutoAnswerSeconds: Math.max(0, Number(vedAutoSec) || 0),
               vuotCnvAutoAnswerSeconds: Math.max(0, Number(cnvAutoSec) || 0),
+              tieBreakAnswerSeconds: Math.max(3, Number(tbAnswerSec) || 10),
             });
             setMsg("Đã lưu cài đặt");
             reload();

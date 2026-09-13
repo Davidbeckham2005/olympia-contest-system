@@ -21,6 +21,8 @@ export function publicState() {
       // kiểu nền + ảnh nền của màn hình khán giả (vòng khởi động)
       audienceBg: d.settings.audienceBg || "dark",
       audienceBgUrl: d.settings.audienceBgUrl || "",
+      // thời gian trả lời mỗi câu Vòng phụ (tie_break) — admin chỉnh ở Cài đặt
+      tieBreakAnswerSeconds: d.settings.tieBreakAnswerSeconds || 10,
     },
     // danh sách các đội thi
     teams: d.teams.map((t) => ({

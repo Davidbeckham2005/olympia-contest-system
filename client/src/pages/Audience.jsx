@@ -217,22 +217,20 @@ export default function Audience() {
           ) : (
             <>
               {buzzTeam ? (
-                <div className="flex flex-col items-center gap-4">
-                  <div className="round-badge bg-[#ffd60a]/15">
-                    Chuông giành quyền: <b style={{ color: buzzTeam.color }}>{buzzTeam.name}</b>
-                  </div>
-                  {timer?.running && (
-                    <div className="flex flex-col items-center gap-1">
-                      <span className="kicker tracking-[0.3em]">ĐANG TỰ TRẢ LỜI</span>
-                      <span className="font-display font-black text-gold text-[clamp(26px,4vw,44px)] drop-shadow-[0_2px_0_rgba(0,0,0,0.5)]">
-                        {formatTime(remaining)}
-                      </span>
-                    </div>
-                  )}
+                <div className="round-badge bg-[#ffd60a]/15">
+                  Chuông giành quyền: <b style={{ color: buzzTeam.color }}>{buzzTeam.name}</b>
                 </div>
               ) : (
-                <div className="text-mist text-[clamp(16px,2.2vw,26px)]">
-                  {tbTeams.length > 0 ? "Đang chờ MC chiếu câu hỏi — chuông sẽ được mở khi bắt đầu." : "Đang chờ MC chọn đội tham gia vòng phụ…"}
+                <div className="text-mist text-[clamp(16px,2vw,24px)]">
+                  Chuông đã mở — các đội bấm chuông giành quyền trả lời.
+                </div>
+              )}
+              {timer?.running && (
+                <div className="flex flex-col items-center gap-1">
+                  <span className="kicker tracking-[0.3em]">{buzzTeam ? "ĐANG TỰ TRẢ LỜI" : "THỜI GIAN TRẢ LỜI"}</span>
+                  <span className="font-display font-black text-gold text-[clamp(26px,4vw,44px)] drop-shadow-[0_2px_0_rgba(0,0,0,0.5)]">
+                    {formatTime(remaining)}
+                  </span>
                 </div>
               )}
             </>

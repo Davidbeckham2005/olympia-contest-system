@@ -122,6 +122,15 @@ export default function RoundTieBreak({ ctx }) {
           {currentQ.mediaUrl && (
             <img src={currentQ.mediaUrl} alt="" className="mt-2 max-h-32 object-contain rounded" />
           )}
+          {running && g.questionIndex < questions.length - 1 && !g.buzzer.winner && (
+            <button
+              type="button"
+              className="btn btn-ghost text-xs py-1! w-full mt-2"
+              onClick={() => act("tiebreak.next")}
+            >
+              Câu tiếp →
+            </button>
+          )}
         </div>
       )}
 

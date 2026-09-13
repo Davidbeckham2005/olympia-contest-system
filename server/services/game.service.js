@@ -10,8 +10,11 @@
   export const VEDICH_COUNTDOWN_SECONDS = 3;
   // Số giây đếm ngược "3-2-1" trước TỪNG lượt thi của đội ở Vòng 1 (Bắt đầu & Sang đội).
   export const KHOI_DONG_PREP_SECONDS = 3;
-  // Thời gian trả lời của đội vừa bấm chuông Vòng phụ (hết giờ → tự khóa chuông).
+  // Thời gian trả lời Vòng phụ — MC/Admin chỉnh được qua Cài đặt (tieBreakAnswerSeconds);
+  // đây chỉ là giá trị mặc định khi chưa cấu hình.
   export const TIEBREAK_ANSWER_SECONDS = 10;
+  export const getTieBreakAnswerSeconds = () =>
+    Math.max(3, Number(getDb().settings?.tieBreakAnswerSeconds) || TIEBREAK_ANSWER_SECONDS);
   // Số giây đếm ngược "3-2-1" trước khi tự mở câu hỏi Vòng phụ.
   export const TIEBREAK_PREP_SECONDS = 3;
 
@@ -1208,7 +1211,7 @@ if (game.round === "khoi_dong") {
       }
       // Vòng phụ: đội vừa giành quyền bấm — bật đồng hồ trả lời (tự khóa nếu hết giờ).
       if (game.round === "tie_break") {
-        setTimer(TIEBREAK_ANSWER_SECONDS, true);
+        setTimer(getTieBreakAnswerSeconds(), true);
       }
     }
     saveDb();
@@ -1702,7 +1705,8 @@ if (game.round === "khoi_dong") {
     }
 
     // Kết thúc đếm ngược (timer loop gọi lại) / chuyển câu kế tiếp giữa vòng:
-    // hiện câu hỏi + mở chuông để các đội giành quyền trả lời.
+    // hiện câu hỏi + mở chuông để các đội giành quyền trả lời. BẮT ĐẦU chạy đồng hồ
+    // trả lời (thời lượng cấu hình trong Admin) ngay khi mở câu.
     if (game.tieBreak.phase === "countdown") game.tieBreak.phase = "running";
     const q = game.tieBreak.questions[game.questionIndex];
     game.questionStatus = "showing";
@@ -1717,7 +1721,7 @@ if (game.round === "khoi_dong") {
       answerRevealed: false,
       note: q.note || "",
     };
-    setTimer(0, false);
+    setTimer(getTieBreakAnswerSeconds(), true);
     resetBuzzer();
     openBuzzer();
     saveDb();
@@ -1760,6 +1764,7 @@ if (game.round === "khoi_dong") {
         answerRevealed: false,
         note: q?.note || "",
       };
+      setTimer(getTieBreakAnswerSeconds(), true);
       openBuzzer();
     } else {
       game.tieBreak.phase = "exhausted";
