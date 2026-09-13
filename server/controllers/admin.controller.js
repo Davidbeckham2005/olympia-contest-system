@@ -3,6 +3,7 @@
   import { publicState, adminState } from "../services/state.service.js";
   import * as exam from "../services/exam.service.js";
   import * as vedich from "../services/rounds/veDich.service.js";
+  import * as quickImport from "../services/rounds/quickImport.service.js";
   import * as game from "../services/game.service.js";
   import { emitEvent } from "../config/io.js";
   import { uploadToCloudinary } from "../middleware/upload.js";
@@ -134,6 +135,30 @@
     // Tăng tốc 1·2·3·4) cập nhật NGAY sau khi lưu/upload câu hỏi, không cần click lại.
     game.emit();
     return db.questions.main;
+  }
+
+  export function importQuickQuestions(req) {
+    // Nhập nhanh Vòng 1 Khởi động / Vòng phụ từ Excel/CSV; chỉ TRẢ dữ liệu đã parse
+    // (ảnh được dò trong db.media đã upload), client ghép vào bản nháp rồi Lưu vòng chính.
+    if (!req.file) {
+      const err = new Error("Không có tệp.");
+      err.status = 400;
+      throw err;
+    }
+    const round = req.body.round || req.query.round || "";
+    const teamId = (req.body.teamId || req.query.teamId || "").toString();
+    if (round === "khoi_dong" && !teamId) {
+      const err = new Error("Thiếu đội cần nhập cho Vòng 1 Khởi động.");
+      err.status = 400;
+      throw err;
+    }
+    const parsed = quickImport.parseQuickImport(req.file.buffer, req.file.originalname || "", round);
+    if (round === "khoi_dong") {
+      parsed.clusters = parsed.clusters.map((qs) => quickImport.buildKhoiDongCluster(qs, teamId));
+    } else if (round === "tie_break") {
+      parsed.questions = parsed.questions.map(quickImport.buildTieBreakQuestion);
+    }
+    return { round, teamId, ...parsed };
   }
 
   export function importVeDichQuestions(req) {

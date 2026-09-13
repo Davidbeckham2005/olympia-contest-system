@@ -70,6 +70,21 @@ export function saveMainQuestions(main) {
   return request("/api/admin/questions/main", { method: "POST", body: { main } });
 }
 
+export async function importQuickQuestionsFile(file, round, teamId) {
+  const fd = new FormData();
+  fd.append("file", file);
+  fd.append("round", round);
+  if (teamId) fd.append("teamId", teamId);
+  const res = await fetch("/api/admin/questions/quick-import", {
+    method: "POST",
+    headers: { "x-admin-pin": getPin() },
+    body: fd,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || "Đọc tệp thất bại.");
+  return data;
+}
+
 export async function importVeDichQuestionsFile(file) {
   const fd = new FormData();
   fd.append("file", file);

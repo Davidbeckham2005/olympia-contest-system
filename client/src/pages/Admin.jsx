@@ -11,6 +11,7 @@ import {
   saveTeams,
   saveMainQuestions,
   importVeDichQuestionsFile,
+  importQuickQuestionsFile,
   uploadFile,
   uploadSound,
   deleteSound,
@@ -524,23 +525,63 @@ function QuestionsTab({ state, reload, setMsg }) {
             </div>
           </div>
 
-          {sub === "khoi_dong" && <KhoiDongEditor draft={draft} setDraft={setDraft} teams={state.teams} />}
+          {sub === "khoi_dong" && <KhoiDongEditor draft={draft} setDraft={setDraft} teams={state.teams} setMsg={setMsg} />}
           {sub === "vuot_cnv" && <VuotCnvEditor draft={draft} setDraft={setDraft} />}
           {sub === "tang_toc" && <TangTocEditor draft={draft} setDraft={setDraft} />}
           {sub === "ve_dich" && <VeDichEditor draft={draft} setDraft={setDraft} setMsg={setMsg} />}
-          {sub === "vong_phu" && <TieBreakEditor draft={draft} setDraft={setDraft} />}
+          {sub === "vong_phu" && <TieBreakEditor draft={draft} setDraft={setDraft} setMsg={setMsg} />}
           {sub === "json" && <JsonEditor draft={draft} setDraft={setDraft} setMsg={setMsg} />}
       </div>
     </div>
   );
 }
 
-function TieBreakEditor({ draft, setDraft }) {
+function TieBreakEditor({ draft, setDraft, setMsg }) {
   const m = draft.main;
   const list = (m.tieBreak || []).slice();
   const setList = (next) => setDraft({ ...draft, main: { ...m, tieBreak: next } });
+  const [importing, setImporting] = useState(false);
+  const fileRef = useRef(null);
+  async function onImport(e) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setImporting(true);
+    try {
+      const r = await importQuickQuestionsFile(file, "tie_break");
+      const fresh = (r.questions || []).map((q) => (q.id ? q : { ...q, id: uid() }));
+      setList([...list, ...fresh]);
+      setMsg(`Đã nhập ${r.added} câu Vòng phụ` + (r.errors?.length ? `, ${r.errors.length} dòng bỏ qua` : "") + ". Bấm Lưu vòng chính khi xong.");
+    } catch (err) {
+      setMsg(err.message);
+    } finally {
+      setImporting(false);
+    }
+  }
+  function downloadTbTemplate() {
+    const csv =
+      "\uFEFFCâu hỏi,Đáp án,Ảnh\n" +
+      "Thủ đô của Việt Nam là thành phố nào?,Hà Nội,\n" +
+      ",Paris,thap-efiel.png\n";
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "mau-cau-hoi-vong-phu.csv";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
   return (
     <div>
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <span className="text-sm text-mist">Ô <b>Ảnh</b> ghi tên hoặc đường dẫn ảnh đã upload — hệ thống tự tìm (có thể để trống).</span>
+        <div className="ml-auto flex items-center gap-2">
+          <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={onImport} />
+          <button type="button" className="btn btn-ok text-xs py-1!" disabled={importing} onClick={() => fileRef.current?.click()}>
+            {importing ? "Đang nhập…" : "Nhập Excel / CSV"}
+          </button>
+          <button type="button" className="btn btn-ghost text-xs py-1!" onClick={downloadTbTemplate}>File mẫu</button>
+        </div>
+      </div>
       <div className="flex flex-col gap-2 mb-4">
         {list.map((q, i) => (
           <div key={q.id || i} className="flex items-center gap-2">
@@ -567,9 +608,41 @@ function TieBreakEditor({ draft, setDraft }) {
   );
 }
 
-function KhoiDongEditor({ draft, setDraft, teams }) {
+function KhoiDongEditor({ draft, setDraft, teams, setMsg }) {
   const m = draft.main;
   const teamIds = TEAM_ORDER;
+  const [importing, setImporting] = useState("");
+  const fileRefs = useRef({});
+  async function onImport(tid, e) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setImporting(tid);
+    try {
+      const r = await importQuickQuestionsFile(file, "khoi_dong", tid);
+      const clusters = m.khoiDong?.[tid] || [];
+      const fresh = (r.clusters || []).filter((cl) => cl && cl.length);
+      const next = [...clusters, ...fresh];
+      setDraft({ ...draft, main: { ...m, khoiDong: { ...(m.khoiDong || {}), [tid]: next } } });
+      setMsg(`Đã nhập ${r.added} thí sinh (${r.added * 5} ảnh) cho đội` + (r.errors?.length ? `, ${r.errors.length} dòng bỏ qua` : "") + ". Bấm Lưu vòng chính khi xong.");
+    } catch (err) {
+      setMsg(err.message);
+    } finally {
+      setImporting("");
+    }
+  }
+  function downloadKdTemplate() {
+    const csv =
+      "\uFEFFẢnh 1,Đáp án 1,Ảnh 2,Đáp án 2,Ảnh 3,Đáp án 3,Ảnh 4,Đáp án 4,Ảnh 5,Đáp án 5\n" +
+      "thap-efiel.png,Pháp,tuong-nu-than.png,Mỹ,thap-nghieng.png,Ý,dai-bai.jpg,Úc,cau-vong.png,Mỹ\n" +
+      "lang-ky-1.png,Hàn Quốc,chua-motcot.png,Myanmar,mosque.png,Ả Rập,tour-canh.png,Đức,phoco.png,Việt Nam\n";
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "mau-khoi-dong.csv";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
 
   const setCluster = (tid, memberIdx, p) => {
     const clusters = [...(m.khoiDong?.[tid] || [])];
@@ -604,7 +677,20 @@ function KhoiDongEditor({ draft, setDraft, teams }) {
           <div key={tid} className="rounded-xl border border-line bg-night/40 p-3">
             <div className="flex items-center gap-2 mb-3">
               <b style={{ color: team?.color }}>{team?.name}{clusters.length > 0 && <span className="text-mist font-normal"> — {clusters.length} thí sinh × 5 ảnh</span>}</b>
-              <button type="button" className="btn btn-ghost text-xs py-1! ml-auto" onClick={() => addMember(tid)}>+ Thêm thí sinh</button>
+              <div className="ml-auto flex items-center gap-2">
+                <input ref={(el) => { fileRefs.current[tid] = el; }} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={(e) => onImport(tid, e)} />
+                <button
+                  type="button"
+                  className="btn btn-ok text-xs py-1!"
+                  disabled={importing === tid}
+                  title="1 dòng = 1 thí sinh, 5 cặp (Ảnh + Đáp án). Ô Ảnh ghi tên/đường dẫn ảnh đã upload."
+                  onClick={() => fileRefs.current[tid]?.click()}
+                >
+                  {importing === tid ? "Đang nhập…" : "Nhập Excel / CSV"}
+                </button>
+                <button type="button" className="btn btn-ghost text-xs py-1!" onClick={downloadKdTemplate}>File mẫu</button>
+                <button type="button" className="btn btn-ghost text-xs py-1!" onClick={() => addMember(tid)}>+ Thêm thí sinh</button>
+              </div>
             </div>
 
             {clusters.map((cl, mi) => (
