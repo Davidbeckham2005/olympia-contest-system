@@ -568,8 +568,12 @@ export function Round2Board({ state, g, minimal }) {
         </div>
         {!!cnv?.hint && (
           <div className="w-full max-w-[680px] mx-auto text-center">
-            <span className="kicker block mb-1">GỢI Ý</span>
-            <div className="text-sm sm:text-base text-mist leading-snug break-words">
+            {!!cnv.keywordLetterCount && (
+              <div className="font-display font-black text-gold text-[clamp(17px,2vw,24px)] tracking-[0.16em] uppercase drop-shadow-[0_2px_0_rgba(0,0,0,0.55)]">
+                TỪ KHÓA: {cnv.keywordLetterCount} CHỮ CÁI
+              </div>
+            )}
+            <div className="mt-1 text-sm sm:text-base text-mist/80 leading-snug break-words">
               {cnv.hint}
             </div>
           </div>
