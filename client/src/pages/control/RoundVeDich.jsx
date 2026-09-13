@@ -33,7 +33,7 @@ export default function RoundVeDich({ ctx }) {
   // Điểm team giành chuông NHẬN khi cướp quyền (khớp server calculateAnswerScore):
   //   - Đúng: +P, NSHV +2P; hết giờ mở chuông (không có stealPending) chỉ +P.
   //   - Sai: luôn −P (không nhân đôi).
-  const stealCorrectPts = stealOpen && !pending ? base : (pending?.star ? pending.base * 2 : pending.base);
+  const stealCorrectPts = !pending ? base : (pending.star ? pending.base * 2 : pending.base);
   const stealWrongPts = pending ? pending.base : base;
   const pkg = g.veDich?.packagePoints;
   const hasPackage = pkg === 60 || pkg === 80 || pkg === 100;
