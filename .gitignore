@@ -15,3 +15,5 @@ client/dist
 .env
 # Bản sao data cũ ở thư mục gốc (server chỉ đọc server/data/)
 data/
+# Workspace/ghi chú của AI agent (không thuộc mã nguồn)
+.kilo/
