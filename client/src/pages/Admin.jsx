@@ -542,21 +542,32 @@ function TieBreakEditor({ draft, setDraft, setMsg }) {
   const setList = (next) => setDraft({ ...draft, main: { ...m, tieBreak: next } });
   const [importing, setImporting] = useState(false);
   const fileRef = useRef(null);
+  const imgRef = useRef(null);
+  const pendingImgs = useRef([]);
   async function onImport(e) {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
     setImporting(true);
     try {
-      const r = await importQuickQuestionsFile(file, "tie_break");
+      const images = pendingImgs.current;
+      pendingImgs.current = [];
+      const r = await importQuickQuestionsFile(file, "tie_break", "", images);
       const fresh = (r.questions || []).map((q) => (q.id ? q : { ...q, id: uid() }));
       setList([...list, ...fresh]);
-      setMsg(`Đã nhập ${r.added} câu Vòng phụ` + (r.errors?.length ? `, ${r.errors.length} dòng bỏ qua` : "") + ". Bấm Lưu vòng chính khi xong.");
+      setMsg(`Đã nhập ${r.added} câu Vòng phụ` + (images.length ? `, dùng ${images.length} ảnh từ thư mục` : "") + (r.errors?.length ? `, ${r.errors.length} dòng bỏ qua` : "") + ". Bấm Lưu vòng chính khi xong.");
     } catch (err) {
       setMsg(err.message);
     } finally {
       setImporting(false);
     }
+  }
+  function pickImages(e) {
+    const files = Array.from(e.target.files || []);
+    e.target.value = "";
+    if (!files.length) return;
+    pendingImgs.current = [...pendingImgs.current, ...files];
+    setMsg(`Đã chọn ${files.length} ảnh (tổng ${pendingImgs.current.length}). Giờ chọn file Excel danh sách bên cạnh.`);
   }
   function downloadTbTemplate() {
     const csv =
@@ -573,8 +584,12 @@ function TieBreakEditor({ draft, setDraft, setMsg }) {
   return (
     <div>
       <div className="flex flex-wrap items-center gap-2 mb-4">
-        <span className="text-sm text-mist">Ô <b>Ảnh</b> ghi tên hoặc đường dẫn ảnh đã upload — hệ thống tự tìm (có thể để trống).</span>
+        <span className="text-sm text-mist">Ô <b>Ảnh</b> ghi tên file (đã upload hoặc nằm trong thư mục ảnh chọn kèm) — hệ thống tự tìm (có thể để trống).</span>
         <div className="ml-auto flex items-center gap-2">
+          <input ref={imgRef} type="file" accept="image/*" multiple className="hidden" onChange={pickImages} />
+          <button type="button" className="btn btn-ghost text-xs py-1!" title="Chọn các file ảnh trong thư mục ảnh trên máy cá nhân." onClick={() => imgRef.current?.click()}>
+            Chọn ảnh…
+          </button>
           <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={onImport} />
           <button type="button" className="btn btn-ok text-xs py-1!" disabled={importing} onClick={() => fileRef.current?.click()}>
             {importing ? "Đang nhập…" : "Nhập Excel / CSV"}
@@ -613,29 +628,43 @@ function KhoiDongEditor({ draft, setDraft, teams, setMsg }) {
   const teamIds = TEAM_ORDER;
   const [importing, setImporting] = useState("");
   const fileRefs = useRef({});
+  const imgRefs = useRef({});
+  const pendingImgs = useRef({}); // { tid: File[] } ảnh chọn trước, chờ chọn file Excel
   async function onImport(tid, e) {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
     setImporting(tid);
     try {
-      const r = await importQuickQuestionsFile(file, "khoi_dong", tid);
+      const images = pendingImgs.current[tid] || [];
+      delete pendingImgs.current[tid];
+      const r = await importQuickQuestionsFile(file, "khoi_dong", tid, images);
       const clusters = m.khoiDong?.[tid] || [];
       const fresh = (r.clusters || []).filter((cl) => cl && cl.length);
       const next = [...clusters, ...fresh];
       setDraft({ ...draft, main: { ...m, khoiDong: { ...(m.khoiDong || {}), [tid]: next } } });
-      setMsg(`Đã nhập ${r.added} thí sinh (${r.added * 5} ảnh) cho đội` + (r.errors?.length ? `, ${r.errors.length} dòng bỏ qua` : "") + ". Bấm Lưu vòng chính khi xong.");
+      setMsg(`Đã nhập ${r.added} câu (${r.clusters?.length || 0} thí sinh) cho đội` + (images.length ? `, dùng ${images.length} ảnh từ thư mục` : "") + (r.errors?.length ? `, ${r.errors.length} dòng bỏ qua` : "") + ". Bấm Lưu vòng chính khi xong.");
     } catch (err) {
       setMsg(err.message);
     } finally {
       setImporting("");
     }
   }
+  function pickImages(tid, e) {
+    const files = Array.from(e.target.files || []);
+    e.target.value = "";
+    if (!files.length) return;
+    pendingImgs.current[tid] = [...(pendingImgs.current[tid] || []), ...files];
+    setMsg(`Đã chọn ${files.length} ảnh cho đội (tổng ${pendingImgs.current[tid].length}). Giờ chọn file Excel danh sách bên cạnh.`);
+  }
   function downloadKdTemplate() {
     const csv =
-      "\uFEFFẢnh 1,Đáp án 1,Ảnh 2,Đáp án 2,Ảnh 3,Đáp án 3,Ảnh 4,Đáp án 4,Ảnh 5,Đáp án 5\n" +
-      "thap-efiel.png,Pháp,tuong-nu-than.png,Mỹ,thap-nghieng.png,Ý,dai-bai.jpg,Úc,cau-vong.png,Mỹ\n" +
-      "lang-ky-1.png,Hàn Quốc,chua-motcot.png,Myanmar,mosque.png,Ả Rập,tour-canh.png,Đức,phoco.png,Việt Nam\n";
+      "\uFEFFẢnh,Đáp án\n" +
+      "thap-efiel.png,Pháp\n" +
+      "tuong-nu-than.png,Mỹ\n" +
+      "thap-nghieng.png,Ý\n" +
+      "dai-bai.jpg,Úc\n" +
+      "cau-vong.png,Mỹ\n";
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
@@ -678,12 +707,28 @@ function KhoiDongEditor({ draft, setDraft, teams, setMsg }) {
             <div className="flex items-center gap-2 mb-3">
               <b style={{ color: team?.color }}>{team?.name}{clusters.length > 0 && <span className="text-mist font-normal"> — {clusters.length} thí sinh × 5 ảnh</span>}</b>
               <div className="ml-auto flex items-center gap-2">
+                <input
+                  ref={(el) => { imgRefs.current[tid] = el; }}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => pickImages(tid, e)}
+                />
+                <button
+                  type="button"
+                  className="btn btn-ghost text-xs py-1!"
+                  title="Chọn các file ảnh trong thư mục ảnh trên máy cá nhân (chưa upload). Có thể chọn nhiều file cùng lúc."
+                  onClick={() => imgRefs.current[tid]?.click()}
+                >
+                  Chọn ảnh…
+                </button>
                 <input ref={(el) => { fileRefs.current[tid] = el; }} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={(e) => onImport(tid, e)} />
                 <button
                   type="button"
                   className="btn btn-ok text-xs py-1!"
                   disabled={importing === tid}
-                  title="1 dòng = 1 thí sinh, 5 cặp (Ảnh + Đáp án). Ô Ảnh ghi tên/đường dẫn ảnh đã upload."
+                  title="1 dòng = 1 câu (Ảnh + Đáp án), cứ 5 dòng = 1 thí sinh. Ảnh ghi tên file (có thể chọn kèm thư mục ảnh trước)."
                   onClick={() => fileRefs.current[tid]?.click()}
                 >
                   {importing === tid ? "Đang nhập…" : "Nhập Excel / CSV"}

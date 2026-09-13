@@ -137,10 +137,11 @@
     return db.questions.main;
   }
 
-  export function importQuickQuestions(req) {
+  export async function importQuickQuestions(req) {
     // Nhập nhanh Vòng 1 Khởi động / Vòng phụ từ Excel/CSV; chỉ TRẢ dữ liệu đã parse
     // (ảnh được dò trong db.media đã upload), client ghép vào bản nháp rồi Lưu vòng chính.
-    if (!req.file) {
+    const file = req.files?.file?.[0];
+    if (!file) {
       const err = new Error("Không có tệp.");
       err.status = 400;
       throw err;
@@ -152,9 +153,35 @@
       err.status = 400;
       throw err;
     }
-    const parsed = quickImport.parseQuickImport(req.file.buffer, req.file.originalname || "", round);
+    // Ảnh chọn kèm từ thư mục máy cá nhân: upload toàn bộ lên server rồi mới resolve,
+    // để các ô Ảnh ghi tên file khớp với db.media.
+    const picked = req.files?.images || [];
+    for (const img of picked) {
+      try {
+        const up = await uploadToCloudinary(img.buffer, {
+          folder: "cuoc-thi/media",
+          resourceType: "image",
+          originalname: img.originalname,
+          mimetype: img.mimetype || "image/png",
+        });
+        const db = getDb();
+        if (!db.media.some((m) => m.url === up.url && m.name === img.originalname)) {
+          db.media.push({
+            id: crypto.randomUUID(),
+            name: img.originalname,
+            url: up.url,
+            type: "image",
+            createdAt: Date.now(),
+          });
+          saveDb();
+        }
+      } catch {
+        // Ảnh không upload được → bỏ qua; câu dùng ảnh đó sẽ báo lỗi ở phần resolve.
+      }
+    }
+    const parsed = quickImport.parseQuickImport(file.buffer, file.originalname || "", round);
     if (round === "khoi_dong") {
-      parsed.clusters = parsed.clusters.map((qs) => quickImport.buildKhoiDongCluster(qs, teamId));
+      parsed.clusters = parsed.units.map((u) => quickImport.buildKhoiDongCluster(u.items, teamId));
     } else if (round === "tie_break") {
       parsed.questions = parsed.questions.map(quickImport.buildTieBreakQuestion);
     }

@@ -70,11 +70,12 @@ export function saveMainQuestions(main) {
   return request("/api/admin/questions/main", { method: "POST", body: { main } });
 }
 
-export async function importQuickQuestionsFile(file, round, teamId) {
+export async function importQuickQuestionsFile(file, round, teamId, images = []) {
   const fd = new FormData();
   fd.append("file", file);
   fd.append("round", round);
   if (teamId) fd.append("teamId", teamId);
+  for (const img of images) fd.append("images", img);
   const res = await fetch("/api/admin/questions/quick-import", {
     method: "POST",
     headers: { "x-admin-pin": getPin() },

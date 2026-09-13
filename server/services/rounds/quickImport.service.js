@@ -3,8 +3,17 @@ import crypto from "crypto";
 import { getDb } from "../../models/store.js";
 
 // Nhập nhanh câu hỏi Vòng 1 Khởi động + Vòng phụ từ Excel/CSV.
-// Ô "Ảnh" ghi TÊN hoặc ĐƯỜNG DẪN ảnh đã upload sẵn (tab Hình ảnh/Video) → hệ thống
-// tự dò trong db.media để lấy URL thật; nếu là URL dán thẳng thì dùng luôn.
+//
+// Vòng 1 Khởi động: MỖI FILE = 1 ĐỘI (chọn cùng nút import của đội đó).
+//   Mỗi DÒNG = 1 CÂU (Ảnh + Đáp án), đọc từ trên xuống, CỨ 5 DÒNG = 1 THÍ SINH.
+//   Có thể dùng dòng tiêu đề "Ảnh, Đáp án" (tự nhận biết) hoặc để thẳng dữ liệu
+//   (cột 0 = ảnh, cột 1 = đáp án).
+//
+// Vòng phụ: 1 dòng = 1 câu (Câu hỏi / Đáp án / Ảnh).
+//
+// Ô "Ảnh": URL dán thẳng, tên ảnh đã upload trên server (dò db.media), HOẶC tên file
+// nằm trong thư mục ảnh chọn kèm khi import (máy cá nhân chưa upload) — hệ thống tự
+// upload số ảnh đó lên server rồi gán URL.
 
 function normKey(k) {
   return String(k || "")
@@ -19,10 +28,13 @@ function normKey(k) {
 const KEY_ANH = new Set(["anh", "image", "pic", "picture", "file", "hinhanh", "media", "icon"]);
 const KEY_DAP_AN = new Set(["dapan", "answer", "keys", "key", "traloi", "ketqua", "dap"]);
 const KEY_CAU_HOI = new Set(["cauhoi", "question", "cau", "noidung", "text", "thacmac"]);
-const KEY_STT = new Set(["stt", "tt", "sothutu", "so", "thisinh", "member", "thutu"]);
 
-function stripNum(k) {
-  return String(k || "").replace(/[^\d]/g, "");
+function pickIdx(keys, set, exclude = new Set()) {
+  for (let i = 0; i < keys.length; i++) {
+    if (exclude.has(i)) continue;
+    if (set.has(keys[i])) return i;
+  }
+  return -1;
 }
 
 // Đọc file (.xlsx/.xls hoặc CSV text) thành mảng các dòng (mỗi dòng là mảng ô chuỗi).
@@ -46,92 +58,80 @@ export function readQuickRows(buf, name = "") {
     .filter((r) => r.some((c) => c));
 }
 
-// Dựa vào hàng đầu của file để nhận biết có dòng tiêu đề hay không và các cột ở đâu.
-function detectHeader(firstRow) {
-  const keys = firstRow.map(normKey);
-  const sttIdx = keys.findIndex((k) => KEY_STT.has(k));
-  const anhIdxs = [];
-  const dapAnIdxs = [];
-  const cauHoiIdx = keys.findIndex((k) => KEY_CAU_HOI.has(k));
-  keys.forEach((k, i) => {
-    const n = stripNum(k);
-    if (n && (KEY_ANH.has(k.replace(/\d+/g, "").trim()) || /^anh?n?[1-5]$/.test(k))) anhIdxs.push(i);
-    else if (n && (KEY_DAP_AN.has(k.replace(/\d+/g, "").trim()) || /^dapan?[1-5]$/.test(k))) dapAnIdxs.push(i);
-    else if (!n && KEY_ANH.has(k)) anhIdxs.push(i);
-    else if (!n && KEY_DAP_AN.has(k)) dapAnIdxs.push(i);
-  });
-  const hasHeader = anhIdxs.length > 0 || cauHoiIdx >= 0 || keys.some((k) => KEY_DAP_AN.has(k));
-  return { hasHeader, sttIdx, anhIdxs, dapAnIdxs, cauHoiIdx };
-}
-
-// Dò URL thật của một ô ghi tên/dường dẫn ảnh đã upload.
-function resolveMedia(value) {
+// Dò URL thật của một ô ghi tên/dường dẫn ảnh.
+// - URL/đường dẫn cloud → dùng luôn (dò db.media lấy type).
+// - Tên ảnh đã upload → trả URL trong db.media.
+// - Không tìm thấy → { mediaUrl:"", mediaType:"", hint: giá gốc } để bước sau tự upload.
+export function resolveMedia(value) {
   const raw = String(value || "").trim();
-  if (!raw) return { mediaUrl: "", mediaType: "" };
-  const db = getDb();
-  const media = db.media || [];
+  if (!raw) return { mediaUrl: "", mediaType: "", hint: "" };
+  const media = getDb().media || [];
   const isUrl = /^https?:\/\//i.test(raw) || raw.startsWith("/uploads/") || raw.startsWith("data:");
   if (isUrl) {
     const hit = media.find((m) => m.url === raw);
-    return { mediaUrl: raw, mediaType: hit ? hit.type : "image" };
+    return { mediaUrl: raw, mediaType: hit ? hit.type : "image", hint: "" };
   }
   const base = normKey(raw.replace(/\\/g, "/").split("/").pop().replace(/\.[a-z0-9]+$/i, ""));
   const matchName = media.find((m) => normKey(m.name.replace(/\\/g, "/").split("/").pop().replace(/\.[a-z0-9]+$/i, "")) === base);
-  if (matchName) return { mediaUrl: matchName.url, mediaType: matchName.type };
+  if (matchName) return { mediaUrl: matchName.url, mediaType: matchName.type, hint: "" };
   const matchUrl = media.find((m) => normKey(m.url.split("/").pop().replace(/\.[a-z0-9]+$/i, "")) === base);
-  if (matchUrl) return { mediaUrl: matchUrl.url, mediaType: matchUrl.type };
+  if (matchUrl) return { mediaUrl: matchUrl.url, mediaType: matchUrl.type, hint: "" };
   const contains = media.find((m) => normKey(String(m.name)).includes(base));
-  if (contains) return { mediaUrl: contains.url, mediaType: contains.type };
-  return { mediaUrl: "", mediaType: "" };
+  if (contains) return { mediaUrl: contains.url, mediaType: contains.type, hint: "" };
+  return { mediaUrl: "", mediaType: "", hint: raw };
 }
 
-// ---- Vòng 1 Khởi động: 1 dòng = 1 thí sinh, 5 cặp (Ảnh + Đáp án). ----
+// ---- Vòng 1 Khởi động: MỖI DÒNG = 1 CÂU, cứ 5 dòng = 1 thí sinh. ----
 export function parseKhoiDongRows(aoa) {
-  if (!Array.isArray(aoa) || !aoa.length) return { clusters: [], errors: [], added: 0 };
-  const det = detectHeader(aoa[0]);
-  const start = det.hasHeader ? 1 : 0;
-  const clusters = [];
+  if (!Array.isArray(aoa) || !aoa.length) return { units: [], errors: [], added: 0 };
+  const keys = aoa[0].map(normKey);
+  const anhIdx = pickIdx(keys, KEY_ANH);
+  const dapIdx = pickIdx(keys, KEY_DAP_AN, new Set([anhIdx]));
+  // Có tiêu đề khi dòng đầu nhận ra được cột Ảnh hoặc Đáp án.
+  const hasHeader = anhIdx >= 0 || dapIdx >= 0;
+  const start = hasHeader ? 1 : 0;
+
+  const items = [];
   const errors = [];
   for (let r = start; r < aoa.length; r++) {
-    const row = aoa[r];
-    const cells = [...row];
-    if (!det.hasHeader) {
-      // Không tiêu đề → mặc định cột: [Ảnh1, Đáp án1, Ảnh2, Đáp án2, ... Ảnh5, Đáp án5]
-      let first = 0;
-      if (/^\d+$/.test(normKey(cells[0] || ""))) {
-        first = 1; // cột 0 là số thứ tự thí sinh
-        errors.push(`Dòng ${r + 2}: bỏ qua cột STT`);
-      }
-      const qs = [];
-      for (let i = 0; i < 5; i++) qs.push(pickPairs(cells[first + i * 2], cells[first + i * 2 + 1]));
-      clusters.push(qs);
+    const cells = [...aoa[r]];
+    let imgCell = "";
+    let answer = "";
+    if (hasHeader) {
+      imgCell = anhIdx >= 0 ? cells[anhIdx] || "" : "";
+      answer = dapIdx >= 0 ? cells[dapIdx] || "" : "";
+    } else {
+      imgCell = cells[0] || "";
+      answer = cells[1] || "";
+    }
+    const media = resolveMedia(imgCell);
+    if (media.hint) errors.push(`Dòng ${r + 1}: ảnh "${media.hint}" chưa thấy trong thư mục/đã upload — câu này bỏ trống.`);
+    if (!media.mediaUrl && !media.hint && !answer) {
+      errors.push(`Dòng ${r + 1}: trống, bỏ qua.`);
       continue;
     }
-    const qs = [null, null, null, null, null];
-    for (let i = 1; i <= 5; i++) {
-      const ai = det.anhIdxs.find((_, j) => j === i - 1);
-      const di = det.dapAnIdxs.find((_, j) => j === i - 1);
-      qs[i - 1] = ai !== undefined ? pickPairs(cells[ai], cells[di]) : { mediaUrl: "", mediaType: "", answer: "" };
-    }
-    if (!qs.some((q) => q.mediaUrl || q.answer)) {
-      errors.push(`Dòng ${r + 1} (thí sinh ${r - start + 1}): trống, bỏ qua.`);
-      continue;
-    }
-    clusters.push(qs);
+    items.push({ media, answer: String(answer || "").trim(), row: r + 1 });
   }
-  return { clusters, errors, added: clusters.length };
-}
 
-function pickPairs(imgCell, ansCell) {
-  const img = resolveMedia(imgCell);
-  return { mediaUrl: img.mediaUrl, mediaType: img.mediaType, answer: String(ansCell || "").trim() };
+  // Chia cụm 5 câu liên tiếp từ trên xuống.
+  const units = [];
+  for (let i = 0; i < items.length; i += 5) {
+    const slice = items.slice(i, i + 5);
+    while (slice.length < 5) slice.push({ media: { mediaUrl: "", mediaType: "", hint: "" }, answer: "" });
+    units.push({ items: slice });
+  }
+  const added = items.filter((x) => x.media.mediaUrl || x.media.hint || x.answer).length;
+  return { units, errors, added };
 }
 
 // ---- Vòng phụ: 1 dòng = 1 câu (Câu hỏi / Đáp án / Ảnh). ----
 export function parseTieBreakRows(aoa) {
   if (!Array.isArray(aoa) || !aoa.length) return { questions: [], errors: [], added: 0 };
-  const det = detectHeader(aoa[0]);
-  const hasHeader = det.cauHoiIdx >= 0 || det.hasHeader;
+  const keys = aoa[0].map(normKey);
+  const cauHoiIdx = pickIdx(keys, KEY_CAU_HOI);
+  const anhIdx = pickIdx(keys, KEY_ANH, new Set([cauHoiIdx]));
+  const dapIdx = pickIdx(keys, KEY_DAP_AN, new Set([cauHoiIdx, anhIdx]));
+  const hasHeader = cauHoiIdx >= 0 || anhIdx >= 0 || dapIdx >= 0;
   const start = hasHeader ? 1 : 0;
   const questions = [];
   const errors = [];
@@ -141,15 +141,10 @@ export function parseTieBreakRows(aoa) {
     let answer = "";
     let imgCell = "";
     if (hasHeader) {
-      const ci = [det.cauHoiIdx, det.anhIdxs[0], det.dapAnIdxs[0]].find((x, i, arr) => x !== undefined);
-      question = cells[det.cauHoiIdx] || "";
-      if (det.dapAnIdxs[0] !== undefined) answer = cells[det.dapAnIdxs[0]] || "";
-      let mediaIdx = det.anhIdxs[0];
-      if (mediaIdx === undefined && det.cauHoiIdx >= 0 && det.sttIdx >= 0) mediaIdx = undefined;
-      imgCell = mediaIdx !== undefined ? cells[mediaIdx] : "";
-      void ci;
+      question = cauHoiIdx >= 0 ? cells[cauHoiIdx] || "" : "";
+      answer = dapIdx >= 0 ? cells[dapIdx] || "" : "";
+      imgCell = anhIdx >= 0 ? cells[anhIdx] || "" : "";
     } else {
-      // Không tiêu đề → quy ước: Câu hỏi, Đáp án, Ảnh (ảnh có thể bỏ trống; STT đầu tuỳ chọn).
       let q = 0;
       let a = 1;
       let im = 2;
@@ -162,13 +157,13 @@ export function parseTieBreakRows(aoa) {
       answer = cells[a] || "";
       imgCell = cells[im] || "";
     }
+    const media = resolveMedia(imgCell);
+    if (media.hint) errors.push(`Dòng ${r + 1}: ảnh "${media.hint}" chưa thấy trong thư mục/đã upload — câu này bỏ trống ảnh.`);
     if (!question && !answer && !imgCell) {
       errors.push(`Dòng ${r + 1}: trống, bỏ qua.`);
       continue;
     }
-    const img = resolveMedia(imgCell);
-    const base = { question, answer, ...img };
-    questions.push(base);
+    questions.push({ question, answer, media, row: r + 1 });
   }
   return { questions, errors, added: questions.length };
 }
@@ -189,13 +184,13 @@ export function parseQuickImport(buf, name = "", round = "") {
 }
 
 // Dựng object câu Khởi động hợp lệ cho DB (5 ô, points mặc định 10).
-export function buildKhoiDongCluster(qs, teamId) {
-  return qs.map((q, i) => ({
+export function buildKhoiDongCluster(items, teamId) {
+  return items.map((q, i) => ({
     id: `kd-${teamId}-imp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}-${i}`,
     answer: q.answer || "",
     points: 10,
-    mediaUrl: q.mediaUrl || "",
-    mediaType: q.mediaType || "",
+    mediaUrl: q.media?.mediaUrl || "",
+    mediaType: q.media?.mediaType || "",
   }));
 }
 
@@ -205,8 +200,8 @@ export function buildTieBreakQuestion(q) {
     question: q.question || "",
     answer: q.answer || "",
     options: [],
-    mediaUrl: q.mediaUrl || "",
-    mediaType: q.mediaType || "",
+    mediaUrl: q.media?.mediaUrl || "",
+    mediaType: q.media?.mediaType || "",
     note: "",
   };
 }

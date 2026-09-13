@@ -19,7 +19,12 @@ router.post("/assign-teams", requirePin, asyncHandler(admin.assignTeams));
 router.post("/reset", requirePin, asyncHandler(admin.reset));
 router.post("/teams", requirePin, asyncHandler(admin.saveTeams));
 router.post("/questions/main", requirePin, asyncHandler(admin.saveMainQuestions));
-router.post("/questions/quick-import", requirePin, uploadImport.single("file"), asyncHandler(admin.importQuickQuestions));
+router.post(
+    "/questions/quick-import",
+    requirePin,
+    uploadImport.fields([{ name: "file", maxCount: 1 }, { name: "images", maxCount: 500 }]),
+    asyncHandler(admin.importQuickQuestions)
+  );
 router.post("/questions/ve-dich/import", requirePin, uploadImport.single("file"), asyncHandler(admin.importVeDichQuestions));
 router.post("/khoi-dong-answer-seconds", requirePin, asyncHandler(admin.setKhoiDongAnswerSeconds));
 router.post("/khoi-dong-timer-seconds", requirePin, asyncHandler(admin.setKhoiDongTimerSeconds));
