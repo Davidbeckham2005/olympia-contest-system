@@ -26,7 +26,7 @@ export default function RulesBoard({ state, g, className = "" }) {
       </div>
 
       {/* Khung câu hỏi chính */}
-      <div className="relative mt-5 rules-frame-in">
+      <div className="relative mt-4 rules-frame-in">
         {/* Halo ngoài: viền cyan mờ phát sáng nhẹ */}
         <div className="absolute -inset-[5px] rounded-[28px] border-2 border-[#4cc9f0]/60 blur-[9px]" />
         <div className="absolute -inset-[2px] rounded-[28px] bg-[#4cc9f0]/25" />
@@ -37,17 +37,17 @@ export default function RulesBoard({ state, g, className = "" }) {
           <div className="absolute inset-[3px] rounded-[21px] border border-white/25 pointer-events-none" />
 
           {/* Nội dung luật — các đoạn không đánh số, giãn line thoáng, vừa khung */}
-          <div className="relative px-8 py-8 max-h-[calc(100vh-260px)] overflow-hidden flex flex-col items-center justify-center gap-4">
+          <div className="relative px-6 py-4 max-h-[calc(100vh-190px)] overflow-y-auto flex flex-col items-center justify-center gap-2">
             {rules.length === 0 ? (
               <p
-                className="rules-line-in text-white/75 text-[clamp(16px,1.8vw,26px)]"
+                className="rules-line-in text-white/75 text-[clamp(15px,1.6vw,22px)]"
                 style={{ animationDelay: "640ms" }}
               >
                 Đang cập nhật luật chơi…
               </p>
             ) : rules.length === 1 ? (
               <p
-                className="rules-line-in max-w-[860px] text-center text-[clamp(18px,2vw,28px)] leading-relaxed text-white/95"
+                className="rules-line-in max-w-[860px] text-center text-[clamp(16px,1.7vw,24px)] leading-snug text-white/95"
                 style={{ whiteSpace: "pre-line", animationDelay: "640ms" }}
               >
                 {rules[0]}
@@ -56,7 +56,7 @@ export default function RulesBoard({ state, g, className = "" }) {
               rules.map((line, i) => (
                 <p
                   key={i}
-                  className="rules-line-in w-full max-w-[880px] text-left text-[clamp(16px,1.8vw,26px)] leading-relaxed text-white/95"
+                  className="rules-line-in w-full max-w-[880px] text-left text-[clamp(15px,1.5vw,23px)] leading-snug text-white/95"
                   style={{ whiteSpace: "pre-line", animationDelay: `${640 + i * 150}ms` }}
                 >
                   {line}
