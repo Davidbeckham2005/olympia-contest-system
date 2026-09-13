@@ -163,8 +163,10 @@ export default function Audience() {
   // KẾ THỪA CƠ CHẾ CHUÔNG BẤM từ round trước (Về đích): MC mở chuông (openBuzzer) →
   // các đội trong vòng phụ bấm chuông giành quyền (buzzer:press) → đội bấm nhanh nhất
   // (buzzer.winner) được TỰ TRẢ LỜI với đồng hồ riêng → MC chấm Đúng/Sai → đáp án lật.
-  // GIAO DIỆN theo chuẩn gameshow "câu hỏi – đáp án" giống các vòng khác: khung panel to
-  // + media lớn + câu hỏi (stage-q) + đáp án lật (stage-answer) + badge giành quyền.
+  // GIAO DIỆN hiện câu hỏi phỏng theo Vòng 1: giữa là trạng thái giành quyền/timer, DƯỚI
+  // là một khung duy nhất — thanh các đội tham gia (highlight đội bấm chuông) + box câu hỏi
+  // to + ô vàng hiển thị đội đang nắm chuông. Các đội tham gia hiển thị NGAY TRONG khung,
+  // không cần TeamsRow riêng khi đang chiếu câu.
   if (g.round === "tie_break") {
     const tb = g.tieBreak || {};
     const tbTeams = (tb.teams || []).map((id) => state.teams.find((t) => t.id === id)).filter(Boolean);
@@ -176,7 +178,7 @@ export default function Audience() {
     const bg = state.settings?.audienceBg || "dark";
     const bgUrl = state.settings?.audienceBgUrl || "";
     return (
-      <div className="relative min-h-screen flex flex-col items-center justify-center px-6 py-4 gap-6 overflow-hidden isolate">
+      <div className="relative min-h-screen flex flex-col items-center justify-center px-6 py-4 overflow-hidden isolate">
         {/* Nền đồng bộ với các vòng khác: navy #070b16 + ảnh blur nếu MC cài màn khán giả */}
         <div className="fixed inset-0 z-0 bg-[#070b16]" />
         {bg === "blur" && bgUrl && (
@@ -188,7 +190,7 @@ export default function Audience() {
             <div className="fixed inset-0 z-0 bg-[#070b16]/45" />
           </>
         )}
-        <div className="relative z-10 flex flex-col items-center gap-6">
+        <div className="relative z-10 flex flex-col items-center gap-6 w-full max-w-[1200px]">
         <div className="round-badge">VÒNG PHỤ</div>
         {exhausted ? (
           <div className="panel w-full max-w-3xl text-center">
@@ -203,8 +205,9 @@ export default function Audience() {
           </div>
         ) : (
           <>
+            {/* GIỮA — trạng thái giành quyền / đồng hồ trả lời */}
             {buzzTeam ? (
-              <div className="flex flex-col items-center gap-4">
+              <div className="flex flex-col items-center gap-3">
                 <div className="round-badge bg-[#ffd60a]/15">
                   Chuông giành quyền: <b style={{ color: buzzTeam.color }}>{buzzTeam.name}</b>
                 </div>
@@ -218,17 +221,46 @@ export default function Audience() {
                 )}
               </div>
             ) : (
-              <div className="text-mist text-[clamp(16px,2.2vw,26px)]">
-                {tbTeams.length > 0 ? "Đang chờ MC chiếu câu hỏi — chuông sẽ được mở khi bắt đầu." : "Đang chờ MC chọn đội tham gia vòng phụ…"}
+              <div className="text-mist text-[clamp(16px,2vw,24px)] text-center">
+                {tbTeams.length > 0 ? "Chuông đã mở — các đội bấm chuông giành quyền trả lời." : "Đang chờ MC chọn đội tham gia vòng phụ…"}
               </div>
             )}
+
+            {/* DƯỚI — khung kiểu Vòng 1 khi đang chiếu câu: bar đội + câu hỏi + ô vàng giành quyền */}
             {showing && (
-              <div className="w-full text-center">
-                {d.answerRevealed ? (
-                  <div className="stage-answer text-[clamp(17px,2.2vw,26px)]">Đáp án: {d.answer}</div>
-                ) : (
-                  d.question && <div className="stage-q text-[clamp(20px,2.6vw,32px)]">{d.question}</div>
-                )}
+              <div className="w-full rounded-2xl border border-[rgba(255,214,10,0.18)] bg-[#2a3d63] shadow-[0_10px_40px_rgba(0,0,0,0.45)]">
+                <div className="flex w-full">
+                  {tbTeams.map((t) => {
+                    const active = g.buzzer?.winner === t.id;
+                    return (
+                      <div
+                        key={t.id}
+                        className={`flex-1 flex items-center justify-center gap-2 py-3.5 px-2 border-r border-[rgba(255,214,10,0.1)] last:border-r-0 transition-colors ${active ? "team-buzz" : ""}`}
+                      >
+                        <span className={`font-bold text-[15px] truncate ${active ? "text-white" : "text-black/80"}`}>
+                          {t.name}
+                        </span>
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: t.color }} />
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="flex items-stretch border-t border-[rgba(255,214,10,0.1)]">
+                  <div className="flex-1 px-6 py-4 text-center flex flex-col items-center justify-center border-r border-[rgba(255,214,10,0.1)]">
+                    {d.answerRevealed ? (
+                      <div className="stage-answer text-[clamp(17px,2.2vw,27px)]">Đáp án: {d.answer}</div>
+                    ) : (
+                      d.question && <div className="stage-q text-[clamp(20px,2.6vw,36px)]">{d.question}</div>
+                    )}
+                  </div>
+                  <div className="shrink-0 flex flex-col items-center justify-center gap-0.5 px-6 py-3 bg-[#ffd60a]/15 min-w-[130px]">
+                    <div className="kicker text-[10px] tracking-[0.2em] text-white/70 uppercase">{buzzTeam?.name || "CHUÔNG"}</div>
+                    <div className="font-display font-black text-[clamp(22px,2.6vw,38px)] leading-none text-[#ffd60a]">
+                      {timer?.running ? formatTime(remaining) : buzzTeam ? "TRẢ LỜI" : "MỞ"}
+                    </div>
+                    <div className="text-[10px] tracking-[0.2em] text-white/50">GIÀNH QUYỀN</div>
+                  </div>
+                </div>
               </div>
             )}
           </>
@@ -241,7 +273,7 @@ export default function Audience() {
             </p>
           </div>
         )}
-        {!exhausted && <TeamsRow teams={tbTeams} state={state} flash={flash} currentTeam={g.buzzer?.winner} />}
+        {!exhausted && !showing && <TeamsRow teams={tbTeams} state={state} flash={flash} currentTeam={g.buzzer?.winner} />}
         {!exhausted && <BuzzOverlay state={state} flash={flash} />}
         <AudioUnlock audioOn={audioOn} onEnable={enableAudio} />
         </div>
