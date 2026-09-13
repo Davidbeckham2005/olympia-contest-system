@@ -12,6 +12,8 @@
   export const KHOI_DONG_PREP_SECONDS = 3;
   // Thời gian trả lời của đội vừa bấm chuông Vòng phụ (hết giờ → tự khóa chuông).
   export const TIEBREAK_ANSWER_SECONDS = 10;
+  // Số giây đếm ngược "3-2-1" trước khi tự mở câu hỏi Vòng phụ.
+  export const TIEBREAK_PREP_SECONDS = 3;
 
   // Trạng thái mặc định cho mỗi câu hỏi vòng 3 (reset khi đổi câu / vào vòng).
   // startedAt: thời điểm đoạn chiếu hiện tại bắt đầu — mốc 0s để ghi nhận đáp án.
@@ -181,6 +183,11 @@
             resetBuzzer(true);
           }
         } else if (game.round === "tie_break") {
+          // Hết đếm ngược "3-2-1" → tự mở câu hỏi + chuông (bắt đầu trả lời).
+          if (game.tieBreak?.phase === "countdown") {
+            showTieBreakQuestion();
+            return;
+          }
           // Hết thời gian trả lời của đội vừa bấm chuông → tự khóa chuông.
           // MC sẽ chấm trả lời (đúng → thắng, sai → mở lại chuông cho đội khác).
           closeBuzzer();
@@ -1670,11 +1677,34 @@ if (game.round === "khoi_dong") {
     if (game.round !== "tie_break") return { ignored: true };
     // Vòng phụ chỉ bắt đầu SAU KHI MC đã chọn đội tham gia — chưa chọn thì không chiếu câu.
     if (!(game.tieBreak?.teams || []).length) return { ignored: true, reason: "no-teams" };
+    if (!game.tieBreak?.questions?.[game.questionIndex]) return { ignored: true, reason: "no-question" };
+
+    // Bắt đầu vòng từ trạng thái chờ (setup): chạy đếm ngược "3-2-1" trước.
+    if (game.tieBreak.phase === "setup") {
+      game.tieBreak.phase = "countdown";
+      game.questionStatus = "idle";
+      game.display = {
+        mode: "idle",
+        title: "",
+        question: "",
+        options: [],
+        mediaUrl: "",
+        mediaType: "",
+        answer: "",
+        answerRevealed: false,
+        note: "",
+      };
+      resetBuzzer();
+      setTimer(TIEBREAK_PREP_SECONDS, true);
+      saveDb();
+      emit();
+      return;
+    }
+
+    // Kết thúc đếm ngược (timer loop gọi lại) / chuyển câu kế tiếp giữa vòng:
+    // hiện câu hỏi + mở chuông để các đội giành quyền trả lời.
+    if (game.tieBreak.phase === "countdown") game.tieBreak.phase = "running";
     const q = game.tieBreak.questions[game.questionIndex];
-    if (!q) return { ignored: true, reason: "no-question" };
-    // Bắt đầu vòng: chuyển từ chờ (setup) sang đang thi (running) — danh từ "bắt đầu"
-    // không cộng điểm, chỉ đánh dấu trạng thái để control/audience hiển thị chính xác.
-    if (game.tieBreak.phase === "setup") game.tieBreak.phase = "running";
     game.questionStatus = "showing";
     game.display = {
       mode: "question",

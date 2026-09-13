@@ -1,5 +1,4 @@
 import { useState } from "react";
-import RulesToggle from "../../components/RulesToggle.jsx";
 
 export default function RoundTieBreak({ ctx }) {
   const { act, state, g, d } = ctx;
@@ -13,22 +12,18 @@ export default function RoundTieBreak({ ctx }) {
   const winner = tb.winner;
   const exhausted = phase === "exhausted";
   const running = phase === "running";
+  const counting = phase === "countdown";
   const currentQ = questions[g.questionIndex];
 
-  const [newQuestion, setNewQuestion] = useState("");
-  const [newAnswer, setNewAnswer] = useState("");
-  const [showBank, setShowBank] = useState(false);
+  const [showQuestions, setShowQuestions] = useState(false);
+  // Ngân hàng câu hỏi do Admin quản lý (tab Câu hỏi → Vòng phụ) — MC chỉ chọn câu, không thêm.
+  const bank = Array.isArray(state.questions?.main?.tieBreak) ? state.questions.main.tieBreak : [];
 
-  function addQuestion() {
-    if (!newQuestion.trim()) return;
-    const updated = [...questions, { question: newQuestion.trim(), answer: newAnswer.trim() }];
-    act("tiebreak.questions", { questions: updated });
-    setNewQuestion("");
-    setNewAnswer("");
-  }
-
-  function removeQuestion(idx) {
-    const updated = questions.filter((_, i) => i !== idx);
+  function toggleQuestion(q) {
+    const has = questions.some((x) => x.id === q.id);
+    const updated = has
+      ? questions.filter((x) => x.id !== q.id)
+      : [...questions, q];
     act("tiebreak.questions", { questions: updated });
   }
 
@@ -55,6 +50,11 @@ export default function RoundTieBreak({ ctx }) {
         {exhausted && (
           <span className="badge badge-warn">
             Hết câu — chọn tay công
+          </span>
+        )}
+        {counting && (
+          <span className="badge badge-warn">
+            Đang đếm 3-2-1…
           </span>
         )}
         {running && (
@@ -173,50 +173,39 @@ export default function RoundTieBreak({ ctx }) {
         </div>
       )}
 
-      {/* Ngân hàng câu hỏi */}
+      {/* Chọn câu hỏi vòng phụ (ngân hàng do Admin quản lý) */}
       <div className="border-t border-line pt-3">
         <button
           type="button"
-          className="flex items-center gap-2 text-xs text-mist hover:text-white transition mb-2"
-          onClick={() => setShowBank((v) => !v)}
+          className="flex items-center gap-2 text-xs text-mist hover:text-white transition mb-2 w-full"
+          onClick={() => setShowQuestions((v) => !v)}
         >
-          <span className={`transition ${showBank ? "rotate-90" : ""}`}>▶</span>
-          Ngân hàng câu hỏi ({questions.length})
+          <span className={`transition ${showQuestions ? "rotate-90" : ""}`}>▶</span>
+          Chọn câu hỏi vòng phụ ({questions.length}/{bank.length})
         </button>
-        {showBank && (
-          <div className="space-y-2">
-            <div className="flex flex-col gap-1.5">
-              {questions.map((q, i) => (
-                <div key={q.id || i} className="flex items-center gap-2 text-xs">
-                  <span className="text-mist shrink-0 w-6">{i + 1}.</span>
+        {bank.length === 0 ? (
+          <p className="text-mist text-xs">Ngân hàng câu hỏi trống — Admin thêm ở tab Câu hỏi → Vòng phụ.</p>
+        ) : null}
+        {showQuestions && (
+          <div className="space-y-1.5">
+            {bank.map((q, i) => {
+              const picked = questions.some((x) => x.id === q.id);
+              return (
+                <label
+                  key={q.id || i}
+                  className={`flex items-center gap-2 text-xs cursor-pointer transition ${picked ? "text-white" : "text-mist"}`}
+                >
+                  <input
+                    type="checkbox"
+                    className="accent-[#ffd60a]"
+                    checked={picked}
+                    onChange={() => toggleQuestion(q)}
+                  />
                   <span className="flex-1 truncate">{q.question}</span>
                   <span className="text-gold shrink-0">({q.answer})</span>
-                  <button type="button" className="text-red-400 hover:text-red-300 shrink-0" onClick={() => removeQuestion(i)}>x</button>
-                </div>
-              ))}
-              {questions.length === 0 && (
-                <p className="text-mist text-xs">Chưa có câu hỏi nào.</p>
-              )}
-            </div>
-            <div className="flex gap-1.5">
-              <input
-                type="text"
-                placeholder="Câu hỏi..."
-                value={newQuestion}
-                onChange={(e) => setNewQuestion(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && addQuestion()}
-                className="flex-1 bg-panel border border-line px-2 py-1.5 text-xs text-white placeholder:text-mist/50"
-              />
-              <input
-                type="text"
-                placeholder="Đáp án"
-                value={newAnswer}
-                onChange={(e) => setNewAnswer(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && addQuestion()}
-                className="w-24 bg-panel border border-line px-2 py-1.5 text-xs text-white placeholder:text-mist/50"
-              />
-              <button type="button" className="btn btn-ghost text-xs py-1!" onClick={addQuestion}>+</button>
-            </div>
+                </label>
+              );
+            })}
           </div>
         )}
       </div>

@@ -194,6 +194,13 @@ export default function Audience() {
           <div className="panel w-full max-w-3xl text-center">
             <p className="text-mist text-[clamp(16px,2.4vw,28px)]">Hết câu hỏi vòng phụ — MC cần chọn đội thắng.</p>
           </div>
+        ) : tb.phase === "countdown" ? (
+          <div className="flex flex-col items-center gap-3">
+            <div className="kicker tracking-[0.3em]">CHUẨN BỊ</div>
+            <div className={`font-display font-black text-[clamp(80px,20vw,220px)] leading-none ${remaining > 0 ? "text-gold" : "text-mist"}`}>
+              {remaining > 0 ? remaining : 3}
+            </div>
+          </div>
         ) : (
           <>
             {buzzTeam ? (
