@@ -9,6 +9,7 @@ import { optimizeVideoUrl } from "../lib/media.js";
 // phát lại đúng lần mở đầu.
 const r2LtrAnimated = new Set();
 const r2TileAnimated = new Set();
+const r2PuzzleAllAnimated = new Set();
 function rowOpenAnimated(i) {
   if (r2LtrAnimated.has(i)) return false;
   r2LtrAnimated.add(i);
@@ -17,6 +18,11 @@ function rowOpenAnimated(i) {
 function tileOpenAnimated(i) {
   if (r2TileAnimated.has(i)) return false;
   r2TileAnimated.add(i);
+  return true;
+}
+function puzzleAllOpenAnimated() {
+  if (r2PuzzleAllAnimated.has("all")) return false;
+  r2PuzzleAllAnimated.add("all");
   return true;
 }
 
@@ -501,7 +507,13 @@ export function Round2Board({ state, g, minimal }) {
   // nhấp nháy vàng để khán giả biết câu hỏi cuối đang nhắm tới mảnh chính giữa.
   const centerTarget = p.currentRow === 4 && p.rowPhase === "open" && !solved[4] && !locked[4];
   // Vòng bị reset (chưa mảnh nào mở) → quên hiệu ứng đã phát.
-  if (![0, 1, 2, 3, 4].some((i) => solved[i])) r2TileAnimated.clear();
+  if (![0, 1, 2, 3, 4].some((i) => solved[i])) {
+    r2TileAnimated.clear();
+    r2PuzzleAllAnimated.clear();
+  }
+  // MỞ TOÀN BỘ: cả 5 mảnh đã mở (giải từ khóa / MC mở hết) → phát đúng 1 nhịp glow
+  // vàng toàn khung. Chỉ màn khán giả (minimal = false).
+  const puzzleAllOpen = !minimal && solved.every(Boolean) && puzzleAllOpenAnimated();
   return (
     <div className="relative w-full max-w-[1200px] min-h-[60vh] mx-auto flex flex-col items-center justify-center">
       <Round2Context g={g} state={state} />
@@ -515,7 +527,7 @@ export function Round2Board({ state, g, minimal }) {
         </div>
       )}
       <div className="flex flex-col items-center justify-center gap-4">
-        <div className="relative w-[clamp(300px,40vw,680px)] aspect-[16/10] rounded-2xl overflow-hidden ring-1 ring-line bg-night">
+        <div className={`relative w-[clamp(300px,40vw,680px)] aspect-[16/10] rounded-2xl overflow-hidden ring-1 ring-line bg-night ${puzzleAllOpen ? "r2-puzzle-all-open" : ""}`}>
           {media?.url && media.type !== "video" && (
             <img src={media.url} alt="" className="absolute inset-0 w-full h-full object-cover" />
           )}

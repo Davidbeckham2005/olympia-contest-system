@@ -239,6 +239,16 @@
     50% { box-shadow: 0 0 38px rgba(255, 214, 10, 0.9); filter: brightness(1.3); }
     100% { box-shadow: 0 0 0 rgba(255, 214, 10, 0); filter: brightness(1); }
   }
+  /* MỞ TOÀN BỘ CHƯỚNG NGẠI VẬT — khi cả 5 mảnh cùng mở (giải đúng từ khóa / MC mở hết):
+     một nhịp glow vàng lan ra toàn khung ảnh rồi dịu lại. Chỉ màn khán giả, 1 lần/vòng. */
+  .r2-puzzle-all-open {
+    animation: r2PuzzleAllOpen 1s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  @keyframes r2PuzzleAllOpen {
+    0% { box-shadow: 0 0 0 0 rgba(255, 214, 10, 0); filter: brightness(1); }
+    35% { box-shadow: 0 0 0 24px rgba(255, 214, 10, 0.28), 0 0 80px rgba(255, 214, 10, 0.55); filter: brightness(1.22); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 214, 10, 0); filter: brightness(1); }
+  }
   .kd-ring {
     position: absolute;
     inset: 0;
