@@ -113,6 +113,13 @@
     return { ok: true };
   }
 
+  // Reset điểm các đội về 0 và restart cuộc thi (GIỮ thí sinh, đội, câu hỏi, âm thanh).
+  export function resetTeams() {
+    game.resetGameKeepTeams();
+    emitEvent("prelim:update", publicState());
+    return { ok: true };
+  }
+
   export function saveTeams(req) {
     const db = getDb();
     (req.body.teams || []).forEach((patch) => {

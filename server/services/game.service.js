@@ -338,6 +338,8 @@ export function resetKhoiDong(teamId = null) {
       clearTimeout(khoiDongTimer);
       khoiDongTimer = null;
     }
+    // Đảm bảo timer loop sống khi bắt đầu/chuyển vòng (idempotent: tự stop cũ trước).
+    startTimerLoop();
     game.phase = "main";
     game.round = roundId;
     game.questionIndex = 0;
@@ -1583,10 +1585,13 @@ if (game.round === "khoi_dong") {
     emit();
   }
 
+  // Reset điểm toàn bộ đội về 0 và restart cuộc thi — GIỮ nguyên đội/thí sinh, câu hỏi,
+  // âm thanh và cài đặt. Đồng thời bỏ trạng thái khóa/loại của mọi đội (eliminated = false).
   export function resetGameKeepTeams() {
     const db = getDb();
     db.teams.forEach((t) => {
       t.score = 0;
+      t.eliminated = false;
     });
     db.game = defaultGame();
     db.game.phase = "teams_ready";
@@ -1602,7 +1607,10 @@ if (game.round === "khoi_dong") {
       clearTimeout(khoiDongTimer);
       khoiDongTimer = null;
     }
-    stopTimerLoop();
+    // Đảm bảo timer loop LUÔN sống sau reset — resetMainRoundState từng gọi stopTimerLoop()
+    // mà không khởi động lại, làm mọi đồng hồ (round 2, tang_toc, ve_dich, tie_break) chết
+    // hẳn cho tới khi khởi động lại server. startTimerLoop() tự stop cũ rồi start mới (an toàn).
+    startTimerLoop();
     setTimer(0, false);
     game.currentTeam = "a";
     game.questionIndex = 0;

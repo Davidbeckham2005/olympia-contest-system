@@ -17,6 +17,7 @@ router.delete("/contestants/:id", requirePin, asyncHandler(admin.deleteContestan
 router.post("/divide-teams", requirePin, asyncHandler(admin.divideTeams));
 router.post("/assign-teams", requirePin, asyncHandler(admin.assignTeams));
 router.post("/reset", requirePin, asyncHandler(admin.reset));
+router.post("/reset-teams", requirePin, asyncHandler(admin.resetTeams));
 router.post("/teams", requirePin, asyncHandler(admin.saveTeams));
 router.post("/questions/main", requirePin, asyncHandler(admin.saveMainQuestions));
 router.post(

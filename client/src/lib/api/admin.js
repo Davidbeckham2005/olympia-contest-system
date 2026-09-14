@@ -62,6 +62,10 @@ export function resetContest() {
   return request("/api/admin/reset", { method: "POST", body: { keepQuestions: true } });
 }
 
+export function resetTeams() {
+  return request("/api/admin/reset-teams", { method: "POST", body: {} });
+}
+
 export function saveTeams(teams) {
   return request("/api/admin/teams", { method: "POST", body: { teams } });
 }

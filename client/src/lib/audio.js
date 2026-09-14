@@ -3,6 +3,14 @@ let unlocked = false;
 let bedKind = null;
 let sfxEl = null;
 let bedEl = null;
+// Slot sfx đang phát qua phần tử sfx chung — để cắt dứt điểm tệp cũ trước khi phát tệp
+// mới và chỉ trả volume nhạc nền đúng khi phần tử phát HẾT trạng thái này.
+let currentSfxSlot = null;
+// Chống "chồng chéo âm thanh" khi MC bật màn Tổng kết: slot "result" chỉ được phát lại
+// sau cửa sổ ngắn (chặn click đúp / event gửi trùng kích chuỗi replay chồng nhau).
+// Các slot khác (đúng/sai/đáp án…) KHÔNG áp dụng — MC có thể chấm nhiều lần liên tiếp.
+const lastSlotPlay = new Map();
+const SLOT_COOLDOWN_MS = 2500;
 
 function els() {
   if (typeof Audio === "undefined") return {};
@@ -40,10 +48,22 @@ export function unlockAudio() {
   return true;
 }
 
+// Hạ/trả volume nhạc nền trong lúc phát âm hiệu (giữ nhạc nền chạy nhưng lặng xuống để
+// âm hiệu không đè chồng lên nhạc — tránh cảm giác "hai bài lồng nhau").
+function duckBed(on) {
+  const { bed } = els();
+  if (bed && !bed.paused) bed.volume = on ? 0.1 : 0.4;
+}
+
 export function playSfx(slot) {
   const url = pack[slot]?.url;
   const { sfx, bed } = els();
   if (!unlocked) return;
+  // Cùng slot "result" trong cửa sổ ngắn (MC bấm đúp / event trùng) → bỏ qua, không
+  // replay chồng chất. Các slot khác vẫn phát bình thường (ngắt lẫn nhau là hợp lý).
+  const now = Date.now();
+  if (slot === "result" && now - (lastSlotPlay.get(slot) || 0) < SLOT_COOLDOWN_MS) return;
+  lastSlotPlay.set(slot, now);
   // Slot "result" chưa upload file → tự tổng hợp tiếng "lộ bảng tổng kết" để MC luôn
   // có âm hiệu khi bật màn Tổng kết điểm (upload file trong Admin sẽ thay thế).
   if (!url) {
@@ -51,22 +71,61 @@ export function playSfx(slot) {
     return;
   }
   if (!sfx) return;
+  // Âm thanh slot khác đang phát → cắt dứt điểm + trả volume nhạc nền TRƯỚC khi phát
+  // tiếng mới; nếu không tiếng cũ vẫn ngân trong lúc tiếng mới đang nổi.
+  if (currentSfxSlot && currentSfxSlot !== slot) {
+    duckBed(false);
+    try {
+      sfx.pause();
+      sfx.currentTime = 0;
+      sfx.onended = null;
+    } catch {
+      /* ignore */
+    }
+  }
+  currentSfxSlot = slot;
   sfx.src = url;
   sfx.currentTime = 0;
-  if (bed && !bed.paused) {
-    bed.volume = 0.1;
-    sfx.onended = () => {
-      bed.volume = 0.4;
-    };
-  }
+  duckBed(true);
+  sfx.onended = () => {
+    if (currentSfxSlot === slot) {
+      currentSfxSlot = null;
+      duckBed(false);
+    }
+  };
   sfx.play().catch(() => {});
 }
 
 // Tiếng hiệu "lộ kết quả" tổng hợp bằng Web Audio (hợp âm rải đi lên, kiểu chương
-// trình truyền hình) — dùng làm âm thanh mặc định cho màn TỔNG KẾT ĐIỂM.
+// trình truyền hình) — dùng làm âm thanh mặc định cho màn TỔNG KẾT ĐIỂM. Dùng CHUNG
+// MỘT AudioContext và luôn dừng các nốt cũ còn réo trước khi phát nốt mới — nếu mỗi
+// lần bật màn Tổng kết lại tạo context riêng thì các âm rải cũ chưa tắt sẽ chồng nhau
+// thành "loạn". Đồng thời hạ nhạc nền xuống như âm hiệu file để không lồng hai bài.
+let stingCtx = null;
+let stingOscs = [];
+let stingEndTimer = null;
+
+function stopSting() {
+  for (const osc of stingOscs) {
+    try {
+      osc.stop();
+    } catch {
+      /* đã dừng */
+    }
+  }
+  stingOscs = [];
+}
+
 function playResultSting() {
   try {
-    const ctx = new AudioContext();
+    clearTimeout(stingEndTimer);
+    stopSting();
+    duckBed(true);
+    if (!stingCtx || stingCtx.state === "closed") stingCtx = new AudioContext();
+    if (stingCtx.state === "suspended") {
+      stingCtx.resume().catch(() => {});
+    }
+    const ctx = stingCtx;
     const master = ctx.createGain();
     master.gain.setValueAtTime(0.0001, ctx.currentTime);
     master.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + 0.1);
@@ -87,7 +146,13 @@ function playResultSting() {
       g.connect(master);
       osc.start(t);
       osc.stop(t + 0.85);
+      stingOscs.push(osc);
     });
+    // Trả volume nhạc nền sau khi âm rải kết thúc (âm dài ~1.5s).
+    stingEndTimer = setTimeout(() => {
+      duckBed(false);
+      stingOscs = [];
+    }, 1500);
   } catch {
     /* ignore */
   }

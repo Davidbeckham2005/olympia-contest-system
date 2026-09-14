@@ -21,6 +21,7 @@ import {
   setKhoiDongAnswerSeconds,
   setKhoiDongTimerSeconds,
   resetContest,
+  resetTeams,
 } from "../lib/api/admin.js";
 import { getPin } from "../lib/session.js";
 import { formatTime } from "../lib/format.js";
@@ -1642,6 +1643,18 @@ function SettingsTab({ state, reload, setMsg }) {
           }}
         >
           Reset cuộc thi
+        </button>
+        <button
+          type="button"
+          className="btn btn-danger btn-ghost"
+          onClick={async () => {
+            if (confirm("Đưa điểm toàn bộ đội về 0 và bắt đầu lại cuộc thi? (Giữ nguyên thí sinh, câu hỏi, âm thanh)")) {
+              await resetTeams();
+              reload();
+            }
+          }}
+        >
+          Reset đội về 0
         </button>
       </div>
     </div>

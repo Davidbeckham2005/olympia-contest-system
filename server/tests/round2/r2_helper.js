@@ -109,6 +109,9 @@ export function createHarness() {
 
   async function teardown() {
     globalThis.setTimeout = realSetTimeout;
+    try {
+      await import("../../services/game.service.js").then((m) => m.stopTimerLoop());
+    } catch {}
     if (snapshot) {
       const s = JSON.parse(snapshot);
       getDb().game = s.game;
