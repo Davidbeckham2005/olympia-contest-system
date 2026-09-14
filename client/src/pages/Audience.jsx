@@ -31,6 +31,8 @@ export default function Audience() {
   const { state, timer } = useGameState();
   const [flash, setFlash] = useState(null);
   const [scoreFlash, setScoreFlash] = useState([]);
+  const [veFlash, setVeFlash] = useState([]);
+  const prevScores = useRef({});
   const { audioOn, enableAudio } = useAudienceAudio(state);
 
   useEffect(() => {
@@ -57,6 +59,29 @@ export default function Audience() {
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lastResultAt]);
+
+  // VÒNG 4 (Về đích): server chấm qua markAnswer (không ghi lastResult) nên client tự dò đội
+  // vừa ĐỔI điểm bằng cách so score hiện tại với snapshot lần render trước, rồi nổi ô điểm
+  // của (các) đội đó một lúc ngắn — hiệu ứng tối giản giống scoreFlash vòng 2.
+  const veRound = state?.game?.round === "ve_dich";
+  useEffect(() => {
+    const teams = state?.teams || [];
+    if (!veRound || !teams.length) {
+      setVeFlash([]);
+      prevScores.current = {};
+      return undefined;
+    }
+    const cur = {};
+    teams.forEach((t) => { cur[t.id] = t.score; });
+    const prev = prevScores.current;
+    const changed = teams.filter((t) => prev[t.id] != null && prev[t.id] !== t.score).map((t) => t.id);
+    prevScores.current = cur;
+    if (!changed.length) return undefined;
+    setVeFlash(changed);
+    const t = setTimeout(() => setVeFlash([]), 2200);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [veRound, state?.teams]);
 
   if (!state) {
     return <div className="min-h-screen grid place-items-center text-mist">Đang kết nối màn hình…</div>;
@@ -352,8 +377,8 @@ export default function Audience() {
       </div>
 
       <div className="relative z-10">
-        <TeamsRow teams={outTeams} state={state} flash={flash} currentTeam={g.round === "ve_dich" ? g.currentTeam : ""} scoreFlash={scoreFlash} steadyFlash={answersPreview}>
-          {g.round === "ve_dich" && <Round4Footer state={state} g={g} />}
+        <TeamsRow teams={outTeams} state={state} flash={flash} currentTeam={g.round === "ve_dich" ? g.currentTeam : ""} scoreFlash={veFlash.length ? veFlash : scoreFlash} steadyFlash={answersPreview}>
+          {g.round === "ve_dich" && <Round4Footer state={state} g={g} flash={veFlash} />}
           {g.round === "vuot_cnv" && d.mode === "question" && <Round2QuestionStrip state={state} d={d} g={g} />}
         </TeamsRow>
       </div>
@@ -741,7 +766,7 @@ function Round4Stage({ state, g, timer }) {
 
 // MÀN CÂU HỎI VÒNG 4 — nằm DƯỚI thanh bar đội: bên trái câu hỏi + đáp án, bên phải ô
 // ĐIỂM (phía trên là GÓI CÂU đội đã chọn). Bố cục tham khảo khung dưới round 1.
-function Round4Footer({ state, g }) {
+function Round4Footer({ state, g, flash = [] }) {
   const d = g.display || {};
   const ved = g.veDich || {};
   const activeTeam = state.teams.find((t) => t.id === g.currentTeam);
@@ -749,6 +774,7 @@ function Round4Footer({ state, g }) {
   const hasPackage = pkg === 60 || pkg === 80 || pkg === 100;
   const phase = ved.phase || "soan";
   const inQuestion = d.mode === "question" && !!d.question;
+  const justScored = activeTeam && (flash || []).includes(activeTeam.id);
   const phaseLabel =
     phase === "countdown"
       ? "Chuẩn bị thi (3 • 2 • 1)…"
@@ -783,7 +809,7 @@ function Round4Footer({ state, g }) {
           <div className="font-display text-white/70 text-[clamp(14px,2vw,20px)]">{phaseLabel}</div>
         )}
       </div>
-      <div className="shrink-0 flex flex-col items-center justify-center gap-0.5 px-6 py-2.5 bg-[#ffd60a]/15">
+      <div className={`shrink-0 flex flex-col items-center justify-center gap-0.5 px-6 py-2.5 bg-[#ffd60a]/15 ${justScored ? "team-buzz" : ""}`}>
         {hasPackage && (
           <div className="kicker text-[10px] tracking-[0.2em] text-white/70">GÓI {pkg}Đ</div>
         )}
