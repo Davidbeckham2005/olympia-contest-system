@@ -503,6 +503,33 @@
   }
 }
 
+/* ---------- Home background ---------- */
+.home-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+}
+.home-bg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: url("https://picsum.photos/id/1015/1920/1080") center/cover no-repeat;
+}
+.home-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(7, 11, 22, 0.78);
+}
+
+[data-theme="light"] .home-overlay {
+  background: rgba(238, 242, 248, 0.72);
+}
+
+/* Bỏ bo góc cho cards trang chủ */
+.home-bg .panel {
+  border-radius: 0;
+}
+
 @keyframes pulse {
   50% {
     opacity: 0.55;

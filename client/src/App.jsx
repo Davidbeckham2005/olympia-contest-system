@@ -43,7 +43,7 @@ export default function App() {
         title={theme === "dark" ? "Bật chế độ sáng" : "Bật chế độ tối"}
         aria-label="Đổi giao diện"
         className={`fixed bottom-5 right-5 z-50 grid h-11 w-11 place-items-center rounded-full border bg-panel border-line text-xl shadow-lg transition hover:scale-105 ${
-          ["/man-hinh", "/thi-sinh", "/vong-1", "/chuong"].includes(pathname) ? "hidden" : ""
+          ["/man-hinh", "/thi-sinh", "/thi", "/ket-qua", "/vong-1", "/chuong"].includes(pathname) ? "hidden" : ""
         }`}
       >
         {theme === "dark" ? "☀️" : "🌙"}
