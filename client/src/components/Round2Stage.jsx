@@ -105,14 +105,13 @@ function Round2Context({ g, state, title, showStatus = true, hideScored = false 
   return (
     <div className="mb-6 text-center flex flex-col items-center gap-2">
       <div className="kicker tracking-[0.28em]">VÒNG 2 · VƯỢT CHƯỚNG NGẠI VẬT</div>
-      {showStatus && (
+      {showStatus && !keywordPhase && (
         <div className="flex flex-wrap items-center justify-center gap-2">
           {hasRow && (isCenter
             ? <span className="badge badge-warn">CÂU HỎI MẢNH GHÉP TRUNG TÂM</span>
             : <span className="badge">HÀNG {row}/4</span>
           )}
           {!scoredBadge && <span className={`badge ${tone}`}>{status}</span>}
-          {keywordPhase && <span className="badge badge-warn">ĐOÁN TỪ KHÓA</span>}
         </div>
       )}
       {claim && (
