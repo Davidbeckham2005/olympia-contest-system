@@ -7,6 +7,10 @@ dotenv.config({ path: path.join(__dirname, "../../.env") });
 
 export const config = {
   port: Number(process.env.PORT) || 3001,
+  // Production (NODE_ENV=production): khu vực ban tổ chức CHỈ mở với ADMIN_TOKEN từ env.
+  // Không set token khi production → toàn bộ /admin + /control bị chặn (401).
+  isProduction: process.env.NODE_ENV === "production",
+  adminToken: process.env.ADMIN_TOKEN || "",
   cloudinary: {
     cloudName: process.env.CLOUDINARY_CLOUD_NAME || "",
     apiKey: process.env.CLOUDINARY_API_KEY || "",

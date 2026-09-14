@@ -1,4 +1,5 @@
 import { getDb } from "../models/store.js";
+import { checkPin } from "../middleware/requirePin.js";
 import * as game from "../services/game.service.js";
 import { emitEvent } from "../config/io.js";
 
@@ -8,7 +9,7 @@ const actions = {
   // khẩu admin để tránh xóa nhầm trạng thái đang thi dở.
   "round.start": (p) => {
     if (p.round === getDb().game.round) {
-      if (!p.pin || p.pin !== getDb().settings.pin) {
+      if (!checkPin(p.pin)) {
         const err = new Error("Cần mật khẩu admin để reset vòng đang chạy.");
         err.status = 401;
         throw err;
@@ -47,7 +48,7 @@ const actions = {
       gg.timer?.running &&
       Number(p.questionIndex) !== Number(gg.questionIndex)
     ) {
-      if (String(p.pin ?? "") !== String(db.settings.pin)) {
+      if (!checkPin(p.pin)) {
         const err = new Error("Đang chiếu video Tăng tốc — cần mật khẩu admin để đổi câu.");
         err.status = 401;
         throw err;
@@ -67,8 +68,7 @@ const actions = {
   "khoi_dong.reset": (p) => {
     // Reset trạng thái (điểm/history) của thí sinh trong vòng Khởi động là thao tác
     // DESTRUCTIVE — mỗi ADMIN mới được lưu lượng. Yêu cầu mật khẩu admin mỗi lần.
-    const db = getDb();
-    if (String(p.pin ?? "") !== String(db.settings.pin)) {
+    if (!checkPin(p.pin)) {
       const err = new Error("Reset trạng thái Khởi động cần mật khẩu admin để xác nhận.");
       err.status = 401;
       throw err;
@@ -140,7 +140,7 @@ const actions = {
   "contest.finish": () => game.finishContest(),
   "contest.resetGame": () => game.resetGameKeepTeams(),
   "main.resetQuestions": (p) => {
-    if (p.pin !== getDb().settings.pin) {
+    if (!checkPin(p.pin)) {
       const err = new Error("Sai PIN ban tổ chức — không thể reset câu hỏi.");
       err.status = 401;
       throw err;

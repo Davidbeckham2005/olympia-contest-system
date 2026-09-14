@@ -1,5 +1,6 @@
   import { getDb, saveDb, defaultGame, emptyPuzzle, ROUNDS, roundsView } from "../models/store.js";
   import { TEAM_ORDER } from "../config/constants.js";
+  import { checkPin } from "../middleware/requirePin.js";
   import * as cnv from "./rounds/vuotCnv.service.js";
   import * as vedich from "./rounds/veDich.service.js";
 
@@ -1488,7 +1489,7 @@ if (game.round === "khoi_dong") {
   // (resumeFrom) để bấm "Chiếu video" lần sau sẽ đếm ngược rồi phát tiếp từ chỗ cũ.
   export function tangTocStop(pin) {
     const db = getDb();
-    if (String(pin ?? "") !== String(db.settings.pin)) {
+    if (!checkPin(pin)) {
       const err = new Error("Mật khẩu không đúng — không được phép dừng video.");
       err.status = 401;
       throw err;

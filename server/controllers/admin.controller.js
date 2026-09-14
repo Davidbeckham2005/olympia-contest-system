@@ -1,5 +1,6 @@
   import { getDb, saveDb, resetContest, normalizeMainKhoiDong, normalizeMainVeDich, normalizeMainTieBreak } from "../models/store.js";
   import { SOUND_SLOTS, emptySounds } from "../models/Sound.js";
+  import { checkPin } from "../middleware/requirePin.js";
   import { publicState, adminState } from "../services/state.service.js";
   import * as exam from "../services/exam.service.js";
   import * as vedich from "../services/rounds/veDich.service.js";
@@ -9,7 +10,7 @@
   import { uploadToCloudinary, utf8Name } from "../middleware/upload.js";
 
   export function login(req) {
-    if (req.body.pin !== getDb().settings.pin) {
+    if (!checkPin(req.body.pin)) {
       const err = new Error("Sai mã PIN.");
       err.status = 401;
       throw err;
