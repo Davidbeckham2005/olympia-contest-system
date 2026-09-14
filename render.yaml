@@ -31,6 +31,8 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "22"
+      - key: NODE_ENV
+        value: production
       - key: DB_CLIENT
         value: postgres
       - key: DB_SSL
@@ -39,6 +41,11 @@ services:
         fromDatabase:
           name: cuoc-thi-db
           property: connectionString
+      # BẮT BUỘC đặt trong Render dashboard (Secret File / Env Var): chuỗi bí mật dùng
+      # làm ADMIN_TOKEN đăng nhập khu vực ban tổ chức (/admin, /mc). Không đặt → toàn
+      # bộ khu vực BTC bị chặn (401).
+      - key: ADMIN_TOKEN
+        sync: false
       - key: CLOUDINARY_CLOUD_NAME
         sync: false
       - key: CLOUDINARY_API_KEY

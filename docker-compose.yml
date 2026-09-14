@@ -9,6 +9,9 @@ services:
     environment:
       - PORT=3001
       - DB_CLIENT=sqlite
+      # BẮT BUỘC đặt: ADMIN_TOKEN bảo vệ khu vực ban tổ chức (/admin, /mc).
+      # Dockerfile đã set NODE_ENV=production → không đặt token này thì BTC bị khóa (401).
+      - ADMIN_TOKEN=${ADMIN_TOKEN:-}
     volumes:
       # Giữ dữ liệu (SQLite) bền vững giữa các lần restart/redeploy
       - ./server/data:/app/server/data
