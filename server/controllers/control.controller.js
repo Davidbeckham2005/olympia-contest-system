@@ -109,6 +109,7 @@ const actions = {
   "vedich.unlock": () => game.vedichUnlockPackage(),
   "vedich.start": () => game.vedichStartGame(),
   "vedich.startAnswer": () => game.startVedichAnswerTimer(),
+  "vedich.revealAnswer": () => game.vedichRevealAnswer(),
   "tangtoc.submit": (p) => game.submitTangToc(p.teamId, p.answer),
   "tangtoc.play": () => game.tangTocPlay(),
   "tangtoc.countdown": () => game.tangTocStartCountdown(),

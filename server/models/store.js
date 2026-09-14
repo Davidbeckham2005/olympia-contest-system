@@ -85,16 +85,22 @@ function normalizeVeDichPoints(p) {
   return 30;
 }
 
-// Chuẩn hóa dữ liệu câu Về đích về NGÂN HÀNG CHUNG dạng mảng — KHÔNG phụ thuộc số đội.
-// Dữ liệu cũ (object { teamId: [câu...] }) được dẹp phẳng thành mảng chung, khử trùng theo id,
-// để server (Vòng 4) với bất kỳ số đội nào cũng lấy câu từ cùng một ngân hàng.
+// Chuẩn hóa dữ liệu câu Về đích về dạng mảng, GIỮ NGUYÊN thông tin gán đội/gói.
+// Mỗi câu có thể mang teamId ("a".."f"), pkg (60/80/100) và order (1-4) = vị trí câu
+// trong gói — do Admin gán cố định lúc nhập từ Excel. Câu không có teamId là câu SPARE
+// (không thuộc gói nào, không được đưa ra thi).
+// Dữ liệu cũ (object { teamId: [câu...] }) vẫn được dẹp phẳng thành mảng chung, khử trùng id.
 export function normalizeMainVeDich(main) {
   if (!main) return main;
   const fixed = { ...main };
   const normQ = (q) => {
     const base = (q && typeof q === "object") ? q : {};
     const points = normalizeVeDichPoints(base.points);
-    return { ...base, id: base.id || `vd-migrate-${Math.random().toString(36).slice(2, 8)}`, points, auto: !!base.auto };
+    const pkg = [60, 80, 100].includes(Number(base.pkg)) ? Number(base.pkg) : base.pkg;
+    const order = Number.isInteger(Number(base.order)) && Number(base.order) > 0 ? Number(base.order) : base.order;
+    const rest = { ...base };
+    delete rest.auto;
+    return { ...rest, id: base.id || `vd-migrate-${Math.random().toString(36).slice(2, 8)}`, points, pkg, order };
   };
   const raw = main.veDich;
   if (Array.isArray(raw)) {
@@ -202,7 +208,8 @@ async function assemble() {
       return { ...def, memberIds: [], score: 0 };
     });
     // Hợp nhất câu hỏi main: giữ dữ liệu đã lưu, bổ sung khối dữ liệu đội mới (khoiDong e/f)
-    // từ JSON để vòng 1 chạy được với 6 đội. veDich là NGÂN HÀNG CHUNG (mảng), không theo đội.
+    // từ JSON để vòng 1 chạy được với 6 đội. veDich là dạng MẢNG — mỗi câu gắn teamId/pkg
+    // (câu gán cố định cho đội/gói) hoặc để trống nếu là câu spare.
     const dbMain = main || fallback.questions.main;
     const freshMain = fallback.questions.main;
     const mergedMain = { ...dbMain };
@@ -215,10 +222,10 @@ async function assemble() {
       settings: { ...fallback.settings, ...settings },
       teams: mergedTeams,
       contestants,
-        questions: {
-          soKhao: soKhao.length ? soKhao : fallback.questions.soKhao,
-          main: normalizeMainKhoiDong(normalizeMainVeDich(normalizeMainTieBreak(mergedMain))),
-        },
+      questions: {
+        soKhao: soKhao.length ? soKhao : fallback.questions.soKhao,
+        main: normalizeMainKhoiDong(normalizeMainVeDich(normalizeMainTieBreak(mergedMain))),
+      },
       media,
       sounds,
       rules,
@@ -245,10 +252,10 @@ export async function loadDb() {
       settings: { ...defaultDb().settings, ...(json.settings || {}) },
       sounds: { ...Sound.emptySounds(), ...(json.sounds || {}) },
       rules: { ...(json.rules || {}) },
-        questions: {
-          soKhao: soKhao.length ? soKhao : fallback.questions.soKhao,
-          main: normalizeMainKhoiDong(normalizeMainVeDich(normalizeMainTieBreak(json.questions?.main || defaultDb().questions.main))),
-        },
+      questions: {
+        soKhao: soKhao.length ? soKhao : fallback.questions.soKhao,
+        main: normalizeMainKhoiDong(normalizeMainVeDich(normalizeMainTieBreak(json.questions?.main || defaultDb().questions.main))),
+      },
     };
     if (!db.game) db.game = defaultGame();
   } else {
@@ -279,10 +286,10 @@ export async function resetContest(keepQuestions = true) {
   const prev = getDb();
   const next = defaultDb();
   if (keepQuestions) next.questions = prev.questions;
-    next.media = prev.media || [];
-    next.sounds = prev.sounds || Sound.emptySounds();
-    next.rules = prev.rules || {};
-    next.settings = { ...next.settings, ...prev.settings, prelimOpen: false };
+  next.media = prev.media || [];
+  next.sounds = prev.sounds || Sound.emptySounds();
+  next.rules = prev.rules || {};
+  next.settings = { ...next.settings, ...prev.settings, prelimOpen: false };
   db = next;
   await persist(db);
   return db;

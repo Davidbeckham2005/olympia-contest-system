@@ -3,6 +3,7 @@
 //   - parseVeDichRows nhận dạng header tiếng Việt/Anh, chuẩn mức điểm;
 //   - importVeDichFile: thêm câu mới, bỏ qua câu trùng nội dung, thống kê đúng;
 //   - test tự khôi phục DB về trạng thái trước khi chạy.
+import fs from "fs";
 import { connectDb } from "../config/database.js";
 import { loadDb, getDb, saveDbSync } from "../models/store.js";
 import * as vedich from "../services/rounds/veDich.service.js";
@@ -46,11 +47,20 @@ const en = vedich.parseVeDichRows([{ points: "40", question: "Q?", answer: "A" }
 ok(en.length === 2 && en[0].points === 30, "mức 40đ lạ chuẩn về 30đ");
 ok(en[1].points === 20 && en[1].question === "Q2" && en[1].answer === "K", "nhận dạng cột tiếng Anh (Score/Question/Key)");
 
+// 3b) Excel mẫu có tiêu đề lớn + tiêu đề nhóm/gói trước header thật.
+const template = fs.readFileSync(new URL("../../client/public/files/template-cau-hoi-ve-dich.xlsx", import.meta.url));
+const templateRows = vedich.parseVeDichXlsx(template);
+ok(templateRows.length === 48, "Excel mẫu đọc đủ 48 dòng câu hỏi");
+ok(
+  templateRows[0]?.team === "ĐỘI A" && templateRows[0]?.pkg === 60 && templateRows[0]?.points === 10,
+  "Excel mẫu nhận đúng Đội/Gói/Điểm từ header thật"
+);
+
 // 4) Import thật vào ngân hàng chung + khôi phục DB.
 let snapshot = null;
 try {
   await loadDb();
-  vedich.init({ emit: () => {} });
+  vedich.init({ emit: () => { } });
   snapshot = JSON.stringify(getDb().questions.main.veDich);
 
   const bank = getDb().questions.main.veDich;
@@ -78,6 +88,40 @@ try {
     await saveDbSync();
     console.log("Đã khôi phục DB về trạng thái ban đầu.");
   }
+}
+
+// 5) Import có cột Đội + Gói → gán fixed teamId/pkg/order và trả về trạng thái gói theo đội.
+try {
+  await loadDb();
+  vedich.init({ emit: () => { } });
+
+  const bank2 = getDb().questions.main.veDich;
+  const snapshot2 = JSON.stringify(bank2);
+  try {
+    const csvT = "Đội,Gói,Điểm,Câu hỏi,Đáp án\nĐội A,60,10,Câu gói A mới 1,Đáp 1\nĐội A,60,20,Câu gói A mới 2,Đáp 2\nĐội B,80,30,Câu gói B mới 1,Đáp 3\nĐội Xyz,60,10,Câu đội lạ,Đáp 4\nĐội A,999,10,Câu gói lạ,Đáp 5\n,100,20,Câu spare có gói nhưng không đội,Đáp 6\n";
+    const r3 = vedich.importVeDichFile(csvBuffer(csvT), "t.csv");
+    const newQs = r3.questions;
+    const qA1 = newQs.find((q) => q.teamId === "a" && q.pkg === 60 && q.question === "Câu gói A mới 1");
+    const qA2 = newQs.find((q) => q.teamId === "a" && q.pkg === 60 && q.question === "Câu gói A mới 2");
+    const qB1 = newQs.find((q) => q.teamId === "b" && q.pkg === 80 && q.question === "Câu gói B mới 1");
+    const qName = newQs.find((q) => q.question === "Câu gói A mới 1");
+    ok(qA1?.order && qA2?.order && qA2.order === qA1.order + 1, "order của câu trong cùng (đội,gói) tăng liên tục (5, 6 sau mãng seed 4)");
+    ok(qB1?.order, "order tính riêng cho từng (đội,gói)");
+    ok(qName && qName.teamId === "a" && qName.pkg === 60, "resolve tên đội Đội A → teamId a, gói 60");
+    ok((r3.errors || []).some((e) => String(e).includes("Đội Xyz")), "đội không tồn tại → dòng lỗi");
+    ok((r3.errors || []).some((e) => String(e).includes("999")), "gói không hợp lệ → dòng lỗi");
+    ok(r3.questions.some((q) => q.question === "Câu spare có gói nhưng không đội" && !q.teamId), "không khai đội → câu spare (không gán)");
+    const teamAVd = (r3.teams || []).find((t) => t.teamId === "a");
+    ok(teamAVd && Number(teamAVd.packages[60]?.have) >= 6, "import trả về teams: gói 60 của Đội A đếm đủ câu (4 seed + 2 mới = 6)");
+  } finally {
+    const db2 = getDb();
+    db2.questions.main.veDich = JSON.parse(snapshot2);
+    await saveDbSync();
+    console.log("Đã khôi phục DB khỏi test nhập đội/gói.");
+  }
+} catch (err) {
+  fail += 1;
+  console.error("ERROR:", err.message);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

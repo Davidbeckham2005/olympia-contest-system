@@ -23,6 +23,7 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
-    "concurrently": "^9.1.2"
+    "concurrently": "^9.1.2",
+    "xlsx-js-style": "^1.2.0"
   }
 }

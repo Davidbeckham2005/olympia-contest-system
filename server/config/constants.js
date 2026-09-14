@@ -47,9 +47,9 @@ export const ROUNDS = [
     id: "ve_dich",
     name: "Về đích",
     rules: [
-      "Mỗi đội chọn 1 gói từ ngân hàng: 60 (10+10+20+20), 80 (10+20+20+30) hoặc 100 (20+20+30+30) — mỗi gói 4 câu.",
+      "Mỗi đội có sẵn 3 gói câu hỏi cố định từ Excel (60đ: 10+10+20+20 · 80đ: 10+20+20+30 · 100đ: 20+20+30+30); MC chọn 1 gói thi — mỗi gói 4 câu.",
       "Các thành viên tự sắp xếp, mỗi người trả lời 1 câu trong gói 4 câu.",
-      "Vừa đọc câu hỏi vừa trả lời: câu 10đ = 30s · 20đ = 45s · 30đ = 60s.",
+      "Vừa đọc câu hỏi vừa trả lời: câu 10đ = 20s · 20đ = 30s · 30đ = 40s.",
       "Mỗi đội có 1 ngôi sao hy vọng, đặt ở bất kỳ câu hỏi nào trước khi câu hỏi đưa ra.",
       "Đội chọn gói — Đúng: hưởng điểm câu hỏi. Sai: không ai trả lời được thì không trừ điểm.",
       "Sai mà đội khác trả lời đúng: đội đang thi trừ đúng số điểm, đội trả lời đúng nhận số điểm đó.",

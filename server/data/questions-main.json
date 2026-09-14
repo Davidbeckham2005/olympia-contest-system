@@ -990,235 +990,352 @@
       "id": "vd-10-1",
       "points": 10,
       "question": "Thủ đô của Việt Nam là thành phố nào?",
-      "answer": "Hà Nội"
+      "answer": "Hà Nội",
+      "teamId": "a",
+      "pkg": 60,
+      "order": 1
     },
     {
       "id": "vd-10-2",
       "points": 10,
       "question": "1 + 1 bằng mấy?",
-      "answer": "2"
+      "answer": "2",
+      "teamId": "a",
+      "pkg": 60,
+      "order": 2
     },
     {
       "id": "vd-10-3",
       "points": 10,
       "question": "Bán cầu nào đang vào mùa lạnh khi Bắc bán cầu vào mùa hè?",
-      "answer": "Nam bán cầu"
+      "answer": "Nam bán cầu",
+      "teamId": "a",
+      "pkg": 80,
+      "order": 1
     },
     {
       "id": "vd-10-4",
       "points": 10,
       "question": "Hệ mặt trời có bao nhiêu hành tinh?",
-      "answer": "8"
+      "answer": "8",
+      "teamId": "b",
+      "pkg": 60,
+      "order": 1
     },
     {
       "id": "vd-10-5",
       "points": 10,
       "question": "Tác giả của truyện “Tắt đèn” là ai?",
-      "answer": "Ngô Tất Tố"
+      "answer": "Ngô Tất Tố",
+      "teamId": "b",
+      "pkg": 60,
+      "order": 2
     },
     {
       "id": "vd-10-6",
       "points": 10,
       "question": "Đồng bằng sông nào lớn nhất Việt Nam?",
-      "answer": "Sông Cửu Long"
+      "answer": "Sông Cửu Long",
+      "teamId": "b",
+      "pkg": 80,
+      "order": 1
     },
     {
       "id": "vd-10-7",
       "points": 10,
       "question": "Năm 2026 bắt đầu vào ngày nào theo Dương lịch?",
-      "answer": "1 tháng 1"
+      "answer": "1 tháng 1",
+      "teamId": "c",
+      "pkg": 60,
+      "order": 1
     },
     {
       "id": "vd-10-8",
       "points": 10,
       "question": "Thủ đô của nước Anh là thành phố nào?",
-      "answer": "London"
+      "answer": "London",
+      "teamId": "c",
+      "pkg": 60,
+      "order": 2
     },
     {
       "id": "vd-10-9",
       "points": 10,
       "question": "Đơn vị đo nhiệt độ phổ biến ở Việt Nam là gì?",
-      "answer": "Độ C (Celsius)"
+      "answer": "Độ C (Celsius)",
+      "teamId": "c",
+      "pkg": 80,
+      "order": 1
     },
     {
       "id": "vd-10-10",
       "points": 10,
       "question": "Từ nào viết đúng chính tả: “tấp nập” hay “tậP nập”?",
-      "answer": "Tấp nập"
+      "answer": "Tấp nập",
+      "teamId": "d",
+      "pkg": 60,
+      "order": 1
     },
     {
       "id": "vd-10-11",
       "points": 10,
       "question": "Đàn bò trong nông trại có 12 con, bị lạc 3 con. Còn lại mấy con?",
-      "answer": "9 con"
+      "answer": "9 con",
+      "teamId": "d",
+      "pkg": 60,
+      "order": 2
     },
     {
       "id": "vd-10-12",
       "points": 10,
       "question": "Loài chim biểu tượng của hòa bình là gì?",
-      "answer": "Chim bồ câu"
+      "answer": "Chim bồ câu",
+      "teamId": "d",
+      "pkg": 80,
+      "order": 1
     },
     {
       "id": "vd-20-extra-1",
       "points": 20,
       "question": "Thành phố nào được gọi là “thủ đô hoa phượng đỏ”?",
-      "answer": "Hải Phòng"
+      "answer": "Hải Phòng",
+      "teamId": "a",
+      "pkg": 80,
+      "order": 3
     },
     {
       "id": "vd-20-extra-2",
       "points": 20,
       "question": "Năm nào Đảng Cộng sản Việt Nam thành lập?",
-      "answer": "1930"
+      "answer": "1930",
+      "teamId": "a",
+      "pkg": 100,
+      "order": 1
     },
     {
       "id": "vd-20-extra-3",
       "points": 20,
       "question": "Nhà toán học Việt Nam nổi tiếng với bài toán Hà Nội tháp là ai?",
-      "answer": "Không xác định (Thuật toán tháp Hà Nội do Édouard Lucas đề xuất)"
+      "answer": "Không xác định (Thuật toán tháp Hà Nội do Édouard Lucas đề xuất)",
+      "teamId": "a",
+      "pkg": 100,
+      "order": 2
     },
     {
       "id": "vd-20-extra-4",
       "points": 20,
       "question": "Đỉnh núi cao nhất Việt Nam là gì?",
-      "answer": "Phan-xi-păng"
+      "answer": "Phan-xi-păng",
+      "teamId": "b",
+      "pkg": 80,
+      "order": 3
     },
     {
       "id": "vd-20-extra-5",
       "points": 20,
       "question": "Vua Hùng thứ 18 tên thật là gì?",
-      "answer": "Hùng Duệ Vương"
+      "answer": "Hùng Duệ Vương",
+      "teamId": "b",
+      "pkg": 100,
+      "order": 1
     },
     {
       "id": "vd-20-extra-6",
       "points": 20,
       "question": "Vùng nào ở Việt Nam có nhiều di sản thiên nhiên thế giới nhất?",
-      "answer": "Quảng Ninh"
+      "answer": "Quảng Ninh",
+      "teamId": "b",
+      "pkg": 100,
+      "order": 2
     },
     {
       "id": "vd-a-20-1",
       "points": 20,
       "question": "Thủ đô của Pháp là thành phố nào?",
-      "answer": "Paris"
+      "answer": "Paris",
+      "teamId": "a",
+      "pkg": 60,
+      "order": 3
     },
     {
       "id": "vd-a-20-2",
       "points": 20,
       "question": "Sông nào dài nhất Việt Nam?",
-      "answer": "Sông Hồng"
+      "answer": "Sông Hồng",
+      "teamId": "a",
+      "pkg": 60,
+      "order": 4
     },
     {
       "id": "vd-a-20-3",
       "points": 20,
       "question": "Đơn vị tiền tệ chính thức của Hoa Kỳ là gì?",
-      "answer": "Đô la Mỹ"
+      "answer": "Đô la Mỹ",
+      "teamId": "a",
+      "pkg": 80,
+      "order": 2
     },
     {
       "id": "vd-b-20-1",
       "points": 20,
       "question": "Hành tinh lớn nhất hệ Mặt Trời là gì?",
-      "answer": "Sao Mộc"
+      "answer": "Sao Mộc",
+      "teamId": "b",
+      "pkg": 60,
+      "order": 3
     },
     {
       "id": "vd-b-20-2",
       "points": 20,
       "question": "Con vật nào được mệnh danh là 'vua của rừng xanh'?",
-      "answer": "Sư tử"
+      "answer": "Sư tử",
+      "teamId": "b",
+      "pkg": 60,
+      "order": 4
     },
     {
       "id": "vd-b-20-3",
       "points": 20,
       "question": "Biển nào lớn nhất thế giới?",
-      "answer": "Thái Bình Dương"
+      "answer": "Thái Bình Dương",
+      "teamId": "b",
+      "pkg": 80,
+      "order": 2
     },
     {
       "id": "vd-c-20-1",
       "points": 20,
       "question": "Đơn vị đo điện trở là gì?",
-      "answer": "Ohm"
+      "answer": "Ohm",
+      "teamId": "c",
+      "pkg": 60,
+      "order": 3
     },
     {
       "id": "vd-c-20-2",
       "points": 20,
       "question": "Quốc gia nào có diện tích lớn nhất thế giới?",
-      "answer": "Nga"
+      "answer": "Nga",
+      "teamId": "c",
+      "pkg": 60,
+      "order": 4
     },
     {
       "id": "vd-c-20-3",
       "points": 20,
       "question": "Nguyên tố hóa học nhẹ nhất là gì?",
-      "answer": "Hydro"
+      "answer": "Hydro",
+      "teamId": "c",
+      "pkg": 80,
+      "order": 2
     },
     {
       "id": "vd-d-20-1",
       "points": 20,
       "question": "Biển lớn nhất thế giới là gì?",
-      "answer": "Thái Bình Dương"
+      "answer": "Thái Bình Dương",
+      "teamId": "d",
+      "pkg": 60,
+      "order": 3
     },
     {
       "id": "vd-d-20-2",
       "points": 20,
       "question": "Loài chim nào không biết bay?",
-      "answer": "Đà điểu"
+      "answer": "Đà điểu",
+      "teamId": "d",
+      "pkg": 60,
+      "order": 4
     },
     {
       "id": "vd-d-20-3",
       "points": 20,
       "question": "Đơn vị đo áp suất trong hệ SI là gì?",
-      "answer": "Pascal"
+      "answer": "Pascal",
+      "teamId": "d",
+      "pkg": 80,
+      "order": 2
     },
     {
       "id": "vd-e-20-1",
       "points": 20,
       "question": "Quốc gia nào có diện tích lớn nhất thế giới?",
-      "answer": "Nga"
+      "answer": "Nga",
+      "teamId": "c",
+      "pkg": 80,
+      "order": 3
     },
     {
       "id": "vd-e-20-2",
       "points": 20,
       "question": "Công cụ nào dùng để quan sát vũ trụ xa?",
-      "answer": "Kính thiên văn"
+      "answer": "Kính thiên văn",
+      "teamId": "c",
+      "pkg": 100,
+      "order": 1
     },
     {
       "id": "vd-e-20-3",
       "points": 20,
       "question": "Số nguyên tố nhỏ nhất là số mấy?",
-      "answer": "2"
+      "answer": "2",
+      "teamId": "c",
+      "pkg": 100,
+      "order": 2
     },
     {
       "id": "vd-f-20-1",
       "points": 20,
       "question": "Thủ đô của Nhật Bản là gì?",
-      "answer": "Tokyo"
+      "answer": "Tokyo",
+      "teamId": "d",
+      "pkg": 80,
+      "order": 3
     },
     {
       "id": "vd-f-20-2",
       "points": 20,
       "question": "Con vật nào có vòi dài nhất?",
-      "answer": "Voi"
+      "answer": "Voi",
+      "teamId": "d",
+      "pkg": 100,
+      "order": 1
     },
     {
       "id": "vd-f-20-3",
       "points": 20,
       "question": "1 cộng 1 bằng mấy?",
-      "answer": "2"
+      "answer": "2",
+      "teamId": "d",
+      "pkg": 100,
+      "order": 2
     },
     {
       "id": "vd-a-30-1",
       "points": 30,
       "question": "Ai là tác giả bản Tuyên ngôn Độc lập năm 1945 của Việt Nam?",
-      "answer": "Hồ Chí Minh"
+      "answer": "Hồ Chí Minh",
+      "teamId": "a",
+      "pkg": 80,
+      "order": 4
     },
     {
       "id": "vd-a-30-2",
       "points": 30,
       "question": "Công thức hóa học của nước là gì?",
-      "answer": "H2O"
+      "answer": "H2O",
+      "teamId": "a",
+      "pkg": 100,
+      "order": 3
     },
     {
       "id": "vd-a-30-3",
       "points": 30,
       "question": "Hành tinh đứng thứ ba tính từ Mặt Trời là?",
-      "answer": "Trái Đất"
+      "answer": "Trái Đất",
+      "teamId": "a",
+      "pkg": 100,
+      "order": 4
     },
     {
       "id": "vd-a-40-1",
@@ -1242,19 +1359,28 @@
       "id": "vd-b-30-1",
       "points": 30,
       "question": "Nhà Trần ba lần đánh thắng quân xâm lược nào?",
-      "answer": "Nguyên Mông"
+      "answer": "Nguyên Mông",
+      "teamId": "b",
+      "pkg": 80,
+      "order": 4
     },
     {
       "id": "vd-b-30-2",
       "points": 30,
       "question": "Đơn vị đo cường độ dòng điện là gì?",
-      "answer": "Ampe"
+      "answer": "Ampe",
+      "teamId": "b",
+      "pkg": 100,
+      "order": 3
     },
     {
       "id": "vd-b-30-3",
       "points": 30,
       "question": "Ai đã phát minh ra bóng đèn điện?",
-      "answer": "Thomas Edison"
+      "answer": "Thomas Edison",
+      "teamId": "b",
+      "pkg": 100,
+      "order": 4
     },
     {
       "id": "vd-b-40-1",
@@ -1278,19 +1404,28 @@
       "id": "vd-c-30-1",
       "points": 30,
       "question": "Tác giả \"Chí Phèo\" còn viết truyện ngắn nào kể về một ông lão và con chó Vàng?",
-      "answer": "Lão Hạc"
+      "answer": "Lão Hạc",
+      "teamId": "c",
+      "pkg": 80,
+      "order": 4
     },
     {
       "id": "vd-c-30-2",
       "points": 30,
       "question": "Thành phố nào được gọi là 'thủ đô công nghiệp' của Việt Nam?",
-      "answer": "Hải Phòng"
+      "answer": "Hải Phòng",
+      "teamId": "c",
+      "pkg": 100,
+      "order": 3
     },
     {
       "id": "vd-c-30-3",
       "points": 30,
       "question": "Đơn vị đo tần số là gì?",
-      "answer": "Hertz"
+      "answer": "Hertz",
+      "teamId": "c",
+      "pkg": 100,
+      "order": 4
     },
     {
       "id": "vd-c-40-1",
@@ -1314,19 +1449,28 @@
       "id": "vd-d-30-1",
       "points": 30,
       "question": "Ai lãnh đạo khởi nghĩa Lam Sơn?",
-      "answer": "Lê Lợi"
+      "answer": "Lê Lợi",
+      "teamId": "d",
+      "pkg": 80,
+      "order": 4
     },
     {
       "id": "vd-d-30-2",
       "points": 30,
       "question": "Thủ đô của Úc là thành phố nào?",
-      "answer": "Canberra"
+      "answer": "Canberra",
+      "teamId": "d",
+      "pkg": 100,
+      "order": 3
     },
     {
       "id": "vd-d-30-3",
       "points": 30,
       "question": "Ai được mệnh danh là 'Ông tổ ngành vi trùng học'?",
-      "answer": "Louis Pasteur"
+      "answer": "Louis Pasteur",
+      "teamId": "d",
+      "pkg": 100,
+      "order": 4
     },
     {
       "id": "vd-d-40-1",

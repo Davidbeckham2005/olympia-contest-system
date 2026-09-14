@@ -163,21 +163,26 @@ letter-count hint. Each corner corresponds to one horizontal row.
 
 #### Round 4 — Về đích (Finish)
 
-Each team takes turns at the podium and the MC picks **one fixed question
-package** live:
+Each team plays **one fixed question package** prepared in advance from Excel
+(the MC picks which of the team's 3 packages is used live):
 
 | Package | Question structure |
 |---|---|
-| 60 | 10 + 10 + 20 |
-| 80 | 10 + 20 + 20 |
-| 100 | 20 + 20 + 30 |
+| 60 | 10 + 10 + 20 + 20 |
+| 80 | 10 + 20 + 20 + 30 |
+| 100 | 20 + 20 + 30 + 30 |
 
-- Every team has its own question bank (12×10, 24×20, 12×30 = 48 questions);
-  the server auto-picks 3 questions per package, never duplicates, and never
-  reuses a previously used question. Locking a package blocks changes.
+- Every team prepares **12 fixed questions** = 3 packages × 4 questions. Each
+  question in the bank is tagged with `teamId`, `pkg` (60/80/100) and `order` —
+  no random draw, no cross-team reuse.
+- Questions are imported via **Quản trị → Về đích**: a CSV/XLSX with columns
+  `Đội, Gói, Điểm, Câu hỏi, Đáp án`. Rows without a team/gói become spare
+  questions and are never asked. The admin panel shows a ✓/✗ per team × package
+  and lists how many questions are still missing.
+- Locking a package blocks changes afterwards.
 - **Ngôi sao hy vọng (Star of Hope)**: each team may mark one question ×2.
-- Per-question answering time depends on its points: **10 → 30s, 20 → 45s,
-  30 → 60s**. The MC reads the question, then presses **“Bắt đầu tính giờ”** to
+- Per-question answering time depends on its points: **10 → 20s, 20 → 30s,
+  30 → 40s**. The MC reads the question, then presses **“Bắt đầu tính giờ”** to
   start the countdown (timer is server-authoritative).
 - If the answering team is wrong, a **steal window opens** and the other teams
   race on the buzzer. The winning team answers with a fresh timer.
@@ -203,7 +208,7 @@ result is known (let `P` = the question’s base points):
 | Wrong, another team steals & answers correctly | `-2P` | `+2P` |
 | Wrong, another team steals & answers wrongly | `-P/2` | `-P` |
 
-After the 3 questions the team’s turn ends and play moves to the next top team.
+After the 4 questions the team’s turn ends and play moves to the next top team.
 
 #### Tie-break (Phụ phuc)
 

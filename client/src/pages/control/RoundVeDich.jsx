@@ -7,14 +7,12 @@ const PACKAGES = {
   100: [20, 20, 30, 30],
 };
 
-const ANSWER_SECONDS = { 10: 30, 20: 45, 30: 60 };
-
 export default function RoundVeDich({ ctx }) {
   const { g, state, act, remaining, q, pts, revealed, running, d } = ctx;
   if (g.round !== "ve_dich") return null;
 
   const activeTeam = state.teams.find((t) => t.id === g.currentTeam);
-  // Ngân hàng câu CHUNG — không gắn đội.
+  // Danh sách câu CHUNG trong DB — mỗi câu gắn teamId/pkg/order.
   const bank = Array.isArray(state.questions?.main?.veDich) ? state.questions.main.veDich : [];
   const pickedIds = (g.veDich?.picked || {})[g.currentTeam] || [];
   const picked = pickedIds
@@ -30,14 +28,30 @@ export default function RoundVeDich({ ctx }) {
   const pending = g.veDich?.stealPending || null;
   const winner = g.buzzer?.winner || null;
   const base = q?.points || g.veDich?.packagePoints || 20;
-  // Điểm team giành chuông NHẬN khi cướp quyền (khớp server calculateAnswerScore):
-  //   - Đúng: +P, NSHV +2P; hết giờ mở chuông (không có stealPending) chỉ +P.
-  //   - Sai: luôn −P (không nhân đôi).
   const stealCorrectPts = !pending ? base : (pending.star ? pending.base * 2 : pending.base);
   const stealWrongPts = pending ? pending.base : base;
   const pkg = g.veDich?.packagePoints;
   const hasPackage = pkg === 60 || pkg === 80 || pkg === 100;
-  const bankCounts = [10, 20, 30].map((lv) => bank.filter((x) => Number(x.points) === lv).length);
+
+  // Tình trạng 3 gói CỐ ĐỊNH của đội hiện tại (từ bank, không phụ thuộc runtime).
+  const teamPkgStatus = (() => {
+    const teamQs = bank.filter((x) => x.teamId === g.currentTeam);
+    const result = {};
+    for (const [total, structure] of Object.entries(PACKAGES)) {
+      const target = Number(total);
+      const qs = teamQs.filter((x) => x.pkg === target).sort((a, b) => (a.order || 0) - (b.order || 0));
+      const expectedCounts = {};
+      for (const lv of structure) expectedCounts[lv] = (expectedCounts[lv] || 0) + 1;
+      const haveCounts = {};
+      for (const x of qs) {
+        const lv = Number(x.points);
+        haveCounts[lv] = (haveCounts[lv] || 0) + 1;
+      }
+      const ok = qs.length === 4 && structure.every((lv) => expectedCounts[lv] === haveCounts[lv]);
+      result[target] = { count: qs.length, ok, points: qs.map((x) => x.points) };
+    }
+    return result;
+  })();
 
   const PACKAGE_LABEL = { 60: "60đ", 80: "80đ", 100: "100đ" };
 
@@ -59,24 +73,30 @@ export default function RoundVeDich({ ctx }) {
           {Object.entries(PACKAGES).map(([total, structure]) => {
             const totalVal = Number(total);
             const isCurrent = hasPackage && pkg === totalVal;
+            const st = teamPkgStatus[totalVal];
+            const ready = !!st?.ok;
+            const points = st?.points?.length ? st.points.map((p) => `${p}đ`).join(" · ") : "chưa gán câu";
             return (
               <button
                 key={total}
                 type="button"
                 disabled={locked}
                 onClick={() => selectPackage(totalVal)}
-                className={`border px-3 py-2 text-xs text-left transition ${
-                  isCurrent
+                className={`border px-3 py-2 text-xs text-left transition ${isCurrent
                     ? "border-ok bg-ok/10"
                     : "border-dashed border-line hover:border-gold/50"
-                }`}
+                  }`}
               >
                 <div className="flex justify-between items-center gap-2">
                   <span className="text-base font-bold text-gold">Gói {totalVal}đ</span>
-                  <span className={isCurrent ? "text-ok" : "text-mist"}>
-                    {structure.join(" + ")} điểm
+                  <span className={ready ? "text-ok" : "text-danger"}>
+                    {ready ? `✓ ${structure.join(" + ")}` : `✗ ${st?.count || 0}/4 câu`}
                   </span>
                   {isCurrent && <span className="text-ok text-xs shrink-0">● ĐANG CHỌN</span>}
+                </div>
+                <div className="text-mist mt-1 flex items-center gap-2 flex-wrap">
+                  <span className="text-xs">{points}</span>
+                  {!ready && <span className="text-danger text-xs">Bổ sung trong mục Quản trị → Về đích</span>}
                 </div>
               </button>
             );
@@ -91,9 +111,8 @@ export default function RoundVeDich({ ctx }) {
               return (
                 <div
                   key={idx}
-                  className={`border px-3 py-2 text-xs flex justify-between items-center gap-2 ${
-                    isCurrent ? "border-gold bg-gold/10" : "border-line"
-                  }`}
+                  className={`border px-3 py-2 text-xs flex justify-between items-center gap-2 ${isCurrent ? "border-gold bg-gold/10" : "border-line"
+                    }`}
                 >
                   <span>
                     <span className="text-gold font-bold">Câu {idx + 1}</span>{" "}
@@ -118,8 +137,15 @@ export default function RoundVeDich({ ctx }) {
           </button>
         )}
         <p className="text-mist text-xs mt-2">
-          Ngân hàng chung: {bankCounts[0]} câu 10đ • {bankCounts[1]} câu 20đ • {bankCounts[2]} câu 30đ
-          {g.veDich?.usedQuestionIds?.length ? ` • đã dùng ${g.veDich.usedQuestionIds.length} câu` : ""}
+          {Object.entries(teamPkgStatus).map(([total, st]) => (
+            <span key={total} className="mr-2">
+              Gói {total}đ {st?.ok ? "✓" : `✗ (${st?.count || 0}/4)`}
+            </span>
+          ))}
+          <span>— {activeTeam?.name || g.currentTeam?.toUpperCase()}</span>
+          {!Object.values(teamPkgStatus).some((s) => s?.ok) && (
+            <span className="text-danger"> • chưa đủ gói, cần nhập Excel</span>
+          )}
         </p>
       </section>
 
@@ -173,36 +199,45 @@ export default function RoundVeDich({ ctx }) {
             )}
             {phase === "answering" && (
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-mist text-xs flex-1">
-                  {stealOpen ? `Cửa sổ cướp quyền — ${winner ? "đội giành chuông trả lời" : "chờ đội bấm chuông"}` : `${activeTeam?.name} (${g.currentTeam?.toUpperCase()}) trả lời`}
-                </span>
-                {!revealed && !stealOpen && !running && (
-                  <button type="button" className="btn btn-ok px-3!" onClick={() => act("vedich.startAnswer")}>
-                    ▶ Bắt đầu tính giờ ({ANSWER_SECONDS[q?.points] ?? 30}s)
-                  </button>
-                )}
-                {revealed && (
-                  <button type="button" className="btn px-3!" onClick={() => act("question.next")}>
-                    Câu tiếp →
-                  </button>
-                )}
-                {!revealed && !stealOpen && (
+                {!running && remaining > 0 && !revealed && !stealOpen && (
                   <>
+                    <span className="text-mist text-xs flex-1">
+                      Đã hiện câu hỏi — MC đọc xong rồi bắt đầu tính giờ
+                    </span>
+                    <button type="button" className="btn btn-ok px-3!" onClick={() => act("vedich.startAnswer")}>
+                      Bắt đầu tính giờ ({remaining}s)
+                    </button>
+                  </>
+                )}
+                {(running || remaining > 0) && (
+                  <span className="text-gold text-sm font-display">
+                    {running ? `⏱ Đang trả lời… ${remaining >= 0 ? remaining : "–"}s` : `⏱ Sẵn sàng — ${remaining}s`}
+                  </span>
+                )}
+                {!running && remaining <= 0 && !revealed && !stealOpen && (
+                  <>
+                    <span className="text-mist text-xs flex-1">
+                      {activeTeam?.name} hết giờ — chấm kết quả
+                    </span>
                     <button type="button" className="btn btn-danger px-3!" onClick={() => act("answer.mark", { correct: false })}>
-                      Sai → mở cướp
+                      Sai
                     </button>
                     <button type="button" className="btn btn-ok px-3!" onClick={() => act("answer.mark", { correct: true })}>
                       Đúng +{pts}
                     </button>
                   </>
                 )}
-                {!revealed && stealOpen && !winner && (
-                  <button type="button" className="btn btn-ghost px-3!" onClick={() => act("answer.mark", { correct: false })}>
-                    Không ai trả lời → chốt đáp án
-                  </button>
+                {!running && remaining <= 0 && !revealed && stealOpen && !winner && (
+                  <>
+                    <span className="text-mist text-xs flex-1">Cửa sổ cướp quyền — chờ đội bấm chuông</span>
+                    <button type="button" className="btn btn-ok px-3!" onClick={() => act("vedich.revealAnswer")}>
+                      Hiện đáp án
+                    </button>
+                  </>
                 )}
                 {!revealed && stealOpen && winner && (
                   <>
+                    <span className="text-mist text-xs flex-1">Đội {winner} giành chuông trả lời</span>
                     <button type="button" className="btn btn-danger px-3!" onClick={() => act("answer.mark", { correct: false })}>
                       Sai −{stealWrongPts}
                     </button>
@@ -210,6 +245,11 @@ export default function RoundVeDich({ ctx }) {
                       Đúng +{stealCorrectPts}
                     </button>
                   </>
+                )}
+                {revealed && (
+                  <button type="button" className="btn px-3!" onClick={() => act("question.next")}>
+                    Câu tiếp →
+                  </button>
                 )}
               </div>
             )}

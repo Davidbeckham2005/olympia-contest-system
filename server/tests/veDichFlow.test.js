@@ -1,11 +1,17 @@
-// Test LUỒNG chọn gói Vòng 4 trên NGÂN HÀNG CHUNG (không phụ thuộc số đội):
-//   - mỗi đội chọn gói nhận đúng 4 câu theo cấu trúc;
-//   - câu đã được giao cho một đội không bao giờ lặp lại cho đội khác (usedQuestionIds);
-//   - chọn lại gói không "giải phóng" câu cũ (tránh trùng).
+// Test LUỒNG chọn gói Vòng 4 — CÂU CỐ ĐỊNH THEO ĐỘI + GÓI (teamId/pkg/order):
+//   - selectPackage trả đúng 4 câu theo cấu trúc gói;
+//   - câu gán cố định theo đội, không random;
+//   - chọn lại gói lấy đúng 4 câu cũ (giữ nguyên);
+//   - câu các đội không trùng nhau (do seed đã phân bổ).
 // Test tự khôi phục DB về trạng thái trước khi chạy (không làm bẩn dữ liệu thật).
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 import { connectDb } from "../config/database.js";
 import { loadDb, getDb, saveDbSync } from "../models/store.js";
 import * as vedich from "../services/rounds/veDich.service.js";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 let pass = 0;
 let fail = 0;
@@ -23,6 +29,10 @@ let snapshot = null;
 try {
   await connectDb();
   await loadDb();
+  // Nạp seed veDich từ file JSON (giả lập nhập Excel một lần trước khi thi).
+  const seed = JSON.parse(fs.readFileSync(path.join(__dirname, "../data/questions-main.json"), "utf8"));
+  getDb().questions.main.veDich = Array.isArray(seed.veDich) ? seed.veDich : [];
+
   vedich.init({ emit: () => {} });
 
   snapshot = {
@@ -36,6 +46,7 @@ try {
   db.game.veDich = vedich.defaultState();
   db.game.round = "ve_dich";
 
+  // 1) Mỗi đội chọn gói → nhận đúng 4 câu theo cấu trúc gói.
   const plans = {};
   teams.forEach((tid, i) => {
     db.game.currentTeam = tid;
@@ -44,24 +55,30 @@ try {
     ok(Array.isArray(pickedIds) && pickedIds.length === 4, `đội ${tid.toUpperCase()} chọn gói ${packages[i]} nhận đúng 4 câu`);
   });
 
-  // Kết cấu gói khớp cấu trúc + đủ mức điểm.
+  // 2) Kết cấu gói khớp cấu trúc + đủ mức điểm.
   for (const tid of teams) {
     const { pkg, ids } = plans[tid];
     const ptrs = ids.map((id) => (db.questions.main.veDich.find((x) => x.id === id) || {}).points);
     ok(String(ptrs.sort((a, b) => a - b)) === String(vedich.PACKAGES[pkg].slice().sort((a, b) => a - b)), `đội ${tid.toUpperCase()}: bộ câu đúng mức điểm gói ${pkg}`);
   }
 
-  // Không câu nào được dùng cho 2 đội.
+  // 3) Mỗi đội chỉ dùng câu gắn teamId trùng tên đội (câu cố định, không random).
+  for (const tid of teams) {
+    const ids = plans[tid].ids;
+    const qTeamIds = ids.map((id) => (db.questions.main.veDich.find((x) => x.id === id) || {}).teamId);
+    const allMatchTeam = qTeamIds.every((t) => t === tid);
+    ok(allMatchTeam, `đội ${tid.toUpperCase()}: 4 câu trả về đều gắn teamId = ${tid.toUpperCase()}`);
+  }
+
+  // 4) Câu các đội không trùng nhau (seed đã phân bổ riêng).
   const all = teams.flatMap((t) => plans[t].ids);
   ok(new Set(all).size === all.length, `4 đội dùng 16 câu KHÔNG trùng lặp (unique ${new Set(all).size}/16)`);
-  ok((db.game.veDich.usedQuestionIds || []).length === all.length, `usedQuestionIds = ${all.length} (cấp VÒNG, lũy kế)`);
 
-  // Chọn lại gói cho 1 đội KHÔNG lấy lại câu cũ của chính nó.
+  // 5) Chọn lại gói cho 1 đội → trả đúng 4 câu Y HƯƠNG ban đầu (giữ nguyên cố định).
   const oldA = [...plans.a.ids];
   db.game.currentTeam = "a";
   const repick = vedich.selectPackage(60);
-  const clash = repick.filter((id) => new Set([...oldA, ...(db.game.veDich.usedQuestionIds || [])]).has(id) && oldA.includes(id));
-  ok(clash.length === 0, "chọn lại gói đội A không lấy lại câu cũ của A");
+  ok(JSON.stringify(repick) === JSON.stringify(oldA), "chọn lại gói đội A trả đúng 4 câu Y HƯƠNG ban đầu (cố định)");
 } catch (err) {
   fail += 1;
   console.error("ERROR:", err.message);

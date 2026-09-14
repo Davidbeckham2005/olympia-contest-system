@@ -32,7 +32,6 @@ export default function Audience() {
   const [flash, setFlash] = useState(null);
   const [scoreFlash, setScoreFlash] = useState([]);
   const [veFlash, setVeFlash] = useState([]);
-  const prevScores = useRef({});
   const { audioOn, enableAudio } = useAudienceAudio(state);
 
   useEffect(() => {
@@ -60,28 +59,24 @@ export default function Audience() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lastResultAt]);
 
-  // VÒNG 4 (Về đích): server chấm qua markAnswer (không ghi lastResult) nên client tự dò đội
-  // vừa ĐỔI điểm bằng cách so score hiện tại với snapshot lần render trước, rồi nổi ô điểm
-  // của (các) đội đó một lúc ngắn — hiệu ứng tối giản giống scoreFlash vòng 2.
+  // VÒNG 4 (Về đích): nhận từng thay đổi điểm từ server. Dùng event riêng thay vì
+  // suy ra bằng snapshot state, vì một lượt cướp quyền có thể cập nhật hai đội liên tiếp.
   const veRound = state?.game?.round === "ve_dich";
   useEffect(() => {
-    const teams = state?.teams || [];
-    if (!veRound || !teams.length) {
+    if (!veRound) {
       setVeFlash([]);
-      prevScores.current = {};
       return undefined;
     }
-    const cur = {};
-    teams.forEach((t) => { cur[t.id] = t.score; });
-    const prev = prevScores.current;
-    const changed = teams.filter((t) => prev[t.id] != null && prev[t.id] !== t.score).map((t) => t.id);
-    prevScores.current = cur;
-    if (!changed.length) return undefined;
-    setVeFlash(changed);
-    const t = setTimeout(() => setVeFlash([]), 2200);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [veRound, state?.teams]);
+    return on("score:update", (payload) => {
+      if (payload?.round !== "ve_dich" || !payload.teamId || !payload.delta) return;
+      const id = `${payload.teamId}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+      const item = { id, teamId: payload.teamId, delta: payload.delta };
+      setVeFlash((current) => [...current, item]);
+      setTimeout(() => {
+        setVeFlash((current) => current.filter((entry) => entry.id !== id));
+      }, 6200);
+    });
+  }, [veRound]);
 
   if (!state) {
     return <div className="min-h-screen grid place-items-center text-mist">Đang kết nối màn hình…</div>;
@@ -335,8 +330,8 @@ export default function Audience() {
   const answersPreview =
     g.round === "vuot_cnv" && d.mode === "answers"
       ? (state?.game?.puzzle?.ranked || [])
-          .filter((r) => r.correct === true && r.points > 0)
-          .map((r) => r.teamId)
+        .filter((r) => r.correct === true && r.points > 0)
+        .map((r) => r.teamId)
       : [];
 
   // Background đồng bộ cho MỌI VÒNG trên màn khán giả (nền tối #070b16 + ảnh mờ blur theo
@@ -377,12 +372,30 @@ export default function Audience() {
       </div>
 
       <div className="relative z-10">
-        <TeamsRow teams={outTeams} state={state} flash={flash} currentTeam={g.round === "ve_dich" ? g.currentTeam : ""} scoreFlash={veFlash.length ? veFlash : scoreFlash} steadyFlash={answersPreview}>
+        <TeamsRow teams={outTeams} state={state} flash={flash} currentTeam={g.round === "ve_dich" ? g.currentTeam : ""} scoreFlash={veFlash.length ? veFlash.map((v) => v.teamId) : scoreFlash} steadyFlash={answersPreview}>
           {g.round === "ve_dich" && <Round4Footer state={state} g={g} flash={veFlash} />}
           {g.round === "vuot_cnv" && d.mode === "question" && <Round2QuestionStrip state={state} d={d} g={g} />}
         </TeamsRow>
       </div>
       <BuzzOverlay state={state} flash={flash} />
+      {/* Toast thông báo điểm Vòng 4 — bên phải màn hình, giữa chiều cao */}
+      {g.round === "ve_dich" && veFlash.length > 0 && (
+        <div className="fixed right-6 top-1/2 -translate-y-1/2 flex flex-col gap-3 pointer-events-none z-40">
+          {veFlash.map((f) => {
+            const team = state.teams.find((t) => t.id === f.teamId);
+            const isPos = f.delta > 0;
+            return (
+              <div
+                key={f.id || f.teamId}
+                className={`ve-score-toast ${isPos ? "ve-score-pos" : "ve-score-neg"}`}
+              >
+                <span className="font-bold text-sm leading-none">{team?.name || f.teamId}</span>
+                <span className="font-black text-xl leading-none">{isPos ? "+" : ""}{f.delta}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
       <AudioUnlock audioOn={audioOn} onEnable={enableAudio} />
     </div>
   );
@@ -434,27 +447,24 @@ function TeamsRow({ teams, state, flash, currentTeam, ranked, scoreFlash = [], s
           return (
             <div
               key={t.id}
-              className={`flex-1 flex items-center justify-center gap-2.5 py-3.5 px-2 border-r border-[rgba(255,214,10,0.1)] last:border-r-0 transition-colors ${
-                isFlash ? "team-buzz bg-[#ffd60a]/20" : isSteady ? "bg-[#ffd60a]/25" : active ? "bg-[#ffd60a]/12" : ""
-              }`}
+              className={`flex-1 flex items-center justify-center gap-2.5 py-3.5 px-2 border-r border-[rgba(255,214,10,0.1)] last:border-r-0 transition-colors ${isFlash ? "team-buzz bg-[#ffd60a]/20" : isSteady ? "bg-[#ffd60a]/25" : active ? "bg-[#ffd60a]/12" : ""
+                }`}
             >
               <span
-                className={`font-bold text-[15px] truncate ${
-                  active ? "text-white" : "text-white/85"
-                }`}
+                className={`font-bold text-[15px] truncate ${active ? "text-white" : "text-white/85"
+                  }`}
               >
                 {t.name}
               </span>
               <span
-                className={`font-display font-bold text-xl tabular-nums shrink-0 ${
-                  active ? "text-[#ffd60a]" : "text-[#ffd60a]/85"
-                }`}
+                className={`font-display font-bold text-xl tabular-nums shrink-0 ${active ? "text-[#ffd60a]" : "text-[#ffd60a]/85"
+                  }`}
               >
                 {t.score}
               </span>
             </div>
           );
-})}
+        })}
       </div>
       {children}
     </div>
@@ -637,9 +647,8 @@ function TangTocList({ items, teams, settled, judge }) {
                     {t?.name || it.teamId}
                   </span>
                   <span
-                    className={`flex-1 text-center font-semibold text-[clamp(15px,1.8vw,22px)] leading-snug px-2 ${
-                      answered ? "text-white" : "text-mist/40"
-                    }`}
+                    className={`flex-1 text-center font-semibold text-[clamp(15px,1.8vw,22px)] leading-snug px-2 ${answered ? "text-white" : "text-mist/40"
+                      }`}
                   >
                     {answered ? `“${it.answer}”` : "—"}
                   </span>
@@ -648,9 +657,8 @@ function TangTocList({ items, teams, settled, judge }) {
                   </span>
                   {judge && (
                     <span
-                      className={`font-display font-bold text-[clamp(18px,2.4vw,30px)] w-14 shrink-0 text-right ${
-                        ok ? "text-ok" : bad ? "text-danger" : "text-mist"
-                      }`}
+                      className={`font-display font-bold text-[clamp(18px,2.4vw,30px)] w-14 shrink-0 text-right ${ok ? "text-ok" : bad ? "text-danger" : "text-mist"
+                        }`}
                     >
                       {ok ? `+${it.points}` : bad ? "0" : ""}
                     </span>
@@ -774,7 +782,7 @@ function Round4Footer({ state, g, flash = [] }) {
   const hasPackage = pkg === 60 || pkg === 80 || pkg === 100;
   const phase = ved.phase || "soan";
   const inQuestion = d.mode === "question" && !!d.question;
-  const justScored = activeTeam && (flash || []).includes(activeTeam.id);
+  const justScored = activeTeam && (flash || []).some((f) => f.teamId === activeTeam.id);
   const phaseLabel =
     phase === "countdown"
       ? "Chuẩn bị thi (3 • 2 • 1)…"
@@ -783,7 +791,7 @@ function Round4Footer({ state, g, flash = [] }) {
         : phase === "ready"
           ? "Sẵn sàng thi"
           : phase === "answering"
-            ? "Chờ MC chiếu câu hỏi…"
+            ? "MC đang đọc câu hỏi — chờ bắt đầu tính giờ"
             : "MC đang soạn bộ câu…";
   return (
     <div className="flex items-stretch border-t border-[rgba(255,214,10,0.1)]">
@@ -915,10 +923,10 @@ export function KhoiDongAudience({ state, timer, flash }) {
       const raw = String(p?.answer || "").trim();
       const file = raw
         || String(p?.mediaUrl || "")
-            .split("/")
-            .pop()
-            ?.split("?")[0]
-            ?.replace(/\.[a-zA-Z0-9]+$/, "")
+          .split("/")
+          .pop()
+          ?.split("?")[0]
+          ?.replace(/\.[a-zA-Z0-9]+$/, "")
         || "";
       if (flashTimer.current) clearTimeout(flashTimer.current);
       setFlashAnswer(file || "Xem ảnh");
@@ -1157,53 +1165,52 @@ export function KhoiDongAudience({ state, timer, flash }) {
         >
           <KdTimerRing box={ringBox} progress={timeProgress} />
           <div className="w-full rounded-2xl border border-[rgba(255,214,10,0.18)] bg-[#2a3d63] shadow-[0_10px_40px_rgba(0,0,0,0.45)]">
-          <div className="flex w-full">
-            {(state.teams || []).map((t) => {
-              const active = g.currentTeam === t.id;
-              return (
-                <div
-                  key={t.id}
-                  className={`flex-1 flex items-center justify-center gap-2 py-3.5 px-2 border-r border-[rgba(255,214,10,0.1)] last:border-r-0 transition-colors ${flash === t.id ? "team-buzz" : ""}`}
-                >
-                  <span
-                    className={`font-bold text-[15px] truncate ${
-                      active ? "text-white" : "text-black/80"
-                    }`}
+            <div className="flex w-full">
+              {(state.teams || []).map((t) => {
+                const active = g.currentTeam === t.id;
+                return (
+                  <div
+                    key={t.id}
+                    className={`flex-1 flex items-center justify-center gap-2 py-3.5 px-2 border-r border-[rgba(255,214,10,0.1)] last:border-r-0 transition-colors ${flash === t.id ? "team-buzz" : ""}`}
                   >
-                    {t.name}
-                  </span>
-                  {active && t.score > 0 && (
-                    <span className="font-display font-bold text-sm shrink-0 text-white">
-                      ({t.score})
+                    <span
+                      className={`font-bold text-[15px] truncate ${active ? "text-white" : "text-black/80"
+                        }`}
+                    >
+                      {t.name}
                     </span>
+                    {active && t.score > 0 && (
+                      <span className="font-display font-bold text-sm shrink-0 text-white">
+                        ({t.score})
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <div className="flex items-stretch border-t border-[rgba(255,214,10,0.1)]">
+              <div className="flex-1 px-4 py-1 text-center flex flex-col items-center justify-center border-r border-[rgba(255,214,10,0.1)]">
+                <div className="font-display font-bold text-[clamp(20px,2.6vw,34px)] text-white">
+                  Đây là tế bào/cấu trúc/cơ quan gì?
+                </div>
+                <div className="relative flex-none w-full h-[3rem] flex items-center justify-center overflow-hidden">
+                  {flashAnswer && (
+                    <div key={flashKey} className="kd-answer-flash whitespace-nowrap">
+                      <span className="font-display font-bold text-[clamp(18px,2.2vw,28px)] text-[#4ade80]">
+                        Đáp án: {flashAnswer}
+                      </span>
+                    </div>
                   )}
                 </div>
-              );
-            })}
-          </div>
-          <div className="flex items-stretch border-t border-[rgba(255,214,10,0.1)]">
-            <div className="flex-1 px-4 py-1 text-center flex flex-col items-center justify-center border-r border-[rgba(255,214,10,0.1)]">
-            <div className="font-display font-bold text-[clamp(20px,2.6vw,34px)] text-white">
-              Đây là tế bào/cấu trúc/cơ quan gì?
-            </div>
-            <div className="relative flex-none w-full h-[3rem] flex items-center justify-center overflow-hidden">
-              {flashAnswer && (
-                <div key={flashKey} className="kd-answer-flash whitespace-nowrap">
-                  <span className="font-display font-bold text-[clamp(18px,2.2vw,28px)] text-[#4ade80]">
-                    Đáp án: {flashAnswer}
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-            <div className="shrink-0 flex flex-col items-center justify-center gap-0.5 px-6 py-2 bg-[#ffd60a]/15">
-              <div className="kicker text-[10px] tracking-[0.2em] text-white/70">{activeTeam?.name || "—"}</div>
-              <div className="font-display font-black text-[clamp(28px,3.4vw,44px)] leading-none text-[#ffd60a]">
-                {activeTeam?.score ?? 0}
               </div>
-              <div className="text-[10px] tracking-[0.2em] text-white/50">ĐIỂM</div>
+              <div className="shrink-0 flex flex-col items-center justify-center gap-0.5 px-6 py-2 bg-[#ffd60a]/15">
+                <div className="kicker text-[10px] tracking-[0.2em] text-white/70">{activeTeam?.name || "—"}</div>
+                <div className="font-display font-black text-[clamp(28px,3.4vw,44px)] leading-none text-[#ffd60a]">
+                  {activeTeam?.score ?? 0}
+                </div>
+                <div className="text-[10px] tracking-[0.2em] text-white/50">ĐIỂM</div>
+              </div>
             </div>
-          </div>
           </div>
         </div>
       </div>
@@ -1225,59 +1232,59 @@ function TangTocStage({ state, g, timer }) {
   const timerRunning = !!t.running;
   const timerDuration = t.duration || 0;
   const timerRemaining = t.remaining ?? 0;
-// ĐỒNG BỘ VIDEO + THỜI GIAN với màn hình MC: mọi màn hình SnAP video theo cùng đồng
-      // hồ server (duration - remaining + elapsedBase). Bám khi lệch lớn (>1.2s) để khán
-      // giả không lệch so với MC; bám ngay khi video vừa nạp xong (loadedmetadata/canplay)
-      // để không bị lệch lúc bắt đầu chiếu. KHÔNG bám sát từng giây (0.15s) vì remaining
-      // là số nguyên cập nhật mỗi giây → seek giật làm video tự dừng rồi phát lại.
-      // Mở trang muộn (giữa lúc video đang chiếu): QUAN TRỌNG — chưa đúng vị trí thì seek
-      // trước rồi MỚI phát (không autoPlay từ 0s rồi nhảy vọt), nên khi vào sau video sẽ hiện
-      // đúng đoạn đang chiếu thay vì chạy lại từ đầu / nhảy lung tung.
-      useEffect(() => {
-        const v = vidRef.current;
-        if (!v) return;
-        // Video mở ở chế độ muted để trình duyệt cho phép phát; khi video ĐÃ phát được thì
-        // bật âm thanh tự động (không cần nút bấm, vẫn hợp autoplay policy).
-        const unmute = () => {
-          if (v.muted) v.muted = false;
-        };
-        const apply = () => {
-          // Chỉ phát trong phase "video". Phase "preparing" (đếm ngược 3·2·1), "answers"
-          // (liệt kê đáp án) hay trước khi MC chiếu → mọi màn hình giữ video dừng lại.
-          if (phase !== "video" || d.mode !== "question") {
-            v.pause();
-            return;
-          }
-          if (!timerRunning || !timerDuration) {
-            v.pause();
-            return;
-          }
-          const elapsed = Math.max(0, timerDuration - timerRemaining) + (tt.elapsedBase || 0);
-          const finiteDur = v.duration && isFinite(v.duration) && v.duration > 0;
-          const target = Math.min(elapsed, finiteDur ? v.duration : timerDuration);
-          // Lệch nhiều (vào giữa lúc đang chiếu / vừa resume): seek + dừng, chờ seeked/canplay.
-          if (v.readyState >= 1 && Math.abs(v.currentTime - target) > 1.2) {
-            v.currentTime = target;
-            v.pause();
-            return;
-          }
-          v.play().then(unmute).catch(() => {});
-        };
-        apply();
-        // Nạp xong / đổi duration / seek xong / phát được → căn ngay (không chờ nhịp 250ms kế).
-        v.addEventListener("loadedmetadata", apply);
-        v.addEventListener("durationchange", apply);
-        v.addEventListener("canplay", apply);
-        v.addEventListener("seeked", apply);
-        v.addEventListener("playing", unmute);
-        return () => {
-          v.removeEventListener("loadedmetadata", apply);
-          v.removeEventListener("durationchange", apply);
-          v.removeEventListener("canplay", apply);
-          v.removeEventListener("seeked", apply);
-          v.removeEventListener("playing", unmute);
-        };
-      }, [phase, timerRunning, timerDuration, timerRemaining, d.mediaUrl, d.mode, tt.elapsedBase]);
+  // ĐỒNG BỘ VIDEO + THỜI GIAN với màn hình MC: mọi màn hình SnAP video theo cùng đồng
+  // hồ server (duration - remaining + elapsedBase). Bám khi lệch lớn (>1.2s) để khán
+  // giả không lệch so với MC; bám ngay khi video vừa nạp xong (loadedmetadata/canplay)
+  // để không bị lệch lúc bắt đầu chiếu. KHÔNG bám sát từng giây (0.15s) vì remaining
+  // là số nguyên cập nhật mỗi giây → seek giật làm video tự dừng rồi phát lại.
+  // Mở trang muộn (giữa lúc video đang chiếu): QUAN TRỌNG — chưa đúng vị trí thì seek
+  // trước rồi MỚI phát (không autoPlay từ 0s rồi nhảy vọt), nên khi vào sau video sẽ hiện
+  // đúng đoạn đang chiếu thay vì chạy lại từ đầu / nhảy lung tung.
+  useEffect(() => {
+    const v = vidRef.current;
+    if (!v) return;
+    // Video mở ở chế độ muted để trình duyệt cho phép phát; khi video ĐÃ phát được thì
+    // bật âm thanh tự động (không cần nút bấm, vẫn hợp autoplay policy).
+    const unmute = () => {
+      if (v.muted) v.muted = false;
+    };
+    const apply = () => {
+      // Chỉ phát trong phase "video". Phase "preparing" (đếm ngược 3·2·1), "answers"
+      // (liệt kê đáp án) hay trước khi MC chiếu → mọi màn hình giữ video dừng lại.
+      if (phase !== "video" || d.mode !== "question") {
+        v.pause();
+        return;
+      }
+      if (!timerRunning || !timerDuration) {
+        v.pause();
+        return;
+      }
+      const elapsed = Math.max(0, timerDuration - timerRemaining) + (tt.elapsedBase || 0);
+      const finiteDur = v.duration && isFinite(v.duration) && v.duration > 0;
+      const target = Math.min(elapsed, finiteDur ? v.duration : timerDuration);
+      // Lệch nhiều (vào giữa lúc đang chiếu / vừa resume): seek + dừng, chờ seeked/canplay.
+      if (v.readyState >= 1 && Math.abs(v.currentTime - target) > 1.2) {
+        v.currentTime = target;
+        v.pause();
+        return;
+      }
+      v.play().then(unmute).catch(() => { });
+    };
+    apply();
+    // Nạp xong / đổi duration / seek xong / phát được → căn ngay (không chờ nhịp 250ms kế).
+    v.addEventListener("loadedmetadata", apply);
+    v.addEventListener("durationchange", apply);
+    v.addEventListener("canplay", apply);
+    v.addEventListener("seeked", apply);
+    v.addEventListener("playing", unmute);
+    return () => {
+      v.removeEventListener("loadedmetadata", apply);
+      v.removeEventListener("durationchange", apply);
+      v.removeEventListener("canplay", apply);
+      v.removeEventListener("seeked", apply);
+      v.removeEventListener("playing", unmute);
+    };
+  }, [phase, timerRunning, timerDuration, timerRemaining, d.mediaUrl, d.mode, tt.elapsedBase]);
   // MÀN KHÁN GIẢ chỉ theo d.mode (MC điều khiển, giống Round 2):
   //   • d.mode === "question" → CHIẾU VIDEO
   //   • d.mode === "answers"  → ĐÁP ÁN CÁC ĐỘI
