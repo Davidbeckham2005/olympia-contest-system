@@ -513,8 +513,7 @@ export default function Team() {
       !g.puzzle?.keywordSolved &&
       !g.puzzle?.keywordClaim &&
       !(g.puzzle?.keywordBlocked || []).includes(team.id) &&
-      !cnvBanned &&
-      g.questionStatus !== "showing";
+      !cnvBanned;
     const answerBar = cnvBanned ? (
       <div className="bg-danger/10 px-4 py-3 text-center">
         <p className="text-sm font-semibold text-danger">Đoán từ khóa chưa đúng — đội bạn đã mất quyền trả lời hàng ngang.</p>
@@ -670,7 +669,7 @@ function Round2Layout({ state, timerCaption, timerRunning, timerRemaining, onLog
                 : "bg-white/10 text-white/45 cursor-not-allowed"
             }`}
           >
-            <span className="bg-black/25 px-3 py-2.5 font-display text-[11px] font-black tracking-widest">
+            <span className={`px-3 py-2.5 font-display text-[11px] font-black tracking-widest ${insertEnabled ? "bg-[#1a1400]/15" : "bg-black/25"}`}>
               INSERT
             </span>
             <span className={`px-3 pr-4 py-2.5 ${insertEnabled ? "text-[#1a1400]" : "text-white/45"}`}>Giành quyền trả lời</span>
