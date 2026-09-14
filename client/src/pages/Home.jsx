@@ -4,6 +4,9 @@ import { getPublicState } from "../lib/api/public.js";
 
 export default function Home() {
   const [info, setInfo] = useState(null);
+  // Production (bản build deploy): ẩn entry Ban tổ chức khỏi trang chủ — BTC vào
+  // thẳng bằng URL (/dang-nhap, /mc, /admin). Dev vẫn hiện để tiện thao tác.
+  const isProd = import.meta.env.PROD;
 
   useEffect(() => {
     getPublicState().then(setInfo).catch(() => {});
@@ -34,13 +37,15 @@ export default function Home() {
               Màn hình khán giả/LED: câu hỏi, từ khóa ô tròn, bảng điểm realtime.
             </span>
           </Link>
-          <Link className="panel flex flex-col gap-2 min-h-[170px] transition hover:-translate-y-1 hover:border-gold hover:shadow-[0_12px_40px_rgba(0,0,0,0.28)]" to="/mc">
-            <div className="kicker">03</div>
-            <b className="text-xl">Ban tổ chức</b>
-            <span className="text-mist text-sm">
-              Bàn điều khiển MC và trang quản trị (câu hỏi, đội, mật khẩu, kết quả).
-            </span>
-          </Link>
+          {!isProd && (
+            <Link className="panel flex flex-col gap-2 min-h-[170px] transition hover:-translate-y-1 hover:border-gold hover:shadow-[0_12px_40px_rgba(0,0,0,0.28)]" to="/mc">
+              <div className="kicker">03</div>
+              <b className="text-xl">Ban tổ chức</b>
+              <span className="text-mist text-sm">
+                Bàn điều khiển MC và trang quản trị (câu hỏi, đội, mật khẩu, kết quả).
+              </span>
+            </Link>
+          )}
         </div>
       </div>
     </div>
