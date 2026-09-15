@@ -198,7 +198,7 @@ export default function Audience() {
       team,
       submitted: !!submissions[team.id],
       answer: submissions[team.id]?.answer || "",
-      elapsed: null,
+      elapsed: submissions[team.id]?.elapsed ?? null,
       ok: corrections[team.id] === true,
       ng: corrections[team.id] === false,
       pts: 0,
