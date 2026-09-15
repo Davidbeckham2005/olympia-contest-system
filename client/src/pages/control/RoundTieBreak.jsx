@@ -1,7 +1,6 @@
-import { useState } from "react";
-
 const PHASE_LABEL = {
-  setup: "CHỌN ĐỘI & CÂU HỎI",
+  setup: "CHỌN ĐỘI",
+  selecting: "CHỌN CÂU HỎI",
   ready: "HIỆN CÂU HỎI — CHỜ BẮT ĐẦU GIỜ",
   running: "ĐANG NHẬN ĐÁP ÁN",
   answers: "CHỜ CHỐT ĐÁP ÁN",
@@ -27,14 +26,8 @@ export default function RoundTieBreak({ ctx }) {
   const isCounting = running && phase === "running";
   const hasMore = (g.questionIndex || 0) + 1 < questions.length;
 
-  const [showQuestions, setShowQuestions] = useState(false);
   // Ngân hàng câu hỏi do Admin quản lý (tab Câu hỏi → Vòng phụ) — MC chỉ chọn câu, không thêm.
   const bank = Array.isArray(state.questions?.main?.tieBreak) ? state.questions.main.tieBreak : [];
-
-  function toggleQuestion(q) {
-    if (questions.some((x) => x.id === q.id)) return;
-    act("tiebreak.questions", { questions: [...questions, q] });
-  }
 
   function toggleTeam(teamId) {
     const updated = selectedTeams.includes(teamId)
@@ -43,7 +36,7 @@ export default function RoundTieBreak({ ctx }) {
     act("tiebreak.teams", { teams: updated });
   }
 
-  const canStart = selectedTeams.length > 0 && questions.length > 0 && phase === "setup";
+  const canStart = selectedTeams.length > 0 && phase === "setup";
   const canReveal = phase === "answers";
 
   return (
@@ -90,17 +83,44 @@ export default function RoundTieBreak({ ctx }) {
         </div>
       </div>
 
-      {/* Điều khiển theo phase */}
+      {/* Bước 1 — Bắt đầu vòng (setup): chỉ mở màn lựa câu hỏi, CHƯA chiếu câu */}
       {phase === "setup" && canStart && (
-        <button type="button" className="btn btn-ok w-full" onClick={() => act("tiebreak.show")}>
-          ▶ Bắt đầu vòng phụ — hiện câu hỏi
+        <button type="button" className="btn btn-ok w-full" onClick={() => act("tiebreak.begin")}>
+          Bắt đầu vòng phụ — chọn câu hỏi
         </button>
+      )}
+
+      {/* Bước 2 — Lựa câu hỏi (selecting): bấm Chọn trên một câu → chiếu câu ngay */}
+      {phase === "selecting" && (
+        <div className="p-3 rounded-lg border border-line bg-night/40 space-y-2">
+          <div className="text-xs text-mist">Vòng phụ thi 1 câu quyết định. Bấm Chọn trên câu muốn chiếu.</div>
+          {bank.length === 0 ? (
+            <p className="text-mist text-xs">Ngân hàng câu hỏi trống — Admin thêm ở tab Câu hỏi → Vòng phụ.</p>
+          ) : (
+            <div className="space-y-1.5">
+              {bank.map((q, i) => (
+                <div key={q.id || i} className="flex items-center gap-2">
+                  <span className={`flex-1 truncate text-xs ${questions.some((x) => x.id === q.id) ? "text-white" : "text-mist"}`}>
+                    {q.question}
+                  </span>
+                  <button
+                    type="button"
+                    className="btn text-xs py-1! shrink-0"
+                    onClick={() => act("tiebreak.pick", { question: q })}
+                  >
+                    Chọn
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
       {phase === "ready" && (
         <div className="flex gap-2">
           <button type="button" className="btn btn-ok w-full" onClick={() => act("tiebreak.start")}>
-            ⏱ Bắt đầu tính giờ trả lời
+            Bắt đầu tính giờ trả lời
           </button>
         </div>
       )}
@@ -108,7 +128,7 @@ export default function RoundTieBreak({ ctx }) {
       {phase === "running" && (
         <div className="flex gap-2">
           <button type="button" className="btn flex-1" onClick={() => act("tiebreak.close")}>
-            ⛔ Đóng nhận bài (chốt)
+            Đóng nhận bài (chốt)
           </button>
         </div>
       )}
@@ -217,7 +237,7 @@ export default function RoundTieBreak({ ctx }) {
         <div className="flex gap-2 border-t border-line pt-3">
           {hasMore && (
             <button type="button" className="btn flex-1" onClick={() => act("tiebreak.next")}>
-              Câu tiếp →
+              Câu tiếp
             </button>
           )}
           <button
@@ -229,7 +249,7 @@ export default function RoundTieBreak({ ctx }) {
               }
             }}
           >
-            ↺ Làm lại vòng phụ
+            Làm lại vòng phụ
           </button>
         </div>
       )}
@@ -237,7 +257,7 @@ export default function RoundTieBreak({ ctx }) {
       {phase === "answers" && (
         <div className="flex gap-2 border-t border-line pt-3">
           <button type="button" className="btn flex-1" onClick={() => act("tiebreak.next")}>
-            Câu tiếp →
+            Câu tiếp
           </button>
           <button
             type="button"
@@ -248,7 +268,7 @@ export default function RoundTieBreak({ ctx }) {
               }
             }}
           >
-            ↺ Làm lại
+            Làm lại
           </button>
         </div>
       )}
@@ -256,46 +276,6 @@ export default function RoundTieBreak({ ctx }) {
       {phase === "ready" && currentQ && (
         <div className="text-xs text-mist border-t border-line pt-3">
           Câu hỏi đã hiện trên màn hình. Bấm <b className="text-white">"Bắt đầu tính giờ trả lời"</b> để các đội bắt đầu gửi đáp án.
-        </div>
-      )}
-
-      {/* Chọn câu hỏi vòng phụ (setup only) */}
-      {phase === "setup" && (
-        <div className="border-t border-line pt-3">
-          <button
-            type="button"
-            className="flex items-center gap-2 text-xs text-mist hover:text-white transition mb-2 w-full"
-            onClick={() => setShowQuestions((v) => !v)}
-          >
-            <span className={`transition ${showQuestions ? "rotate-90" : ""}`}>▶</span>
-            Chọn câu hỏi vòng phụ ({questions.length}/{bank.length})
-          </button>
-          {bank.length === 0 ? (
-            <p className="text-mist text-xs">Ngân hàng câu hỏi trống — Admin thêm ở tab Câu hỏi → Vòng phụ.</p>
-          ) : null}
-          {showQuestions && (
-            <div className="space-y-1.5">
-              {bank.map((q, i) => {
-                const picked = questions.some((x) => x.id === q.id);
-                return (
-                  <label
-                    key={q.id || i}
-                    className={`flex items-center gap-2 text-xs cursor-pointer transition ${picked ? "text-white" : "text-mist"}`}
-                  >
-                    <input
-                      type="checkbox"
-                      className="accent-[#ffd60a]"
-                      checked={picked}
-                      disabled={picked || phase !== "setup"}
-                      onChange={() => toggleQuestion(q)}
-                    />
-                    <span className="flex-1 truncate">{q.question}</span>
-                    <span className="text-gold shrink-0">({q.answer})</span>
-                  </label>
-                );
-              })}
-            </div>
-          )}
         </div>
       )}
     </div>
