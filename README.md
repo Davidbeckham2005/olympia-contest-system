@@ -212,7 +212,18 @@ After the 4 questions the team’s turn ends and play moves to the next top team
 
 #### Tie-break (Phụ phuc)
 
-Sudden-death buzzer round used to break ties.
+Used when ties must be split (e.g. more than 4 teams on the top-4 borderline).
+Flow, driven by the MC:
+
+1. **Chọn câu hỏi** — MC picks which teams take part and which questions from the
+   tie-break bank (managed in Admin).
+2. **Hiện câu hỏi** — the question appears on every screen; the timer is NOT running yet.
+3. **Bấm giờ** — MC starts one shared answer window; all selected teams submit
+   simultaneously (multiple submissions allowed, elapsed time recorded precisely).
+4. **Chờ chốt đáp án** — when time runs out (or MC closes early) submissions close;
+   MC marks each team right/wrong. Revealing the answer announces the winner:
+   the team that answered **correctly and fastest**. If nobody is correct, MC
+   continues to the next question or picks the winner manually.
 
 ## Data
 

@@ -16,8 +16,6 @@ export const KHOI_DONG_PREP_SECONDS = 3;
 export const TIEBREAK_ANSWER_SECONDS = 10;
 export const getTieBreakAnswerSeconds = () =>
   Math.max(3, Number(getDb().settings?.tieBreakAnswerSeconds) || TIEBREAK_ANSWER_SECONDS);
-// Số giây đếm ngược "3-2-1" trước khi tự mở câu hỏi Vòng phụ.
-export const TIEBREAK_PREP_SECONDS = 3;
 
 // Trạng thái mặc định cho mỗi câu hỏi vòng 3 (reset khi đổi câu / vào vòng).
 // startedAt: thời điểm đoạn chiếu hiện tại bắt đầu — mốc 0s để ghi nhận đáp án.
@@ -180,10 +178,11 @@ export function startTimerLoop() {
         }
         // Hết 30s → KHÔNG tự mở chuông. Chỉ pause timer, MC sẽ bấm Đúng/Sai.
       } else if (game.round === "tie_break") {
-        // Hết đếm ngược "3-2-1" → tự mở câu hỏi và timer chung.
-        if (game.tieBreak?.phase === "countdown") {
-          showTieBreakQuestion();
-          return;
+        // Hết giờ trả lời Vòng phụ → tự đóng nhận bài, chuyển sang giai đoạn
+        // MC chấm Đúng/Sai từng đội ("chờ chốt đáp án"). Không tự mở câu kế tiếp.
+        if (game.tieBreak?.phase === "running") {
+          game.tieBreak.phase = "answers";
+          game.questionStatus = "showing";
         }
       } else if (
         game.round === "vuot_cnv" &&
@@ -398,6 +397,9 @@ export function startRound(roundId) {
       questions: [...(getDb().questions.main.tieBreak || [])],
       phase: "setup",
       winner: null,
+      submissions: {},
+      corrections: {},
+      fastest: null,
     };
   }
   saveDb();
@@ -1233,10 +1235,6 @@ export function pressBuzzer(teamId, intent = "row") {
     if (game.round === "ve_dich" && game.veDich?.stealOpen) {
       setTimer(vedich.getAnswerSeconds(game), true);
     }
-    // Vòng phụ: đội vừa giành quyền bấm — bật đồng hồ trả lời (tự khóa nếu hết giờ).
-    if (game.round === "tie_break") {
-      setTimer(getTieBreakAnswerSeconds(), true);
-    }
   }
   saveDb();
   broadcast("buzzer:press", {
@@ -1661,14 +1659,47 @@ export function resetMainRoundState() {
   emit();
 }
 
-// === TIE-BREAK ===
+// === TIE-BREAK (Vòng phụ) ===
+// Flow (MC điều khiển từng bước):
+//   setup   → MC chọn đội tham gia + câu hỏi (ngân hàng do Admin quản lý).
+//   ready   → "Hiện câu hỏi": câu hiện lên mọi màn hình, CHƯA tính giờ.
+//   running → "Bắt đầu tính giờ": mở cửa sổ trả lời chung, các đội nộp đáp án
+//             (ghi nhận thời gian nộp chính xác để xét "đúng + nhanh nhất").
+//   answers → Hết giờ (hoặc MC đóng sớm): đóng nhận bài, MC chấm Đúng/Sai từng đội.
+//   done    → Lật đáp án: đội trả lời ĐÚNG và NHANH NHẤT (tieBreak.fastest) thắng vòng phụ.
+//   exhausted → Hết câu hỏi mà chưa có đội thắng → MC tự chọn đội thắng / làm lại.
+// Các đội tham gia trả lời ĐỒNG THỜI trong một cửa sổ giờ chung. Sai không bị trừ điểm.
 export function setTieBreakTeams(teamIds) {
   const game = g();
   if (game.round !== "tie_break") return { ignored: true };
-  const current = game.tieBreak.teams || [];
-  game.tieBreak.teams = [...new Set([...current, ...(Array.isArray(teamIds) ? teamIds : [])])];
+  if (game.tieBreak.phase !== "setup") return { ignored: true, reason: "already-started" };
+  game.tieBreak.teams = [...new Set(Array.isArray(teamIds) ? teamIds : [])];
   saveDb();
   emit();
+}
+
+// Xóa sạch kết quả của câu hỏi đang thi (khi hiện câu mới / bắt đầu lại).
+function resetTieBreakQuestionState() {
+  const game = g();
+  game.tieBreak.submissions = {};
+  game.tieBreak.corrections = {};
+  game.tieBreak.fastest = null;
+  game.tieBreak.startAt = null;
+}
+
+// Đội thắng câu vừa chốt: trong các đội được MC chấm ĐÚNG, đội nộp sớm nhất (elapsed nhỏ nhất).
+function tieBreakFastest() {
+  const tb = g().tieBreak;
+  const corr = tb.corrections || {};
+  const subs = tb.submissions || {};
+  let best = null;
+  for (const [teamId, correct] of Object.entries(corr)) {
+    if (correct !== true) continue;
+    const elapsed = Number(subs[teamId]?.elapsed);
+    if (!Number.isFinite(elapsed)) continue;
+    if (!best || elapsed < best.elapsed) best = { teamId, elapsed };
+  }
+  return best;
 }
 
 // Bắt đầu lại vòng phụ: xóa toàn bộ lựa chọn để MC cấu hình lại từ đầu.
@@ -1680,10 +1711,7 @@ export function resetTieBreak() {
   game.tieBreak.questionIndex = 0;
   game.tieBreak.phase = "setup";
   game.tieBreak.winner = null;
-  game.tieBreak.submissions = {};
-  game.tieBreak.corrections = {};
-  game.tieBreak.submissions = {};
-  game.tieBreak.corrections = {};
+  resetTieBreakQuestionState();
   game.questionIndex = 0;
   game.questionStatus = "idle";
   game.display = {
@@ -1716,38 +1744,22 @@ export function setTieBreakQuestions(questions) {
   emit();
 }
 
-export function showTieBreakQuestion() {
+// Bước 2 — "Hiện câu hỏi": đưa câu hỏi lên màn hình, chưa tính giờ.
+// Dùng để bắt đầu vòng (từ setup) và hiện câu tiếp theo (từ answers/done/exhausted).
+export function showTieBreakQuestion(force = false) {
   const game = g();
   if (game.round !== "tie_break") return { ignored: true };
   // Vòng phụ chỉ bắt đầu SAU KHI MC đã chọn đội tham gia — chưa chọn thì không chiếu câu.
   if (!(game.tieBreak?.teams || []).length) return { ignored: true, reason: "no-teams" };
-  if (!game.tieBreak?.questions?.[game.questionIndex]) return { ignored: true, reason: "no-question" };
-
-  // Bắt đầu vòng từ trạng thái chờ (setup): chạy đếm ngược "3-2-1" trước.
-  if (game.tieBreak.phase === "setup") {
-    game.tieBreak.phase = "countdown";
-    game.questionStatus = "idle";
-    game.display = {
-      mode: "idle",
-      title: "",
-      question: "",
-      options: [],
-      mediaUrl: "",
-      mediaType: "",
-      answer: "",
-      answerRevealed: false,
-      note: "",
-    };
-    setTimer(TIEBREAK_PREP_SECONDS, true);
-    saveDb();
-    emit();
-    return;
+  const q = game.tieBreak?.questions?.[game.questionIndex];
+  if (!q) return { ignored: true, reason: "no-question" };
+  // Không cho "hiện lại" giữa lúc đang nhận bài hoặc đang chấm điểm — phải đóng/chuyển câu trước.
+  // (force = chuyển câu từ nextTieBreakQuestion: phase đang ở answers/exhausted/done.)
+  if (!force && (game.tieBreak.phase === "running" || game.tieBreak.phase === "answers")) {
+    return { ignored: true, reason: "already-open" };
   }
-
-  // Kết thúc đếm ngược / chuyển câu: hiện câu hỏi và mở một cửa sổ trả lời chung
-  // cho toàn bộ đội đã chọn, không dùng chuông.
-  if (game.tieBreak.phase === "countdown") game.tieBreak.phase = "running";
-  const q = game.tieBreak.questions[game.questionIndex];
+  game.tieBreak.phase = "ready";
+  resetTieBreakQuestionState();
   game.questionStatus = "showing";
   game.display = {
     mode: "question",
@@ -1756,15 +1768,42 @@ export function showTieBreakQuestion() {
     options: q.options || [],
     mediaUrl: q.mediaUrl || "",
     mediaType: q.mediaType || "",
-    answer: "",
+    answer: q.answer || "",
     answerRevealed: false,
     note: q.note || "",
   };
-  game.tieBreak.submissions = {};
-  game.tieBreak.corrections = {};
+  setTimer(0, false);
+  saveDb();
+  emit();
+  return { ok: true };
+}
+
+// Bước 3 — "Bắt đầu tính giờ": mở cửa sổ trả lời chung cho các đội đã chọn.
+export function startTieBreakTimer() {
+  const game = g();
+  if (game.round !== "tie_break") return { ignored: true };
+  if (game.tieBreak.phase !== "ready" || game.questionStatus !== "showing") {
+    return { ignored: true, reason: "not-ready" };
+  }
+  game.tieBreak.phase = "running";
+  game.tieBreak.startAt = Date.now();
   setTimer(getTieBreakAnswerSeconds(), true);
   saveDb();
   emit();
+  return { ok: true };
+}
+
+// MC đóng nhận bài SỚM (trước khi hết giờ) → sang giai đoạn chấm Đúng/Sai.
+export function closeTieBreak() {
+  const game = g();
+  if (game.round !== "tie_break") return { ignored: true };
+  if (game.tieBreak.phase !== "running") return { ignored: true, reason: "not-running" };
+  pauseTimer();
+  game.tieBreak.phase = "answers";
+  game.questionStatus = "showing";
+  saveDb();
+  emit();
+  return { ok: true };
 }
 
 export function submitTieBreak(teamId, answer) {
@@ -1775,49 +1814,85 @@ export function submitTieBreak(teamId, answer) {
   if (!game.timer.running) return { ok: false, reason: "not-started" };
   const value = String(answer || "").trim();
   if (!value) return { ok: false, reason: "empty" };
-  game.tieBreak.submissions = { ...(game.tieBreak.submissions || {}), [teamId]: { answer: value, at: Date.now() } };
+  // Cho phép gửi NHIỀU lần (ghi đè đáp án mới nhất, cùng cơ chế Vòng 2/3); ghi nhận thời gian
+  // nộp theo đồng hồ trả lời (giây thập phân từ lúc MC bấm "Bắt đầu tính giờ") để xét độ nhanh.
+  const startAt = Number(game.tieBreak.startAt) || 0;
+  const elapsed = startAt
+    ? Math.max(0, (Date.now() - startAt) / 1000)
+    : Math.max(0, game.timer.duration - game.timer.remaining);
+  game.tieBreak.submissions = { ...(game.tieBreak.submissions || {}), [teamId]: { answer: value, at: Date.now(), elapsed } };
   saveDb();
   emit();
   return { ok: true };
 }
 
+// Sang câu kế tiếp (chỉ sau khi đã chốt/đóng câu hiện tại): hiện câu mới ở phase "ready".
 export function nextTieBreakQuestion() {
   const game = g();
   if (game.round !== "tie_break") return { ignored: true };
+  const ph = game.tieBreak.phase;
+  if (ph !== "answers" && ph !== "done" && ph !== "exhausted") {
+    return { ignored: true, reason: "not-closed" };
+  }
   if (game.questionIndex + 1 < game.tieBreak.questions.length) {
     game.questionIndex += 1;
-    showTieBreakQuestion();
+    return showTieBreakQuestion(true);
   }
+  // Hết câu hỏi → MC tự quyết đội thắng (hoặc làm lại vòng).
+  game.tieBreak.phase = "exhausted";
+  game.tieBreak.winner = null;
+  game.display.answerRevealed = false;
+  saveDb();
+  emit();
+  return { ok: true };
 }
 
+// MC chấm Đúng/Sai từng đội — chỉ sau khi đóng nhận bài (phase "answers").
 export function markTieBreakAnswer(teamId, correct) {
   const game = g();
   if (game.round !== "tie_break") return { ignored: true };
   if (!(game.tieBreak?.teams || []).includes(teamId)) return { ignored: true, reason: "not-participant" };
   if (!game.tieBreak.submissions?.[teamId]) return { ignored: true, reason: "no-submission" };
+  if (game.tieBreak.phase !== "answers") return { ignored: true, reason: "not-closed" };
   game.tieBreak.corrections = { ...(game.tieBreak.corrections || {}), [teamId]: !!correct };
+  // Cập nhật ngay đội thắng tạm thời (đúng + nhanh nhất) cho bàn MC theo thời gian thực.
+  const fast = tieBreakFastest();
+  game.tieBreak.fastest = fast?.teamId || null;
   saveDb();
   emit();
 }
 
+// MC chọn đội thắng (thủ công) — cũng dùng để ghi đè kết quả tự động của reveal.
 export function setTieBreakWinner(teamId) {
   const game = g();
   if (game.round !== "tie_break") return { ignored: true };
-  if (game.tieBreak.winner) return { ignored: true, reason: "winner-already-selected" };
+  const t = getDb().teams.find((x) => x.id === teamId);
+  if (!t) return { ignored: true, reason: "not-found" };
   game.tieBreak.winner = teamId;
   game.tieBreak.phase = "done";
   saveDb();
   emit();
+  return { ok: true };
 }
 
+// "Lật đáp án": công bố đáp án đúng; đội ĐÚNG + NỘP NHANH NHẤT thắng vòng phụ.
+// Nếu có đội thắng → phase "done"; nếu không đội nào đúng → MC bấm "Câu tiếp" (hoặc chọn tay).
 export function revealTieBreakAnswer() {
   const game = g();
   if (game.round !== "tie_break") return { ignored: true };
+  if (game.tieBreak.phase !== "answers") return { ignored: true, reason: "not-closed" };
+  const q = game.tieBreak.questions[game.questionIndex];
   game.display.answerRevealed = true;
-  game.display.answer = game.tieBreak.questions[game.questionIndex]?.answer || "";
-  game.display.answerRevealed = true;
+  game.display.answer = q?.answer || "";
+  const fast = tieBreakFastest();
+  game.tieBreak.fastest = fast?.teamId || null;
+  if (fast) {
+    game.tieBreak.winner = fast.teamId;
+    game.tieBreak.phase = "done";
+  }
   saveDb();
   emit();
+  return { ok: true, winner: game.tieBreak.winner || null };
 }
 
 // Kiểm tra ngoại lệ: có >4 đội CHƯA BỊ LOẠI đồng điểm ở ranh giới top 4

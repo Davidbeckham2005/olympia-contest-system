@@ -226,13 +226,6 @@ export default function Audience() {
             <div className="panel w-full max-w-3xl text-center">
               <p className="text-mist text-[clamp(16px,2.4vw,28px)]">Hết câu hỏi vòng phụ — MC cần chọn đội thắng.</p>
             </div>
-          ) : tb.phase === "countdown" ? (
-            <div className="flex flex-col items-center gap-3">
-              <div className="kicker tracking-[0.3em]">CHUẨN BỊ</div>
-              <div className={`font-display font-black text-[clamp(80px,20vw,220px)] leading-none ${remaining > 0 ? "text-gold" : "text-mist"}`}>
-                {remaining > 0 ? remaining : 3}
-              </div>
-            </div>
           ) : tb.phase === "setup" ? (
             // MÀN CHỜ ĐẦU VÒNG giống Round 1 (RoundWait): chỉ dòng chữ vàng + thông báo.
             // KHÔNG hiện bảng đội/câu hỏi khi vừa click vào vòng phụ.
@@ -246,9 +239,14 @@ export default function Audience() {
             />
           ) : (
             <>
-              {!answersScreen && (
+              {!answersScreen && tb.phase === "running" && (
                 <div className="fixed right-6 top-5 z-20 inline-flex items-center justify-center rounded-xl border border-[rgba(255,214,10,0.45)] bg-[#0e1830]/75 px-5 py-1.5 timer-xl text-4xl text-gold">
                   {formatTime(remaining)}
+                </div>
+              )}
+              {!answersScreen && tb.phase === "ready" && (
+                <div className="fixed right-6 top-5 z-20 badge badge-warn">
+                  Chờ MC bắt đầu tính giờ…
                 </div>
               )}
               {!answersScreen && showing && d.mediaUrl && d.mediaType === "image" && (

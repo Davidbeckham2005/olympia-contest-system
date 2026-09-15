@@ -440,7 +440,7 @@ export default function Team() {
             onChange={(e) => setAnswer(e.target.value)}
             disabled={!tbCanSubmit}
             readOnly={!tbCanSubmit}
-            placeholder={tbCanSubmit ? "Nhập đáp án của đội…" : "Chờ MC bắt đầu tính giờ…"}
+            placeholder={tb.phase === "ready" ? "MC chưa bắt đầu giờ — chờ…" : tb.phase === "answers" ? "Đã hết thời gian nhận đáp án." : tbCanSubmit ? "Nhập đáp án của đội…" : "Chờ MC bắt đầu tính giờ…"}
             className="min-w-0 flex-1"
           />
           <button type="submit" className="btn" disabled={!tbCanSubmit || !answer.trim()}>Gửi</button>
@@ -459,6 +459,10 @@ export default function Team() {
           <p className="text-mist">MC đang công bố đáp án trên màn hình khán giả.</p>
         ) : g.questionStatus !== "showing" ? (
           <p className="text-mist">Đang chờ MC mở câu hỏi…</p>
+        ) : tb.phase === "answers" ? (
+          <p className="text-mist">Đã hết thời gian trả lời — chờ MC chốt đáp án.</p>
+        ) : tb.phase === "ready" ? (
+          <p className="text-mist">Câu hỏi đã hiện — chờ MC bắt đầu tính giờ trả lời.</p>
         ) : (
           <>
             <div className="panel w-full text-center">
