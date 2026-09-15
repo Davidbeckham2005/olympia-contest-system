@@ -1198,11 +1198,19 @@ function VeDichEditor({ draft, setDraft, teams = [], setMsg }) {
     setImporting(true);
     try {
       const r = await importVeDichQuestionsFile(file);
+      const inDraft = new Set(qs0.map((q) => String(q.question || "").trim().toLocaleLowerCase()).filter(Boolean));
+      const fresh = (r.questions || []).filter((q) => {
+        const key = String(q.question || "").trim().toLocaleLowerCase();
+        if (!key || inDraft.has(key)) return false;
+        inDraft.add(key);
+        return true;
+      });
+      if (fresh.length) setQs([...qs0, ...fresh]);
       const bad = (r.teams || []).filter((t) => !t.ok);
       const msgParts = [
-        `File có ${r.added + r.skipped} câu (${r.added} mới, ${r.skipped} trùng) — chưa ghi vào ngân hàng`,
+        `Đã nhận ${fresh.length} câu từ file vào bản nháp (${r.added} mới, ${r.skipped} trùng) — bấm "Lưu vòng chính" để ghi vào ngân hàng`,
         r.errors?.length ? `, ${r.errors.length} dòng lỗi` : "",
-        ` (ngân hàng: ${r.total} câu)`,
+        ` (ngân hàng hiện có: ${r.total} câu)`,
       ];
       if (bad.length) {
         const detail = bad.map((t) => {
@@ -1281,7 +1289,7 @@ function VeDichEditor({ draft, setDraft, teams = [], setMsg }) {
           <button
             type="button"
             disabled={importing}
-            title="Đọc file để xác minh (KHÔNG ghi câu vào ngân hàng). Cột: Đội • Gói (60/80/100) • Điểm (10/20/30) • Câu hỏi • Đáp án. Tệp không có tiêu đề = 3 cột đúng thứ tự (Điểm, Câu hỏi, Đáp án) → thành câu dự trữ."
+            title="Đọc file và đưa câu hợp lệ vào bản nháp; bấm Lưu vòng chính để ghi vào ngân hàng. Cột: Đội • Gói (60/80/100) • Điểm (10/20/30) • Câu hỏi • Đáp án. Tệp không có tiêu đề = 3 cột đúng thứ tự (Điểm, Câu hỏi, Đáp án) → thành câu dự trữ."
             className="btn btn-ok text-xs py-1!"
             onClick={() => fileRef.current?.click()}
           >
