@@ -240,6 +240,16 @@ export default function Audience() {
                     : "Đang chờ MC chọn đội tham gia và bắt đầu…"
               }
             />
+          ) : tb.phase === "countdown" ? (
+            // ĐẾM NGƯỢC 3 · 2 · 1 trước khi mở nhận đáp án: màn chỉ con số đếm lớn
+            // (câu hỏi tạm ẩn), sau đó tự chuyển sang phase running.
+            <div className="text-center">
+              <div className="kicker tracking-[0.35em] text-[#ffd60a]">VÒNG PHỤ</div>
+              <div className={`font-display font-black text-[clamp(90px,22vw,240px)] leading-none mt-2 ${running && remaining <= 3 ? "text-gold" : "text-mist"}`}>
+                {remaining > 0 ? remaining : 3}
+              </div>
+              <div className="mt-3 text-[clamp(18px,2.6vw,30px)] text-mist">Chuẩn bị trả lời…</div>
+            </div>
           ) : (
             <>
               {!answersScreen && tb.phase === "running" && (
@@ -554,7 +564,7 @@ function Stage({ state, timer }) {
           </>
         ) : (
           <>
-            {d.mediaUrl ? (
+{d.mediaUrl ? (
               d.mediaType === "video" ? (
                 <video src={optimizeVideoUrl(d.mediaUrl)} autoPlay controls className="max-h-[260px] mb-4" />
               ) : (
