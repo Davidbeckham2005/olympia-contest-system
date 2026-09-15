@@ -5,7 +5,7 @@ import { optimizeVideoUrl } from "../lib/media.js";
 import { on } from "../lib/socket.js";
 import { useGameState } from "../lib/useGame.js";
 import { activeTeamIds } from "../lib/teams.js";
-import { CnvRowsFrame, Round2Board, Round2Question, Round2QuestionStrip, RowResults } from "../components/Round2Stage.jsx";
+import { CnvRowsFrame, R2AnswersTimeline, Round2Board, Round2Question, Round2QuestionStrip, RowResults } from "../components/Round2Stage.jsx";
 import RulesBoard from "../components/RulesBoard.jsx";
 import RoundResultBoard from "../components/RoundResultBoard.jsx";
 
@@ -193,6 +193,17 @@ export default function Audience() {
     const submissions = tb.submissions || {};
     const corrections = tb.corrections || {};
     const answersScreen = d.mode === "answers";
+    const answerCards = tbTeams.map((team) => ({
+      teamId: team.id,
+      team,
+      submitted: !!submissions[team.id],
+      answer: submissions[team.id]?.answer || "",
+      elapsed: null,
+      ok: corrections[team.id] === true,
+      ng: corrections[team.id] === false,
+      pts: 0,
+      revealed: true,
+    }));
     const bg = state.settings?.audienceBg || "dark";
     const bgUrl = state.settings?.audienceBgUrl || "";
     return (
@@ -263,20 +274,8 @@ export default function Audience() {
                 </div>
               )}
               {answersScreen && (
-                <div className="w-full max-w-[900px] panel text-left">
-                  <div className="kicker text-center mb-4">ĐÁP ÁN CÁC ĐỘI</div>
-                  {tbTeams.map((t) => {
-                    const submission = submissions[t.id];
-                    const marked = corrections[t.id];
-                    return (
-                      <div key={t.id} className="flex items-center gap-3 border-b border-line/50 px-3 py-3 last:border-b-0">
-                        <span className="w-36 truncate font-bold" style={{ color: t.color }}>{t.name}</span>
-                        <span className="flex-1 text-white">{submission?.answer || "Chưa gửi"}</span>
-                        {marked === true && <span className="font-bold text-ok">ĐÚNG</span>}
-                        {marked === false && <span className="font-bold text-danger">SAI</span>}
-                      </div>
-                    );
-                  })}
+                <div className="w-full">
+                  <R2AnswersTimeline cards={answerCards} />
                 </div>
               )}
             </>

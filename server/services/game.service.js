@@ -573,7 +573,7 @@ export function hideQuestion() {
 //   các đội (2 màn riêng, tab trên bàn MC).
 export function setScreenMode(mode) {
   const game = g();
-  if (game.round !== "vuot_cnv" && game.round !== "tang_toc") return;
+  if (game.round !== "vuot_cnv" && game.round !== "tang_toc" && game.round !== "tie_break") return;
   // RÒ RỈ (audit TT-1): Vòng 3, màn "Đáp án các đội" KHÔNG được mở trong lúc video
   // Tăng tốc đang chiếu (phase "video", đồng hồ chạy) — các đội vẫn đang nộp bài theo
   // độ nhanh, hiện màn này = khán giả + mọi đội đọc được đáp án của nhau realtime → "chép".
@@ -586,7 +586,7 @@ export function setScreenMode(mode) {
   game.display.mode =
     mode === "question" || mode === "answers"
       ? mode
-      : game.round === "tang_toc"
+      : game.round === "tang_toc" || game.round === "tie_break"
         ? "question"
         : "puzzle";
   saveDb();

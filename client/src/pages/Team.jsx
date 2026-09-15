@@ -298,6 +298,7 @@ export default function Team() {
   }
 
   let body;
+  let tieBreakAnswerBar = null;
   if (d.mode === "rules") {
     // Màn hình LUẬT THI (MC bật qua "screen.rules") — HIỆN FULL-SCREEN giống màn hình
     // MC: RulesBoard giữa màn + nền đồng bộ khán giả + ONLY nút đăng xuất (không header,
@@ -431,6 +432,22 @@ export default function Team() {
     const tbSubmission = tb.submissions?.[team.id];
     const tbCanSubmit = isParticipant && tb.phase === "running" && g.questionStatus === "showing" && running;
     const answersScreen = d.mode === "answers";
+    tieBreakAnswerBar = isParticipant && !answersScreen && !exhausted ? (
+      <div className="rounded-2xl border border-gold/40 bg-[#0e1830]/90 px-4 py-3 shadow-[0_8px_30px_rgba(0,0,0,0.35)]">
+        <form onSubmit={submitTieBreak} className="flex w-full gap-2">
+          <input
+            value={answer}
+            onChange={(e) => setAnswer(e.target.value)}
+            disabled={!tbCanSubmit}
+            readOnly={!tbCanSubmit}
+            placeholder={tbCanSubmit ? "Nhập đáp án của đội…" : "Chờ MC bắt đầu tính giờ…"}
+            className="min-w-0 flex-1"
+          />
+          <button type="submit" className="btn" disabled={!tbCanSubmit || !answer.trim()}>Gửi</button>
+        </form>
+        {tbSubmission && <p className="mt-2 text-center text-sm text-mist">Đã gửi: <span className="text-gold">{tbSubmission.answer}</span></p>}
+      </div>
+    ) : null;
     body = (
       <div className="flex flex-col items-center gap-5 w-full max-w-lg">
         <div className="round-badge">VÒNG PHỤ</div>
@@ -439,37 +456,15 @@ export default function Team() {
         ) : exhausted ? (
           <p className="text-mist">Hết câu hỏi vòng phụ — chờ MC chọn đội thắng.</p>
         ) : answersScreen ? (
-          <div className="panel w-full text-left">
-            <div className="kicker text-center mb-3">ĐÁP ÁN CÁC ĐỘI</div>
-            {(tb.teams || []).map((id) => {
-              const other = state.teams.find((item) => item.id === id);
-              const submission = tb.submissions?.[id];
-              const marked = tb.corrections?.[id];
-              return (
-                <div key={id} className="flex items-center gap-2 border-b border-line/50 px-2 py-2 last:border-b-0">
-                  <span className="w-28 truncate font-semibold" style={{ color: other?.color }}>{other?.name || id}</span>
-                  <span className="flex-1 text-white">{submission?.answer || "Chưa gửi"}</span>
-                  {marked === true && <span className="text-ok font-bold">ĐÚNG</span>}
-                  {marked === false && <span className="text-danger font-bold">SAI</span>}
-                </div>
-              );
-            })}
-          </div>
+          <p className="text-mist">MC đang công bố đáp án trên màn hình khán giả.</p>
         ) : g.questionStatus !== "showing" ? (
           <p className="text-mist">Đang chờ MC mở câu hỏi…</p>
         ) : (
           <>
             <div className="panel w-full text-center">
-              {d.mediaUrl && d.mediaType === "image" && <img src={d.mediaUrl} alt="" className="max-h-[24vh] mx-auto object-contain" />}
-              {!g.display?.answerRevealed && <p className="stage-q text-[clamp(18px,2.4vw,28px)] mt-3">{g.display?.question}</p>}
-              {g.display?.answerRevealed && <p className="text-gold text-[clamp(18px,2.4vw,26px)] font-semibold">Đáp án: {g.display.answer}</p>}
-              <div className="font-display font-black text-gold text-[clamp(26px,4vw,38px)] mt-3">{formatTime(remaining)}</div>
+              {d.mediaUrl && d.mediaType === "image" && <img src={d.mediaUrl} alt="" className="max-h-[42vh] max-w-full mx-auto object-contain rounded-xl" />}
+              {g.display?.question && <p className="stage-q text-[clamp(18px,2.4vw,28px)] mt-4">{g.display.question}</p>}
             </div>
-            <form onSubmit={submitTieBreak} className="flex w-full gap-2">
-              <input value={answer} onChange={(e) => setAnswer(e.target.value)} disabled={!tbCanSubmit} readOnly={!tbCanSubmit} placeholder={tbCanSubmit ? "Nhập đáp án của đội…" : "Chờ MC bắt đầu tính giờ…"} className="flex-1" />
-              <button type="submit" className="btn" disabled={!tbCanSubmit || !answer.trim()}>Gửi</button>
-            </form>
-            {tbSubmission && <p className="text-mist text-sm">Đã gửi: <span className="text-gold">{tbSubmission.answer}</span></p>}
             {tb.winner && (
               <div className="panel w-full text-center">
                 <div className="kicker">ĐỘI THẮNG VÒNG PHỤ</div>
@@ -487,6 +482,22 @@ export default function Team() {
         <p className="text-mist mt-3">Giao diện sẽ tự chuyển theo từng vòng thi.</p>
         <ScoreList teams={state.teams} me={team.id} />
       </>
+    );
+  }
+
+  if (g.round === "tie_break") {
+    return (
+      <Round2Layout
+        state={state}
+        timerCaption={formatTime(remaining)}
+        timerRunning={running}
+        timerRemaining={remaining}
+        onLogout={quit}
+        answerBar={tieBreakAnswerBar}
+        currentTeamId={team.id}
+      >
+        {body}
+      </Round2Layout>
     );
   }
 

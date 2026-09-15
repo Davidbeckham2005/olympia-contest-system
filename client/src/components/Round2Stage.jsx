@@ -43,10 +43,10 @@ export function CnvRowsFrame({ state, g }) {
         const isOpenRow = row.status === "open";
         const firstOpen = isOpenRow && rowOpenAnimated(i);
         return (
-        <Fragment key={i}>
-          <div className="flex gap-1.5 self-center">
-            {isOpenRow
-              ? row.word.replace(/\s/g, "").split("").map((ch, j) => (
+          <Fragment key={i}>
+            <div className="flex gap-1.5 self-center">
+              {isOpenRow
+                ? row.word.replace(/\s/g, "").split("").map((ch, j) => (
                   <span
                     key={j}
                     className={`ltr ltr-open ${firstOpen ? "r2-ltr-pop" : ""}`}
@@ -55,18 +55,18 @@ export function CnvRowsFrame({ state, g }) {
                     {ch}
                   </span>
                 ))
-              : row.status === "locked"
-                ? Array.from({ length: row.letterCount }, (_, j) => (
+                : row.status === "locked"
+                  ? Array.from({ length: row.letterCount }, (_, j) => (
                     <span key={j} className="ltr ltr-locked">✕</span>
                   ))
-                : Array.from({ length: row.letterCount }, (_, j) => (
+                  : Array.from({ length: row.letterCount }, (_, j) => (
                     <span key={j} className={`ltr ${i === p.currentRow ? "r2-current" : ""}`} />
                   ))}
-          </div>
-          <span className="text-sm w-10 justify-self-start font-display font-bold tabular-nums text-gold self-center">
-            {i + 1}
-          </span>
-        </Fragment>
+            </div>
+            <span className="text-sm w-10 justify-self-start font-display font-bold tabular-nums text-gold self-center">
+              {i + 1}
+            </span>
+          </Fragment>
         );
       })}
     </div>
@@ -219,14 +219,12 @@ function ScoredToast({ lastResult }) {
   return (
     <div className="mx-auto mb-3 flex w-fit items-center gap-2 rounded bg-[#0e1830] px-4 py-1.5">
       <span
-        className={`h-3 w-3 shrink-0 rounded-full border-2 ${
-          ok ? "border-[#80ed99] bg-[#80ed99]/30" : "border-[#ff8fa3] bg-[#ff8fa3]/30"
-        }`}
+        className={`h-3 w-3 shrink-0 rounded-full border-2 ${ok ? "border-[#80ed99] bg-[#80ed99]/30" : "border-[#ff8fa3] bg-[#ff8fa3]/30"
+          }`}
       />
       <span
-        className={`text-[clamp(13px,1.5vw,17px)] font-bold tracking-wide ${
-          ok ? "text-[#80ed99]" : "text-[#ff8fa3]"
-        }`}
+        className={`text-[clamp(13px,1.5vw,17px)] font-bold tracking-wide ${ok ? "text-[#80ed99]" : "text-[#ff8fa3]"
+          }`}
       >
         {ok ? `MỞ ${name.toUpperCase()}` : `KHÓA ${name.toUpperCase()}`}
       </span>
@@ -251,7 +249,7 @@ function formatAnswerTime(sec) {
 // trắng mảnh, nền navy-có-chiều-sâu với bokeh blur; ở trung tâm một đường kết nối màu nâu
 // đồng/vàng tối chạy dọc. Đáp án/người chơi là các THANH NGANG đặt XEN KẼ trái/phải đường
 // dọc, nối bằng node tròn xanh sáng viền vàng. Các thanh xuất hiện lần lượt từ trên xuống.
-function R2AnswersTimeline({ cards }) {
+export function R2AnswersTimeline({ cards }) {
   return (
     <div className="relative mx-auto w-[min(820px,95%)]">
       {/* Halo ngoài — giống màn Luật thi: viền cyan mờ phát sáng nhẹ */}
@@ -284,11 +282,10 @@ function R2TimelineRow({ c, i }) {
       {/* Node nối đường timeline — xanh nhạt viền vàng, chỉ phát sáng khi đúng */}
       <span className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2">
         <span
-          className={`block h-[11px] w-[11px] rounded-full border ${
-            c.ok
+          className={`block h-[11px] w-[11px] rounded-full border ${c.ok
               ? "border-gold bg-ok shadow-[0_0_8px_rgba(128,237,153,0.5)]"
               : "border-[rgba(255,214,10,0.35)] bg-[#31415f]"
-          }`}
+            }`}
         />
       </span>
       {left ? (
@@ -419,9 +416,8 @@ export function StaggeredRow({ team, index, answer, elapsed, resultLabel /* unus
           {team?.name || ""}
         </span>
         <span
-          className={`flex-1 text-center font-semibold text-[clamp(15px,1.8vw,22px)] leading-snug px-2 ${
-            answered ? "" : "text-mist/40"
-          }`}
+          className={`flex-1 text-center font-semibold text-[clamp(15px,1.8vw,22px)] leading-snug px-2 ${answered ? "" : "text-mist/40"
+            }`}
         >
           {center}
         </span>
@@ -535,26 +531,25 @@ export function Round2Board({ state, g, minimal }) {
             {[0, 1, 2, 3].map((r) => {
               const first = solved[r] && tileOpenAnimated(r);
               return (
-              <div
-                key={r}
-                className={`relative flex ${r % 2 === 0 ? "justify-start" : "justify-end"} ${r < 2 ? "items-start" : "items-end"} font-display font-black text-[clamp(26px,3.4vw,52px)] tracking-tight drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)] transition-colors ${
-                  solved[r]
-                    ? (media?.url && media.type !== "video")
-                      ? `pointer-events-none ${first ? "r2-tile-open" : ""}`
-                      : `bg-gold/90 text-[#1a1400] ${first ? "r2-tile-open" : ""}`
-                    : locked[r]
-                      ? "bg-black pointer-events-none"
-                      : "bg-[#0e1830] text-mist"
-                }`}
-              >
-                {locked[r] ? (
-                  ""
-                ) : solved[r] && media?.url && media.type !== "video" ? (
-                  ""
-                ) : (
-                  <span className={`px-3 ${r < 2 ? "pt-2" : "pb-2"}`}>{r + 1}</span>
-                )}
-              </div>
+                <div
+                  key={r}
+                  className={`relative flex ${r % 2 === 0 ? "justify-start" : "justify-end"} ${r < 2 ? "items-start" : "items-end"} font-display font-black text-[clamp(26px,3.4vw,52px)] tracking-tight drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)] transition-colors ${solved[r]
+                      ? (media?.url && media.type !== "video")
+                        ? `pointer-events-none ${first ? "r2-tile-open" : ""}`
+                        : `bg-gold/90 text-[#1a1400] ${first ? "r2-tile-open" : ""}`
+                      : locked[r]
+                        ? "bg-black pointer-events-none"
+                        : "bg-[#0e1830] text-mist"
+                    }`}
+                >
+                  {locked[r] ? (
+                    ""
+                  ) : solved[r] && media?.url && media.type !== "video" ? (
+                    ""
+                  ) : (
+                    <span className={`px-3 ${r < 2 ? "pt-2" : "pb-2"}`}>{r + 1}</span>
+                  )}
+                </div>
               );
             })}
           </div>
@@ -562,8 +557,7 @@ export function Round2Board({ state, g, minimal }) {
               phải hàng ngang thứ 5. Đang thi câu hỏi cuối → mảnh nhấp nháy vàng làm mục
               tiêu. Mở mảnh → lộ ảnh gốc (hoặc hiện vàng nếu vòng không có ảnh); khóa → ô đen. */}
           <div
-            className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[52%] h-[60%] rounded-xl border-2 grid place-items-center font-display font-black text-[clamp(26px,3.4vw,52px)] tracking-tight drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)] transition ${
-              solved[4]
+            className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[52%] h-[60%] rounded-xl border-2 grid place-items-center font-display font-black text-[clamp(26px,3.4vw,52px)] tracking-tight drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)] transition ${solved[4]
                 ? media?.url && media.type !== "video"
                   ? `border-transparent ${tileOpenAnimated(4) ? "r2-tile-open" : ""}`
                   : `bg-gold text-[#1a1400] border-gold shadow-[0_0_26px_rgba(255,214,10,0.45)] ${tileOpenAnimated(4) ? "r2-tile-open" : ""}`
@@ -572,7 +566,7 @@ export function Round2Board({ state, g, minimal }) {
                   : centerTarget
                     ? "bg-[#0e1830] text-gold border-gold shadow-[0_0_34px_rgba(255,214,10,0.6)] animate-pulse"
                     : "bg-[#0e1830] text-mist border-line"
-            }`}
+              }`}
           >
             {locked[4] ? "" : solved[4] && media?.url && media.type !== "video" ? "" : 5}
           </div>
