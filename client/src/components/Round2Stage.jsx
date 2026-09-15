@@ -249,9 +249,10 @@ function formatAnswerTime(sec) {
 // trắng mảnh, nền navy-có-chiều-sâu với bokeh blur; ở trung tâm một đường kết nối màu nâu
 // đồng/vàng tối chạy dọc. Đáp án/người chơi là các THANH NGANG đặt XEN KẼ trái/phải đường
 // dọc, nối bằng node tròn xanh sáng viền vàng. Các thanh xuất hiện lần lượt từ trên xuống.
-export function R2AnswersTimeline({ cards }) {
+// Prop `big` (màn khán giả Vòng phụ): phóng to khung + chữ để khán giả nhìn rõ từ xa.
+export function R2AnswersTimeline({ cards, big = false }) {
   return (
-    <div className="relative mx-auto w-[min(820px,95%)]">
+    <div className={`relative mx-auto ${big ? "w-[min(1120px,96%)]" : "w-[min(820px,95%)]"}`}>
       {/* Halo ngoài — giống màn Luật thi: viền cyan mờ phát sáng nhẹ */}
       <div className="absolute -inset-[5px] rounded-[28px] border-2 border-[#4cc9f0]/60 blur-[9px]" />
       <div className="absolute -inset-[2px] rounded-[28px] bg-[#4cc9f0]/25" />
@@ -265,7 +266,7 @@ export function R2AnswersTimeline({ cards }) {
         <div className="absolute left-1/2 top-6 bottom-6 w-px -translate-x-1/2 bg-[rgba(255,214,10,0.28)]" aria-hidden />
         <div className="relative flex flex-col px-4 py-5">
           {cards.map((c, i) => (
-            <R2TimelineRow key={c.teamId} c={c} i={i} />
+            <R2TimelineRow key={c.teamId} c={c} i={i} big={big} />
           ))}
         </div>
       </div>
@@ -275,10 +276,11 @@ export function R2AnswersTimeline({ cards }) {
 
 // Một mốc trên timeline: node tròn nhỏ (điểm nối với đường dọc) + thanh ngang xen kẽ
 // trái/phải. Hai nửa cùng độ rộng (flex-1) nên căn luôn đối xứng quanh đường trung tâm.
-function R2TimelineRow({ c, i }) {
+function R2TimelineRow({ c, i, big = false }) {
   const left = i % 2 === 0;
+  const rowMin = big ? "min-h-[140px]" : "min-h-[76px]";
   return (
-    <div className="r2-row-in relative flex min-h-[76px] items-center" style={{ animationDelay: `${i * 220}ms` }}>
+    <div className={`r2-row-in relative flex ${rowMin} items-center`} style={{ animationDelay: `${i * 220}ms` }}>
       {/* Node nối đường timeline — xanh nhạt viền vàng, chỉ phát sáng khi đúng */}
       <span className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2">
         <span
@@ -290,16 +292,16 @@ function R2TimelineRow({ c, i }) {
       </span>
       {left ? (
         <>
-          <div className="flex min-w-0 flex-1 justify-end pr-8">
-            <R2TimelineBar c={c} />
+          <div className={`flex min-w-0 flex-1 justify-end ${big ? "pr-14" : "pr-8"}`}>
+            <R2TimelineBar c={c} big={big} />
           </div>
           <span className="flex-1" aria-hidden />
         </>
       ) : (
         <>
           <span className="flex-1" aria-hidden />
-          <div className="flex min-w-0 flex-1 justify-start pl-8">
-            <R2TimelineBar c={c} />
+          <div className={`flex min-w-0 flex-1 justify-start ${big ? "pl-14" : "pl-8"}`}>
+            <R2TimelineBar c={c} big={big} />
           </div>
         </>
       )}
@@ -310,7 +312,7 @@ function R2TimelineRow({ c, i }) {
 // Thanh thông tin một người chơi: tên đội + đáp án bên trái, thời gian trả lời đến mili
 // giây (giây cỡ lớn trắng, phần lẻ nhỏ mờ) bên phải. Chỉ nhấn mạnh bằng viền vàng + glow
 // xanh nhạt khi ĐÚNG — các trạng thái còn lại màu trung tính, không thêm màu rực.
-function R2TimelineBar({ c }) {
+function R2TimelineBar({ c, big = false }) {
   const { team, submitted, answer, elapsed, ok, ng, pts, revealed } = c;
   const answered = revealed && !!answer && answer !== "";
   const time = answered && elapsed != null ? formatAnswerTime(elapsed) : null;
@@ -337,27 +339,27 @@ function R2TimelineBar({ c }) {
         : "border-white/10 bg-[#0d1424]/80";
 
   return (
-    <div className="w-full max-w-[460px]">
-      <div className={`rounded-xl border px-4 py-2.5 ${frame}`}>
+    <div className={big ? "w-full max-w-[640px]" : "w-full max-w-[460px]"}>
+      <div className={`rounded-xl border ${big ? "px-6 py-5" : "px-4 py-2.5"} ${frame}`}>
         <div className="flex items-baseline gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex items-baseline gap-2">
-              <span className="truncate text-[clamp(12px,1.3vw,16px)] font-bold leading-tight text-white">
+              <span className={`truncate font-bold leading-tight text-white ${big ? "text-[clamp(24px,2.6vw,36px)]" : "text-[clamp(12px,1.3vw,16px)]"}`}>
                 {team?.name || ""}
               </span>
               {ok && pts > 0 && (
-                <span className="shrink-0 text-[clamp(12px,1.3vw,15px)] font-bold text-gold">+{pts}đ</span>
+                <span className={`shrink-0 font-bold text-gold ${big ? "text-[clamp(20px,2.2vw,30px)]" : "text-[clamp(12px,1.3vw,15px)]"}`}>+{pts}đ</span>
               )}
             </div>
-            <div className="mt-0.5 truncate text-[clamp(13px,1.5vw,18px)] leading-snug">{status}</div>
+            <div className={`mt-0.5 truncate leading-snug ${big ? "text-[clamp(26px,2.9vw,40px)]" : "text-[clamp(13px,1.5vw,18px)]"}`}>{status}</div>
           </div>
           {time ? (
             <span className="shrink-0 whitespace-nowrap font-mono tabular-nums">
-              <span className="text-[clamp(14px,1.5vw,18px)] font-bold leading-tight text-white">{time.ss}</span>
-              <span className="text-[clamp(9px,1vw,11px)] font-semibold text-mist">.{time.cs}s</span>
+              <span className={`font-bold leading-tight text-white ${big ? "text-[clamp(30px,3.4vw,48px)]" : "text-[clamp(14px,1.5vw,18px)]"}`}>{time.ss}</span>
+              <span className={`font-semibold text-mist ${big ? "text-[clamp(16px,1.8vw,24px)]" : "text-[clamp(9px,1vw,11px)]"}`}>.{time.cs}s</span>
             </span>
           ) : (
-            <span className="shrink-0 text-sm text-white/25">—</span>
+            <span className={`shrink-0 text-white/25 ${big ? "text-2xl" : "text-sm"}`}>—</span>
           )}
         </div>
       </div>

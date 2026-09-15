@@ -273,7 +273,13 @@ export default function Audience() {
               )}
               {answersScreen && (
                 <div className="w-full">
-                  <R2AnswersTimeline cards={answerCards} />
+                  {d.answerRevealed && d.answer && (
+                    <div className="mx-auto mb-5 w-fit rounded-2xl border-2 border-gold/60 bg-[#121b33]/85 px-8 py-4 text-center shadow-[0_0_30px_rgba(255,214,10,0.25)]">
+                      <div className="kicker">ĐÁP ÁN CÂU HỎI</div>
+                      <div className="stage-answer r2-answer-reveal mt-1 text-[clamp(30px,4.2vw,64px)]">{d.answer}</div>
+                    </div>
+                  )}
+                  <R2AnswersTimeline cards={answerCards} big />
                 </div>
               )}
             </>
