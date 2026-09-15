@@ -25,6 +25,16 @@ export function registerSockets(io) {
       game.submitTangToc(payload.teamId, payload.answer);
     });
 
+    socket.on("tiebreak:submit", (payload, ack) => {
+      if (!payload?.teamId) return;
+      if (!teamOk(payload)) {
+        ack?.({ ok: false, reason: "auth" });
+        return;
+      }
+      const result = game.submitTieBreak(payload.teamId, payload.answer);
+      ack?.(result || { ok: false, reason: "not-open" });
+    });
+
     socket.on("khoidong:submit", (payload) => {
       if (!payload?.teamId) return;
       if (!teamOk(payload)) return;

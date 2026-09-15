@@ -124,7 +124,7 @@ export function defaultGame() {
     veDich: { packagePoints: null, starQuestion: null, answeringTeam: null, stealOpen: false, stealPending: null, locked: false, phase: "soan", picked: {}, pickIndex: 0, usedQuestionIds: [] },
     tangToc: { submissions: {}, ranked: [] },
     khoiDong: { submissions: {}, history: {}, timerSeconds: 60, answerSeconds: 4 },
-    tieBreak: { teams: [], questionIndex: 0, questions: [], phase: "setup", winner: null },
+    tieBreak: { teams: [], questionIndex: 0, questions: [], phase: "setup", winner: null, submissions: {}, corrections: {} },
     // Điểm thưởng theo độ nhanh khi trả lời ĐÚNG câu hàng ngang Vòng 2 (Vượt CNV) và
     // Tăng tốc Vòng 3 — admin có thể thay đổi (mặc định 40 · 30 · 20 · 10 cho 4 đội).
     round2Points: [40, 30, 20, 10],

@@ -161,7 +161,7 @@ export default function Team() {
       try {
         const a = new Audio(url);
         a.volume = 1;
-        a.play().catch(() => {});
+        a.play().catch(() => { });
       } catch {
         /* bỏ qua lỗi phát âm thanh */
       }
@@ -173,6 +173,24 @@ export default function Team() {
     if (!answer.trim()) return;
     socket.emit("tangtoc:submit", { teamId: session.teamId, pass: session.pass, answer });
     setAnswer("");
+  }
+
+  function submitTieBreak(e) {
+    e.preventDefault();
+    if (!answer.trim()) return;
+    const value = answer;
+    socket.emit(
+      "tiebreak:submit",
+      { teamId: session.teamId, pass: session.pass, answer: value },
+      (res) => {
+        if (res?.ok) setAnswer("");
+        else setCnvMsg(
+          res?.reason === "not-started" ? "MC chưa bắt đầu tính giờ."
+            : res?.reason === "not-open" ? "Đã hết thời gian nhận đáp án."
+              : "Chưa thể gửi đáp án."
+        );
+      }
+    );
   }
 
   function submitCnv(e) {
@@ -227,9 +245,8 @@ export default function Team() {
               type="button"
               onClick={() => setPickId(t.id)}
               style={{ borderColor: pickId === t.id ? "var(--color-gold)" : t.color }}
-              className={`panel text-left cursor-pointer transition hover:-translate-y-0.5 ${
-                pickId === t.id ? "shadow-[0_0_0_2px_rgba(255,214,10,0.35)]" : ""
-              }`}
+              className={`panel text-left cursor-pointer transition hover:-translate-y-0.5 ${pickId === t.id ? "shadow-[0_0_0_2px_rgba(255,214,10,0.35)]" : ""
+                }`}
             >
               <b style={{ color: t.color }}>{t.name}</b>
               <div className="text-mist text-sm mt-1">
@@ -328,7 +345,7 @@ export default function Team() {
         d={d}
       />
     );
-} else if (g.round === "tang_toc") {
+  } else if (g.round === "tang_toc") {
     const tt = g.tangToc || {};
     const phase = tt.phase || "video";
     // THÍ SINH đồng bộ với KHÁN GIẢ theo ĐÚNG display.mode do MC điều khiển (cộng phase):
@@ -409,11 +426,11 @@ export default function Team() {
   } else if (g.round === "tie_break") {
     const tb = g.tieBreak || {};
     const isParticipant = (tb.teams || []).includes(team.id);
-    const hasBuzzer = g.buzzer?.open && !g.buzzer?.locked && !g.buzzer?.blocked?.includes(team.id) && !g.buzzer?.winner;
-    const isWinner = g.buzzer?.winner === team.id;
     const exhausted = tb.phase === "exhausted";
     const tbWinner = state.teams.find((t) => t.id === tb.winner);
-    const buzzTeam = state.teams.find((t) => t.id === g.buzzer?.winner);
+    const tbSubmission = tb.submissions?.[team.id];
+    const tbCanSubmit = isParticipant && tb.phase === "running" && g.questionStatus === "showing" && running;
+    const answersScreen = d.mode === "answers";
     body = (
       <div className="flex flex-col items-center gap-5 w-full max-w-lg">
         <div className="round-badge">VÒNG PHỤ</div>
@@ -421,35 +438,38 @@ export default function Team() {
           <p className="text-mist">Đội bạn không tham gia vòng phụ.</p>
         ) : exhausted ? (
           <p className="text-mist">Hết câu hỏi vòng phụ — chờ MC chọn đội thắng.</p>
+        ) : answersScreen ? (
+          <div className="panel w-full text-left">
+            <div className="kicker text-center mb-3">ĐÁP ÁN CÁC ĐỘI</div>
+            {(tb.teams || []).map((id) => {
+              const other = state.teams.find((item) => item.id === id);
+              const submission = tb.submissions?.[id];
+              const marked = tb.corrections?.[id];
+              return (
+                <div key={id} className="flex items-center gap-2 border-b border-line/50 px-2 py-2 last:border-b-0">
+                  <span className="w-28 truncate font-semibold" style={{ color: other?.color }}>{other?.name || id}</span>
+                  <span className="flex-1 text-white">{submission?.answer || "Chưa gửi"}</span>
+                  {marked === true && <span className="text-ok font-bold">ĐÚNG</span>}
+                  {marked === false && <span className="text-danger font-bold">SAI</span>}
+                </div>
+              );
+            })}
+          </div>
         ) : g.questionStatus !== "showing" ? (
-          <p className="text-mist">Đang chờ MC mở câu hỏi (chuông bấm được mở khi chiếu câu)…</p>
+          <p className="text-mist">Đang chờ MC mở câu hỏi…</p>
         ) : (
           <>
-            {g.display?.answerRevealed ? (
-              <div className="panel w-full text-center">
-                <div className="kicker text-xs tracking-[0.25em]">ĐÁP ÁN</div>
-                <p className="text-gold text-[clamp(18px,2.4vw,26px)] font-semibold mt-1">Đáp án: {g.display.answer}</p>
-              </div>
-            ) : (
-              <div className="panel w-full text-center">
-                <p className="stage-q text-[clamp(18px,2.4vw,28px)]">{g.display?.question}</p>
-              </div>
-            )}
-            {hasBuzzer && (
-              <button type="button" className="buzz-btn" onClick={() => buzz("row")}>
-                🛎 BẤM CHUÔNG GIÀNH QUYỀN
-              </button>
-            )}
-            {isWinner && <p className="badge badge-ok">Bạn đã bấm trước — chờ MC chấm.</p>}
-            {isWinner && timer?.running && (
-              <div className="flex flex-col items-center gap-1">
-                <span className="kicker tracking-[0.3em]">ĐANG TRẢ LỜI</span>
-                <span className="font-display font-black text-gold text-[clamp(26px,4vw,38px)]">{formatTime(remaining)}</span>
-              </div>
-            )}
-            {g.buzzer?.winner && !isWinner && (
-              <p className="text-mist">Đội <b style={{ color: buzzTeam?.color }}>{buzzTeam?.name}</b> đã bấm trước.</p>
-            )}
+            <div className="panel w-full text-center">
+              {d.mediaUrl && d.mediaType === "image" && <img src={d.mediaUrl} alt="" className="max-h-[24vh] mx-auto object-contain" />}
+              {!g.display?.answerRevealed && <p className="stage-q text-[clamp(18px,2.4vw,28px)] mt-3">{g.display?.question}</p>}
+              {g.display?.answerRevealed && <p className="text-gold text-[clamp(18px,2.4vw,26px)] font-semibold">Đáp án: {g.display.answer}</p>}
+              <div className="font-display font-black text-gold text-[clamp(26px,4vw,38px)] mt-3">{formatTime(remaining)}</div>
+            </div>
+            <form onSubmit={submitTieBreak} className="flex w-full gap-2">
+              <input value={answer} onChange={(e) => setAnswer(e.target.value)} disabled={!tbCanSubmit} readOnly={!tbCanSubmit} placeholder={tbCanSubmit ? "Nhập đáp án của đội…" : "Chờ MC bắt đầu tính giờ…"} className="flex-1" />
+              <button type="submit" className="btn" disabled={!tbCanSubmit || !answer.trim()}>Gửi</button>
+            </form>
+            {tbSubmission && <p className="text-mist text-sm">Đã gửi: <span className="text-gold">{tbSubmission.answer}</span></p>}
             {tb.winner && (
               <div className="panel w-full text-center">
                 <div className="kicker">ĐỘI THẮNG VÒNG PHỤ</div>
@@ -663,11 +683,10 @@ function Round2Layout({ state, timerCaption, timerRunning, timerRemaining, onLog
             onClick={insertEnabled ? onInsert : undefined}
             disabled={!insertEnabled}
             title={insertEnabled ? "Giành quyền trả lời chướng ngại vật" : "Chưa thể giành quyền lúc này"}
-            className={`flex items-center gap-2 text-sm font-bold transition ${
-              insertEnabled
-                ? "bg-gold text-[#1a1400] cursor-pointer"
-                : "bg-white/10 text-white/45 cursor-not-allowed"
-            }`}
+            className={`flex items-center gap-2 text-sm font-bold transition ${insertEnabled
+              ? "bg-gold text-[#1a1400] cursor-pointer"
+              : "bg-white/10 text-white/45 cursor-not-allowed"
+              }`}
           >
             <span className={`px-3 py-2.5 font-display text-[11px] font-black tracking-widest ${insertEnabled ? "bg-[#1a1400]/15" : "bg-black/25"}`}>
               INSERT
@@ -704,21 +723,19 @@ function Round2BellFrame({ bell }) {
 
   return (
     <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-40 w-[min(560px,94vw)]">
-      <div className={`flex items-center gap-4 px-5 py-3.5 ${
-        bell.enabled
-          ? "bg-gold/10"
-          : ""
-      }`}>
+      <div className={`flex items-center gap-4 px-5 py-3.5 ${bell.enabled
+        ? "bg-gold/10"
+        : ""
+        }`}>
         <button
           type="button"
           onClick={bell.enabled ? bell.onPress : undefined}
           disabled={!bell.enabled}
           aria-label="Giành quyền trả lời chướng ngại vật"
-          className={`grid h-12 w-12 shrink-0 place-items-center text-2xl transition ${
-            bell.enabled
-              ? "bg-gold text-[#1a1400] cursor-pointer"
-              : "bg-white/10 text-white/40 cursor-not-allowed"
-          }`}
+          className={`grid h-12 w-12 shrink-0 place-items-center text-2xl transition ${bell.enabled
+            ? "bg-gold text-[#1a1400] cursor-pointer"
+            : "bg-white/10 text-white/40 cursor-not-allowed"
+            }`}
         >
           🔔
         </button>
@@ -765,11 +782,10 @@ function TeamsSidebar({ teams, currentTeamId }) {
           return (
             <div
               key={t.id}
-              className={`flex items-center gap-2 py-1.5 px-2 text-sm whitespace-nowrap ${
-                isMe
-                  ? "bg-white text-black"
-                  : "text-white/75"
-              }`}
+              className={`flex items-center gap-2 py-1.5 px-2 text-sm whitespace-nowrap ${isMe
+                ? "bg-white text-black"
+                : "text-white/75"
+                }`}
             >
               <span className={`h-2 w-2 rounded-full shrink-0 ${isMe ? "bg-black" : "bg-white/40"}`} />
               <span className={`font-semibold truncate leading-tight ${isMe ? "text-black" : ""}`}>
@@ -994,9 +1010,8 @@ function ScoreList({ teams, me }) {
       {[...teams].sort((a, b) => b.score - a.score).map((t) => (
         <div
           key={t.id}
-          className={`flex justify-between items-center rounded-xl bg-panel-solid border border-line px-4 py-2.5 ${
-            t.id === me ? "!border-gold shadow-[0_0_12px_rgba(255,214,10,0.2)]" : ""
-          }`}
+          className={`flex justify-between items-center rounded-xl bg-panel-solid border border-line px-4 py-2.5 ${t.id === me ? "!border-gold shadow-[0_0_12px_rgba(255,214,10,0.2)]" : ""
+            }`}
         >
           <b>{t.name}</b>
           <span>{t.score} điểm</span>
@@ -1037,7 +1052,7 @@ function TeamVideo({ d, g, timer }) {
         v.pause();
         return;
       }
-      v.play().catch(() => {});
+      v.play().catch(() => { });
     };
     apply();
     v.addEventListener("loadedmetadata", apply);
@@ -1100,9 +1115,8 @@ function FinalBoard({ teams, me }) {
       {teams.map((t, i) => (
         <div
           key={t.id}
-          className={`flex items-center gap-3 justify-between rounded-xl bg-panel-solid border border-line px-4 py-2.5 ${
-            t.id === me ? "!border-gold shadow-[0_0_12px_rgba(255,214,10,0.2)]" : ""
-          }`}
+          className={`flex items-center gap-3 justify-between rounded-xl bg-panel-solid border border-line px-4 py-2.5 ${t.id === me ? "!border-gold shadow-[0_0_12px_rgba(255,214,10,0.2)]" : ""
+            }`}
         >
           <span className="text-mist">#{i + 1}</span>
           <b>{t.name}</b>

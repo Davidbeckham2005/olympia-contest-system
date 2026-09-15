@@ -10,28 +10,26 @@ export default function RoundTieBreak({ ctx }) {
   const questions = tb.questions || [];
   const phase = tb.phase || "setup";
   const winner = tb.winner;
+  const submissions = tb.submissions || {};
+  const corrections = tb.corrections || {};
   const exhausted = phase === "exhausted";
   const running = phase === "running";
   const counting = phase === "countdown";
   const currentQ = questions[g.questionIndex];
+  const answersScreen = d.mode === "answers";
 
   const [showQuestions, setShowQuestions] = useState(false);
   // Ngân hàng câu hỏi do Admin quản lý (tab Câu hỏi → Vòng phụ) — MC chỉ chọn câu, không thêm.
   const bank = Array.isArray(state.questions?.main?.tieBreak) ? state.questions.main.tieBreak : [];
 
   function toggleQuestion(q) {
-    const has = questions.some((x) => x.id === q.id);
-    const updated = has
-      ? questions.filter((x) => x.id !== q.id)
-      : [...questions, q];
-    act("tiebreak.questions", { questions: updated });
+    if (questions.some((x) => x.id === q.id)) return;
+    act("tiebreak.questions", { questions: [...questions, q] });
   }
 
   function toggleTeam(teamId) {
-    const updated = selectedTeams.includes(teamId)
-      ? selectedTeams.filter((id) => id !== teamId)
-      : [...selectedTeams, teamId];
-    act("tiebreak.teams", { teams: updated });
+    if (selectedTeams.includes(teamId)) return;
+    act("tiebreak.teams", { teams: [...selectedTeams, teamId] });
   }
 
   const canStart = selectedTeams.length > 0 && questions.length > 0 && phase === "setup";
@@ -41,7 +39,7 @@ export default function RoundTieBreak({ ctx }) {
       {/* Header */}
       <div className="flex items-center justify-between gap-2">
         <h3 className="text-sm font-semibold text-mist uppercase tracking-wider">Vòng phụ</h3>
-        <span className="text-[10px] text-mist/70 uppercase tracking-wider">Không tính điểm — chỉ Đúng/Sai</span>
+        <span className="text-[10px] text-mist/70 uppercase tracking-wider">Trả lời đồng thời — chỉ Đúng/Sai</span>
         {phase === "done" && winner && (
           <span className="badge badge-ok">
             Thắng: {teams.find((t) => t.id === winner)?.name || winner}
@@ -77,12 +75,14 @@ export default function RoundTieBreak({ ctx }) {
             <button
               key={t.id}
               type="button"
+              disabled={selectedTeams.includes(t.id) || phase !== "setup"}
               onClick={() => toggleTeam(t.id)}
-              className={`px-2.5 py-1 text-xs font-semibold border transition ${
-                selectedTeams.includes(t.id)
-                  ? "border-white/40 bg-white/20 text-white"
+              className={`px-2.5 py-1 text-xs font-semibold border transition ${selectedTeams.includes(t.id)
+                ? "border-ok/60 bg-ok/10 text-ok cursor-not-allowed"
+                : phase !== "setup"
+                  ? "border-line bg-panel text-mist/40 cursor-not-allowed"
                   : "border-line bg-panel text-mist hover:bg-white/10"
-              }`}
+                }`}
             >
               {t.name}
             </button>
@@ -114,6 +114,17 @@ export default function RoundTieBreak({ ctx }) {
         </button>
       )}
 
+      {phase !== "setup" && phase !== "countdown" && (
+        <div className="flex gap-2 border-t border-line pt-3">
+          <button type="button" className={`btn flex-1 text-xs ${!answersScreen ? "btn-ok" : "btn-ghost"}`} onClick={() => act("screen.set", { mode: "question" })}>
+            Màn câu hỏi
+          </button>
+          <button type="button" className={`btn flex-1 text-xs ${answersScreen ? "btn-ok" : "btn-ghost"}`} onClick={() => act("screen.set", { mode: "answers" })}>
+            Màn đáp án
+          </button>
+        </div>
+      )}
+
       {/* Câu hỏi hiện tại */}
       {currentQ && phase !== "setup" && (
         <div className="p-3 rounded-lg border border-line bg-night/40">
@@ -122,7 +133,7 @@ export default function RoundTieBreak({ ctx }) {
           {currentQ.mediaUrl && (
             <img src={currentQ.mediaUrl} alt="" className="mt-2 max-h-32 object-contain rounded" />
           )}
-          {running && g.questionIndex < questions.length - 1 && !g.buzzer.winner && (
+          {phase === "running" && g.questionIndex < questions.length - 1 && (
             <button
               type="button"
               className="btn btn-ghost text-xs py-1! w-full mt-2"
@@ -134,51 +145,24 @@ export default function RoundTieBreak({ ctx }) {
         </div>
       )}
 
-      {/* Chấm đúng/sai - không cộng điểm */}
-      {g.buzzer.winner && phase !== "done" && !exhausted && (
-        <div className="p-3 rounded-lg border border-line bg-night/40">
-          <div className="text-xs text-mist mb-2">
-            Đội bấm chuông: <b style={{ color: teams.find((t) => t.id === g.buzzer.winner)?.color }}>{teams.find((t) => t.id === g.buzzer.winner)?.name}</b>
-          </div>
-          <div className="flex gap-1.5">
-            <button
-              type="button"
-              className="btn btn-ok text-xs py-1!"
-              onClick={() => act("tiebreak.mark", { teamId: g.buzzer.winner, correct: true })}
-            >
-              Đúng
-            </button>
-            <button
-              type="button"
-              className="btn btn-danger text-xs py-1!"
-              onClick={() => act("tiebreak.mark", { teamId: g.buzzer.winner, correct: false })}
-            >
-              Sai
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Chọn tay thắng */}
-      {phase !== "done" && selectedTeams.length > 0 && (
-        <div className="p-3 rounded-lg border border-line bg-night/40">
-          <div className="text-xs text-mist mb-2">Chọn tay thắng</div>
-          <div className="flex flex-wrap gap-1.5">
-            {selectedTeams.filter((id) => id !== winner).map((id) => {
-              const t = teams.find((x) => x.id === id);
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  className="px-2.5 py-1 text-xs font-semibold border border-line bg-panel hover:bg-white/10 transition"
-                  style={{ borderColor: t?.color, color: t?.color }}
-                  onClick={() => act("tiebreak.winner", { teamId: id })}
-                >
-                  {t?.name}
-                </button>
-              );
-            })}
-          </div>
+      {/* Bài nộp và chấm từng đội, giống màn chấm Vòng 3 */}
+      {phase !== "setup" && !exhausted && (
+        <div className="p-3 rounded-lg border border-line bg-night/40 space-y-2">
+          <div className="text-xs text-mist mb-2">Đáp án các đội</div>
+          {selectedTeams.map((id) => {
+            const t = teams.find((x) => x.id === id);
+            const submission = submissions[id];
+            const marked = corrections[id];
+            return (
+              <div key={id} className="flex items-center gap-2 border-b border-line/50 pb-2 last:border-b-0">
+                <span className="w-24 truncate text-xs font-semibold" style={{ color: t?.color }}>{t?.name || id}</span>
+                <span className="flex-1 truncate text-sm">{submission?.answer || "Chưa gửi"}</span>
+                {submission && <button type="button" className={`btn ${marked === true ? "btn-ok" : ""} text-xs py-1!`} onClick={() => act("tiebreak.mark", { teamId: id, correct: true })}>Đúng</button>}
+                {submission && <button type="button" className={`btn ${marked === false ? "btn-danger" : ""} text-xs py-1!`} onClick={() => act("tiebreak.mark", { teamId: id, correct: false })}>Sai</button>}
+              </div>
+            );
+          })}
+          {currentQ && <button type="button" className="btn btn-ghost text-xs py-1!" onClick={() => act("tiebreak.reveal")}>Hiện đáp án</button>}
         </div>
       )}
 
@@ -208,6 +192,7 @@ export default function RoundTieBreak({ ctx }) {
                     type="checkbox"
                     className="accent-[#ffd60a]"
                     checked={picked}
+                    disabled={picked || phase !== "setup"}
                     onChange={() => toggleQuestion(q)}
                   />
                   <span className="flex-1 truncate">{q.question}</span>

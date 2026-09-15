@@ -180,19 +180,19 @@ export default function Audience() {
   }
 
   // === VÒNG PHỤ (tie_break) ===
-  // KẾ THỪA CƠ CHẾ CHUÔNG BẤM từ round trước (Về đích): MC mở chuông (openBuzzer) →
-  // các đội trong vòng phụ bấm chuông giành quyền (buzzer:press) → đội bấm nhanh nhất
-  // (buzzer.winner) được TỰ TRẢ LỜI với đồng hồ riêng → MC chấm Đúng/Sai → đáp án lật.
+  // Các đội được chọn trả lời đồng thời trong một cửa sổ timer chung; MC chấm từng đội.
   // GIAO DIỆN theo chuẩn gameshow "câu hỏi – đáp án" giống các vòng khác: khung panel to
   // + media lớn + câu hỏi (stage-q) + đáp án lật (stage-answer) + badge giành quyền.
   if (g.round === "tie_break") {
     const tb = g.tieBreak || {};
     const tbTeams = (tb.teams || []).map((id) => state.teams.find((t) => t.id === id)).filter(Boolean);
-    const showing = g.questionStatus === "showing" && !!g.display?.question;
+    const showing = g.questionStatus === "showing" && !!(g.display?.question || g.display?.mediaUrl);
     const exhausted = tb.phase === "exhausted";
     const d = g.display || {};
     const winnerTeam = state.teams.find((t) => t.id === tb.winner);
-    const buzzTeam = g.buzzer?.winner ? state.teams.find((t) => t.id === g.buzzer.winner) : null;
+    const submissions = tb.submissions || {};
+    const corrections = tb.corrections || {};
+    const answersScreen = d.mode === "answers";
     const bg = state.settings?.audienceBg || "dark";
     const bgUrl = state.settings?.audienceBgUrl || "";
     return (
@@ -209,9 +209,8 @@ export default function Audience() {
           </>
         )}
 
-        {/* Phần trung tâm — badge vòng + trạng thái giành quyền / đếm 3-2-1 */}
-        <div className="relative z-10 flex-1 flex flex-col items-center justify-center gap-6 px-6 pt-6 min-h-0">
-          <div className="round-badge">VÒNG PHỤ</div>
+        {/* Màn câu hỏi: bố cục thoáng như Vòng 1, không hiện tiêu đề/thông báo phụ. */}
+        <div className="relative z-10 flex-1 flex flex-col items-center justify-center gap-8 px-6 pt-6 min-h-0">
           {exhausted ? (
             <div className="panel w-full max-w-3xl text-center">
               <p className="text-mist text-[clamp(16px,2.4vw,28px)]">Hết câu hỏi vòng phụ — MC cần chọn đội thắng.</p>
@@ -236,21 +235,48 @@ export default function Audience() {
             />
           ) : (
             <>
-              {buzzTeam ? (
-                <div className="round-badge bg-[#ffd60a]/15">
-                  Chuông giành quyền: <b style={{ color: buzzTeam.color }}>{buzzTeam.name}</b>
-                </div>
-              ) : (
-                <div className="text-mist text-[clamp(16px,2vw,24px)]">
-                  Chuông đã mở — các đội bấm chuông giành quyền trả lời.
+              {!answersScreen && (
+                <div className="fixed right-6 top-5 z-20 inline-flex items-center justify-center rounded-xl border border-[rgba(255,214,10,0.45)] bg-[#0e1830]/75 px-5 py-1.5 timer-xl text-4xl text-gold">
+                  {formatTime(remaining)}
                 </div>
               )}
-              {timer?.running && (
-                <div className="flex flex-col items-center gap-1">
-                  <span className="kicker tracking-[0.3em]">{buzzTeam ? "ĐANG TỰ TRẢ LỜI" : "THỜI GIAN TRẢ LỜI"}</span>
-                  <span className="font-display font-black text-gold text-[clamp(26px,4vw,44px)] drop-shadow-[0_2px_0_rgba(0,0,0,0.5)]">
-                    {formatTime(remaining)}
-                  </span>
+              {!answersScreen && showing && d.mediaUrl && d.mediaType === "image" && (
+                <div className="flex min-h-[min(58vh,620px)] w-full items-center justify-center">
+                  <img src={d.mediaUrl} alt="" className="max-h-[min(58vh,620px)] max-w-[min(1200px,90vw)] rounded-2xl object-contain" />
+                </div>
+              )}
+              {!answersScreen && showing && (
+                <div className="w-full max-w-[1200px] overflow-hidden rounded-2xl border border-[rgba(255,214,10,0.18)] bg-[#2a3d63] shadow-[0_10px_40px_rgba(0,0,0,0.45)]">
+                  <div className="flex w-full">
+                    {tbTeams.map((t) => (
+                      <div key={t.id} className="flex-1 flex items-center justify-center gap-2 border-r border-[rgba(255,214,10,0.1)] px-2 py-3.5 last:border-r-0">
+                        <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: t.color }} />
+                        <span className="font-display font-bold text-[clamp(15px,1.8vw,24px)] text-white truncate">{t.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                  {d.question && (
+                    <div className="flex min-h-[6.5rem] items-center justify-center border-t border-[rgba(255,214,10,0.1)] px-6 py-4 text-center">
+                      <div className="stage-q text-[clamp(21px,2.8vw,38px)] leading-tight">{d.question}</div>
+                    </div>
+                  )}
+                </div>
+              )}
+              {answersScreen && (
+                <div className="w-full max-w-[900px] panel text-left">
+                  <div className="kicker text-center mb-4">ĐÁP ÁN CÁC ĐỘI</div>
+                  {tbTeams.map((t) => {
+                    const submission = submissions[t.id];
+                    const marked = corrections[t.id];
+                    return (
+                      <div key={t.id} className="flex items-center gap-3 border-b border-line/50 px-3 py-3 last:border-b-0">
+                        <span className="w-36 truncate font-bold" style={{ color: t.color }}>{t.name}</span>
+                        <span className="flex-1 text-white">{submission?.answer || "Chưa gửi"}</span>
+                        {marked === true && <span className="font-bold text-ok">ĐÚNG</span>}
+                        {marked === false && <span className="font-bold text-danger">SAI</span>}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </>
@@ -265,52 +291,6 @@ export default function Audience() {
           )}
         </div>
 
-        {/* KHỐI ĐÁY — khung câu hỏi kèm các đội được chọn (thi chung, không highlight "đội đang
-            thi" riêng lẻ; chỉ tô đội đang nắm chuông). Chỉ xuất hiện SAU khi đếm 3-2-1 xong
-            (phase running / done): khi đếm chỉ đếm. Chiều cao vùng câu hỏi cố định (h-[6.5rem])
-            để đổi câu không làm khung nhảy. */}
-        {(tb.phase === "running" || tb.phase === "done") && (
-          <div className="relative z-10 flex-none px-8 pb-6">
-            <div className="w-full max-w-[900px] mx-auto rounded-2xl border border-[rgba(255,214,10,0.18)] bg-[#2a3d63] shadow-[0_10px_40px_rgba(0,0,0,0.45)] overflow-hidden">
-              {/* Dải các đội được chọn vào vòng phụ */}
-              <div className="flex w-full">
-                {tbTeams.length > 0 ? (
-                  tbTeams.map((t) => {
-                    const active = g.buzzer?.winner === t.id;
-                    return (
-                      <div
-                        key={t.id}
-                        className={`flex-1 flex items-center justify-center gap-2 py-3 px-2 border-r border-[rgba(255,214,10,0.1)] last:border-r-0 transition-colors ${active ? "team-buzz" : ""}`}
-                      >
-                        <span className={`font-bold text-[15px] truncate ${active ? "text-white" : "text-black/80"}`}>
-                          {t.name}
-                        </span>
-                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: t.color }} />
-                      </div>
-                    );
-                  })
-                ) : (
-                  <div className="flex-1 flex items-center justify-center py-3 px-2">
-                    <span className="font-bold text-[15px] text-black/70">Đang chọn đội…</span>
-                  </div>
-                )}
-              </div>
-              {/* Vùng câu hỏi — chiều cao cố định, không đổi khi đổi câu */}
-              <div className="flex items-center justify-center h-[6.5rem] px-6 py-3 text-center border-t border-[rgba(255,214,10,0.1)] overflow-hidden">
-                {showing ? (
-                  d.answerRevealed ? (
-                    <div className="stage-answer text-[clamp(16px,2vw,25px)]">Đáp án: {d.answer}</div>
-                  ) : (
-                    d.question && <div className="stage-q text-[clamp(19px,2.4vw,32px)]">{d.question}</div>
-                  )
-                ) : (
-                  <span className="text-mist text-[clamp(15px,1.8vw,22px)] tracking-[0.3em]">· · ·</span>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-        {!exhausted && <BuzzOverlay state={state} flash={flash} />}
         <AudioUnlock audioOn={audioOn} onEnable={enableAudio} />
       </div>
     );

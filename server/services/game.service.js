@@ -180,14 +180,11 @@ export function startTimerLoop() {
         }
         // Hết 30s → KHÔNG tự mở chuông. Chỉ pause timer, MC sẽ bấm Đúng/Sai.
       } else if (game.round === "tie_break") {
-        // Hết đếm ngược "3-2-1" → tự mở câu hỏi + chuông (bắt đầu trả lời).
+        // Hết đếm ngược "3-2-1" → tự mở câu hỏi và timer chung.
         if (game.tieBreak?.phase === "countdown") {
           showTieBreakQuestion();
           return;
         }
-        // Hết thời gian trả lời của đội vừa bấm chuông → tự khóa chuông.
-        // MC sẽ chấm trả lời (đúng → thắng, sai → mở lại chuông cho đội khác).
-        closeBuzzer();
       } else if (
         game.round === "vuot_cnv" &&
         !game.puzzle.keywordSolved &&
@@ -1668,19 +1665,25 @@ export function resetMainRoundState() {
 export function setTieBreakTeams(teamIds) {
   const game = g();
   if (game.round !== "tie_break") return { ignored: true };
-  game.tieBreak.teams = teamIds;
+  const current = game.tieBreak.teams || [];
+  game.tieBreak.teams = [...new Set([...current, ...(Array.isArray(teamIds) ? teamIds : [])])];
   saveDb();
   emit();
 }
 
-// Bắt đầu lại vòng phụ: quay về trạng thái chọn đội (setup), GIỮ đội + câu hỏi đã
-// chuẩn bị; đóng chuông, xoá đội thắng, dừng đồng hồ và ẩn câu đang chiếu.
+// Bắt đầu lại vòng phụ: xóa toàn bộ lựa chọn để MC cấu hình lại từ đầu.
 export function resetTieBreak() {
   const game = g();
   if (game.round !== "tie_break") return { ignored: true };
+  game.tieBreak.teams = [];
+  game.tieBreak.questions = [];
   game.tieBreak.questionIndex = 0;
   game.tieBreak.phase = "setup";
   game.tieBreak.winner = null;
+  game.tieBreak.submissions = {};
+  game.tieBreak.corrections = {};
+  game.tieBreak.submissions = {};
+  game.tieBreak.corrections = {};
   game.questionIndex = 0;
   game.questionStatus = "idle";
   game.display = {
@@ -1695,7 +1698,6 @@ export function resetTieBreak() {
     note: "",
   };
   setTimer(0, false);
-  resetBuzzer();
   saveDb();
   emit();
 }
@@ -1703,7 +1705,13 @@ export function resetTieBreak() {
 export function setTieBreakQuestions(questions) {
   const game = g();
   if (game.round !== "tie_break") return { ignored: true };
-  game.tieBreak.questions = questions;
+  const current = game.tieBreak.questions || [];
+  const incoming = Array.isArray(questions) ? questions : [];
+  const byId = new Map(current.map((question) => [question.id, question]));
+  incoming.forEach((question) => {
+    if (question?.id && !byId.has(question.id)) byId.set(question.id, question);
+  });
+  game.tieBreak.questions = [...byId.values()];
   saveDb();
   emit();
 }
@@ -1730,16 +1738,14 @@ export function showTieBreakQuestion() {
       answerRevealed: false,
       note: "",
     };
-    resetBuzzer();
     setTimer(TIEBREAK_PREP_SECONDS, true);
     saveDb();
     emit();
     return;
   }
 
-  // Kết thúc đếm ngược (timer loop gọi lại) / chuyển câu kế tiếp giữa vòng:
-  // hiện câu hỏi + mở chuông để các đội giành quyền trả lời. BẮT ĐẦU chạy đồng hồ
-  // trả lời (thời lượng cấu hình trong Admin) ngay khi mở câu.
+  // Kết thúc đếm ngược / chuyển câu: hiện câu hỏi và mở một cửa sổ trả lời chung
+  // cho toàn bộ đội đã chọn, không dùng chuông.
   if (game.tieBreak.phase === "countdown") game.tieBreak.phase = "running";
   const q = game.tieBreak.questions[game.questionIndex];
   game.questionStatus = "showing";
@@ -1754,11 +1760,25 @@ export function showTieBreakQuestion() {
     answerRevealed: false,
     note: q.note || "",
   };
+  game.tieBreak.submissions = {};
+  game.tieBreak.corrections = {};
   setTimer(getTieBreakAnswerSeconds(), true);
-  resetBuzzer();
-  openBuzzer();
   saveDb();
   emit();
+}
+
+export function submitTieBreak(teamId, answer) {
+  const game = g();
+  if (game.round !== "tie_break") return { ok: false, reason: "wrong-round" };
+  if (!(game.tieBreak?.teams || []).includes(teamId)) return { ok: false, reason: "not-participant" };
+  if (game.tieBreak.phase !== "running" || game.questionStatus !== "showing") return { ok: false, reason: "not-open" };
+  if (!game.timer.running) return { ok: false, reason: "not-started" };
+  const value = String(answer || "").trim();
+  if (!value) return { ok: false, reason: "empty" };
+  game.tieBreak.submissions = { ...(game.tieBreak.submissions || {}), [teamId]: { answer: value, at: Date.now() } };
+  saveDb();
+  emit();
+  return { ok: true };
 }
 
 export function nextTieBreakQuestion() {
@@ -1773,35 +1793,9 @@ export function nextTieBreakQuestion() {
 export function markTieBreakAnswer(teamId, correct) {
   const game = g();
   if (game.round !== "tie_break") return { ignored: true };
-  setTimer(0, false);
-  if (correct) {
-    game.tieBreak.winner = teamId;
-    game.tieBreak.phase = "done";
-    game.display.answerRevealed = true;
-    game.display.answer = game.tieBreak.questions[game.questionIndex]?.answer || "";
-    saveDb();
-    emit();
-    return;
-  }
-  if (game.questionIndex + 1 < game.tieBreak.questions.length) {
-    game.questionIndex += 1;
-    const q = game.tieBreak.questions[game.questionIndex];
-    game.display = {
-      mode: "question",
-      title: `Vòng phụ — Câu ${game.questionIndex + 1}`,
-      question: q?.question || "",
-      options: q?.options || [],
-      mediaUrl: q?.mediaUrl || "",
-      mediaType: q?.mediaType || "",
-      answer: "",
-      answerRevealed: false,
-      note: q?.note || "",
-    };
-    setTimer(getTieBreakAnswerSeconds(), true);
-    openBuzzer();
-  } else {
-    game.tieBreak.phase = "exhausted";
-  }
+  if (!(game.tieBreak?.teams || []).includes(teamId)) return { ignored: true, reason: "not-participant" };
+  if (!game.tieBreak.submissions?.[teamId]) return { ignored: true, reason: "no-submission" };
+  game.tieBreak.corrections = { ...(game.tieBreak.corrections || {}), [teamId]: !!correct };
   saveDb();
   emit();
 }
@@ -1809,6 +1803,7 @@ export function markTieBreakAnswer(teamId, correct) {
 export function setTieBreakWinner(teamId) {
   const game = g();
   if (game.round !== "tie_break") return { ignored: true };
+  if (game.tieBreak.winner) return { ignored: true, reason: "winner-already-selected" };
   game.tieBreak.winner = teamId;
   game.tieBreak.phase = "done";
   saveDb();
@@ -1820,6 +1815,7 @@ export function revealTieBreakAnswer() {
   if (game.round !== "tie_break") return { ignored: true };
   game.display.answerRevealed = true;
   game.display.answer = game.tieBreak.questions[game.questionIndex]?.answer || "";
+  game.display.answerRevealed = true;
   saveDb();
   emit();
 }

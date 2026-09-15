@@ -549,6 +549,7 @@ function TieBreakEditor({ draft, setDraft, setMsg }) {
   const list = (m.tieBreak || []).slice();
   const setList = (next) => setDraft({ ...draft, main: { ...m, tieBreak: next } });
   const [importing, setImporting] = useState(false);
+  const [search, setSearch] = useState("");
   const fileRef = useRef(null);
   const imgRef = useRef(null);
   const pendingImgs = useRef([]);
@@ -577,6 +578,21 @@ function TieBreakEditor({ draft, setDraft, setMsg }) {
     pendingImgs.current = [...pendingImgs.current, ...files];
     setMsg(`Đã chọn ${files.length} ảnh (tổng ${pendingImgs.current.length}). Giờ chọn file Excel danh sách bên cạnh.`);
   }
+  function setQuestion(index, patch) {
+    setList(list.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item)));
+  }
+  function addQuestion() {
+    setList([...list, { id: `tb-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`, question: "", answer: "", options: [], mediaUrl: "", mediaType: "", note: "" }]);
+  }
+  async function uploadQuestionImage(index, file) {
+    if (!file) return;
+    try {
+      const media = await uploadFile(file);
+      setQuestion(index, { mediaUrl: media.url, mediaType: media.type || "image" });
+    } catch (err) {
+      setMsg(err.message);
+    }
+  }
   function downloadTbTemplate() {
     const csv =
       "\uFEFFCâu hỏi,Đáp án,Ảnh\n" +
@@ -590,61 +606,104 @@ function TieBreakEditor({ draft, setDraft, setMsg }) {
     URL.revokeObjectURL(a.href);
   }
   return (
-    <div>
-      <div className="flex flex-wrap items-center gap-2 mb-4">
-        <span className="text-sm text-mist">Ô <b>Ảnh</b> ghi tên file (đã upload hoặc nằm trong thư mục ảnh chọn kèm) — hệ thống tự tìm (có thể để trống).</span>
-        <div className="ml-auto flex items-center gap-2">
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-2 border-b border-line pb-3">
+        <div>
+          <div className="text-sm font-semibold text-white">Ngân hàng câu hỏi Vòng phụ</div>
+          <div className="text-xs text-mist mt-0.5">Mỗi dòng là một câu. Có thể nhập kèm ảnh giống Vòng 1.</div>
+        </div>
+        <div className="ml-auto flex flex-wrap items-center gap-2">
           <input ref={imgRef} type="file" accept="image/*" multiple className="hidden" onChange={pickImages} />
-          <button type="button" className="btn btn-ghost text-xs py-1!" title="Chọn các file ảnh trong thư mục ảnh trên máy cá nhân." onClick={() => imgRef.current?.click()}>
-            Chọn ảnh…
+          <button type="button" className="btn btn-ghost text-xs py-1.5!" title="Chọn các ảnh để dùng cùng file nhập." onClick={() => imgRef.current?.click()}>
+            Chọn ảnh kèm
           </button>
           <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={onImport} />
-          <button type="button" className="btn btn-ok text-xs py-1!" disabled={importing} onClick={() => fileRef.current?.click()}>
+          <button type="button" className="btn btn-ok text-xs py-1.5!" disabled={importing} onClick={() => fileRef.current?.click()}>
             {importing ? "Đang nhập…" : "Nhập Excel / CSV"}
           </button>
-          <button type="button" className="btn btn-ghost text-xs py-1!" onClick={downloadTbTemplate}>File mẫu</button>
+          {pendingImgs.current.length > 0 && <span className="text-xs text-gold">Đã chọn {pendingImgs.current.length} ảnh</span>}
+          <button type="button" className="btn btn-ghost text-xs py-1.5!" onClick={downloadTbTemplate}>Tải file mẫu</button>
         </div>
       </div>
-      <div className="overflow-x-auto mb-4">
-        <div className="min-w-[620px] flex flex-col gap-1.5">
-          <div className="grid grid-cols-[2.5rem_minmax(0,1fr)_12rem_2rem] gap-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-mist/70">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="text-sm text-mist">
+          <span className="text-white font-semibold">{list.length}</span> câu
+          <span className="mx-2 text-line">|</span>
+          <span className="text-ok">{list.filter((q) => q.question?.trim() && q.answer?.trim()).length}</span> hoàn chỉnh
+          <span className="mx-2 text-line">|</span>
+          <span className="text-gold">{list.filter((q) => q.mediaUrl).length}</span> có ảnh
+        </div>
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Tìm câu hỏi / đáp án…"
+          className="ml-auto min-w-[240px] flex-1! max-w-[420px]"
+        />
+        <button type="button" className="btn btn-ghost text-xs py-1.5!" onClick={addQuestion}>+ Thêm câu</button>
+      </div>
+      <div className="overflow-x-auto">
+        <div className="min-w-[900px] flex flex-col gap-1.5">
+          <div className="grid grid-cols-[2.5rem_9rem_minmax(0,1fr)_14rem_2.5rem] gap-2 border-b border-line px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-mist/70">
             <span className="text-right">#</span>
+            <span>Hình ảnh</span>
             <span>Câu hỏi</span>
             <span>Đáp án</span>
             <span />
           </div>
-          {list.length === 0 ? (
-            <p className="px-1 text-sm text-mist/80">Chưa có câu hỏi Vòng phụ.</p>
+          {list.filter((q) => {
+            const keyword = search.trim().toLowerCase();
+            return !keyword || `${q.question || ""} ${q.answer || ""}`.toLowerCase().includes(keyword);
+          }).length === 0 ? (
+            <div className="border border-dashed border-line px-4 py-8 text-center text-sm text-mist">
+              {list.length ? "Không có câu phù hợp." : "Chưa có câu hỏi Vòng phụ. Hãy nhập file hoặc thêm câu mới."}
+            </div>
           ) : (
-            list.map((q, i) => (
-              <div key={q.id || i} className="grid grid-cols-[2.5rem_minmax(0,1fr)_12rem_2rem] gap-2 items-center px-3 py-1.5 rounded bg-night/25 hover:bg-night/50 transition">
-                <span className="text-right text-xs text-mist/70 tabular-nums">{i + 1}</span>
-                <input
-                  className="w-full! bg-panel border border-line px-2 py-1.5 text-xs text-white"
-                  value={q.question}
-                  onChange={(e) => setList(list.map((x, j) => (j === i ? { ...x, question: e.target.value } : x)))}
-                  placeholder="Câu hỏi…"
-                />
-                <input
-                  className="w-full! bg-panel border border-line px-2 py-1.5 text-xs text-white"
-                  value={q.answer}
-                  onChange={(e) => setList(list.map((x, j) => (j === i ? { ...x, answer: e.target.value } : x)))}
-                  placeholder="Đáp án"
-                />
-                <button
-                  type="button"
-                  title="Xóa câu"
-                  className="justify-self-end text-mist/70 hover:text-danger text-sm"
-                  onClick={() => setList(list.filter((_, j) => j !== i))}
-                >
-                  ✕
-                </button>
-              </div>
-            ))
+            list.map((q, i) => {
+              const keyword = search.trim().toLowerCase();
+              if (keyword && !`${q.question || ""} ${q.answer || ""}`.toLowerCase().includes(keyword)) return null;
+              return (
+                <div key={q.id || i} className="grid grid-cols-[2.5rem_9rem_minmax(0,1fr)_14rem_2.5rem] gap-2 items-center border-b border-line/50 px-3 py-2 hover:bg-night/30 transition">
+                  <span className="text-right text-xs text-mist/70 tabular-nums">{i + 1}</span>
+                  <div className="flex items-center gap-1.5">
+                    {q.mediaUrl ? (
+                      <div className="relative">
+                        <img src={q.mediaUrl} alt="" className="h-14 w-20 rounded object-cover border border-line" />
+                        <button type="button" title="Gỡ ảnh" className="absolute -top-1 -right-1 rounded bg-night/90 px-1 text-[10px] text-danger" onClick={() => setQuestion(i, { mediaUrl: "", mediaType: "" })}>✕</button>
+                      </div>
+                    ) : (
+                      <span className="h-14 w-20 rounded border border-dashed border-line grid place-items-center text-[10px] text-mist">Chưa có ảnh</span>
+                    )}
+                    <label className="btn btn-ghost text-[10px] py-1! cursor-pointer">
+                      Đổi ảnh
+                      <input type="file" accept="image/*" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; e.target.value = ""; uploadQuestionImage(i, file); }} />
+                    </label>
+                  </div>
+                  <input
+                    className="w-full! bg-panel border border-line px-2.5 py-2 text-sm text-white"
+                    value={q.question || ""}
+                    onChange={(e) => setQuestion(i, { question: e.target.value })}
+                    placeholder="Câu hỏi…"
+                  />
+                  <input
+                    className="w-full! bg-panel border border-line px-2.5 py-2 text-sm text-white"
+                    value={q.answer || ""}
+                    onChange={(e) => setQuestion(i, { answer: e.target.value })}
+                    placeholder="Đáp án"
+                  />
+                  <button
+                    type="button"
+                    title="Xóa câu"
+                    className="justify-self-end text-mist/70 hover:text-danger text-sm"
+                    onClick={() => setList(list.filter((_, j) => j !== i))}
+                  >
+                    Xóa
+                  </button>
+                </div>
+              );
+            })
           )}
         </div>
       </div>
-      <button type="button" className="btn btn-ghost text-xs py-1!" onClick={() => setList([...list, { id: `tb-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`, question: "", answer: "", options: [], mediaUrl: "", mediaType: "", note: "" }])}>+ Thêm câu hỏi</button>
     </div>
   );
 }
