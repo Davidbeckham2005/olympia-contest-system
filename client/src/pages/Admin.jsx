@@ -1050,6 +1050,44 @@ function VuotCnvEditor({ draft, setDraft }) {
             ))
           )}
         </div>
+        {v.rows?.[4] && (
+          <div className="mt-3 rounded-lg border border-gold/30 bg-gold/5 p-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <b className="text-sm text-gold">Hình minh họa câu hỏi số 5</b>
+              {v.rows[4].mediaUrl ? (
+                <img src={v.rows[4].mediaUrl} alt="Minh họa câu hỏi số 5" className="h-16 w-24 rounded object-cover border border-line" />
+              ) : (
+                <span className="text-xs text-mist">Chưa có hình</span>
+              )}
+              <label className="btn btn-ghost text-xs! py-1! cursor-pointer">
+                {v.rows[4].mediaUrl ? "Đổi hình" : "Chọn hình"}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const f = e.target.files?.[0];
+                    if (!f) return;
+                    const r = await uploadFile(f);
+                    setRow(4, { mediaUrl: r.url, mediaType: "image" });
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+              {v.rows[4].mediaUrl && (
+                <button type="button" className="btn btn-ghost text-xs! py-1!" onClick={() => setRow(4, { mediaUrl: "", mediaType: "image" })}>Gỡ hình</button>
+              )}
+              <input
+                type="url"
+                className="min-w-64 flex-1! text-xs!"
+                value={v.rows[4].mediaUrl || ""}
+                placeholder="…hoặc dán URL hình minh họa"
+                onChange={(e) => setRow(4, { mediaUrl: e.target.value, mediaType: "image" })}
+              />
+            </div>
+            <p className="mt-2 text-xs text-mist">Hình này chỉ xuất hiện khi MC mở câu hỏi mảnh ghép trung tâm (câu số 5), không thay cho ảnh chướng ngại vật.</p>
+          </div>
+        )}
       </div>
       <button
         type="button"
