@@ -226,15 +226,18 @@ export default function Audience() {
             <div className="panel w-full max-w-3xl text-center">
               <p className="text-mist text-[clamp(16px,2.4vw,28px)]">Hết câu hỏi vòng phụ — MC cần chọn đội thắng.</p>
             </div>
-          ) : tb.phase === "setup" ? (
+          ) : tb.phase === "setup" || tb.phase === "selecting" ? (
             // MÀN CHỜ ĐẦU VÒNG giống Round 1 (RoundWait): chỉ dòng chữ vàng + thông báo.
-            // KHÔNG hiện bảng đội/câu hỏi khi vừa click vào vòng phụ.
+            // KHÔNG hiện bảng đội/câu hỏi khi vừa click vào vòng phụ. Phase "selecting":
+            // MC đang lựa câu hỏi — khán giả đợi, chưa có gì chiếu lên màn hình.
             <RoundWait
               title="VÒNG PHỤ"
               message={
-                tbTeams.length > 0
-                  ? "Đã chọn đội tham gia — chờ MC bấm Bắt đầu."
-                  : "Đang chờ MC chọn đội tham gia và bắt đầu…"
+                tb.phase === "selecting"
+                  ? "Đang chờ MC chọn câu hỏi…"
+                  : tbTeams.length > 0
+                    ? "Đã chọn đội tham gia — chờ MC bắt đầu."
+                    : "Đang chờ MC chọn đội tham gia và bắt đầu…"
               }
             />
           ) : (
