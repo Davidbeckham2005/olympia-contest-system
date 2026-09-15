@@ -1,7 +1,9 @@
 // Test Vòng phụ (tie_break) — flow mới do MC điều khiển:
-//   setup → chọn đội/câu → "Hiện câu hỏi" (ready, CHƯA tính giờ) →
+//   setup → chọn đội → "Bắt đầu vòng" (selecting: mở màn LỰA CÂU HỎI, chưa chiếu gì) →
+//   MC bấm "Chọn" lên một câu → chiếu câu ngay (ready, CHƯA tính giờ) →
 //   "Bắt đầu tính giờ" (running, mở nhận đáp án) → hết giờ/đóng sớm (answers) →
 //   MC chấm Đúng/Sai → "Lật đáp án": đội đúng + nhanh nhất thắng (done).
+// Vòng phụ quyết định bằng 1 câu.
 // Chạy: node server/tests/tieBreakFlow.test.js
 import { connectDb } from "../config/database.js";
 import { loadDb, getDb, saveDbSync } from "../models/store.js";
@@ -50,38 +52,66 @@ try {
     db.game.timer = { duration: 0, remaining: 0, running: false, endsAt: null };
   };
 
-  // ---------- Bước 1: setup → "Hiện câu hỏi" (ready), CHƯA tính giờ ----------
+  // ---------- Bước 1: "Bắt đầu vòng" → mở màn LỰA CÂU HỎI, CHƯA chiếu câu ----------
   seed();
-  const r = game.showTieBreakQuestion();
-  ok(r?.ok === true, "Hiện câu hỏi từ setup → ok");
-  ok(db.game.tieBreak.phase === "ready", "phase = ready (hiện câu, chưa tính giờ)");
-  ok(db.game.questionStatus === "showing", "Câu hỏi hiện ra trên màn hình");
-  ok(db.game.timer.running === false, "Timer CHƯA chạy khi chỉ hiện câu hỏi");
-  ok(db.game.display.mode === "question", "display ở dạng câu hỏi");
-  ok(db.game.tieBreak.fastest === null, "Chưa có đội thắng tạm thời");
+  const r = game.beginTieBreak();
+  ok(r?.ok === true, "Bấm Bắt đầu vòng phụ → ok");
+  ok(db.game.tieBreak.phase === "selecting", "phase = selecting (mở màn lựa câu hỏi)");
+  ok(db.game.questionStatus === "idle", "Chưa chiếu câu hỏi lên màn hình");
+  ok(db.game.display.mode === "idle", "display vẫn ở dạng idle");
+  ok(db.game.timer.running === false, "Timer CHƯA chạy");
 
-  // ---------- Bước 1b: không chọn đội → từ chối ----------
+  // Chưa chọn đội → không bắt đầu vòng.
   seed();
   db.game.tieBreak.teams = [];
-  const r2 = game.showTieBreakQuestion();
-  ok(r2?.reason === "no-teams", "Chưa chọn đội → không hiện câu");
+  const rb = game.beginTieBreak();
+  ok(rb?.reason === "no-teams", "Chưa chọn đội → chưa bắt đầu vòng được");
 
-  // ---------- Bước 2: "Bắt đầu tính giờ" sau khi hiện câu ----------
+  // ---------- Bước 1b: MC bấm "Chọn" lên một câu → CHIẾU CÂU NGAY (ready) ----------
   seed();
-  game.showTieBreakQuestion();
+  game.beginTieBreak();
+  const q1 = { id: "tb-1", question: "Đội nào vô địch?", answer: "Olympia", options: [], mediaUrl: "", mediaType: "", note: "" };
+  const pick = game.pickTieBreakQuestion(q1);
+  ok(pick?.ok === true, "Bấm Chọn trên một câu → ok");
+  ok(db.game.tieBreak.questions.length === 1, "Vòng phụ giữ đúng 1 câu đã chọn");
+  ok(db.game.tieBreak.phase === "ready", "Chiếu câu ngay → phase ready");
+  ok(db.game.questionStatus === "showing", "Câu hỏi hiện ra trên màn hình");
+  ok(db.game.display.mode === "question", "display ở dạng câu hỏi");
+  ok(db.game.display.question === "Đội nào vô địch?", "Nội dung câu hỏi chính xác");
+  ok(db.game.timer.running === false, "Timer CHƯA chạy khi chỉ chiếu câu hỏi");
+  ok(db.game.tieBreak.fastest === null, "Chưa có đội thắng tạm thời");
+
+  // Không truyền câu → từ chối.
+  seed();
+  game.beginTieBreak();
+  const pickNoQ = game.pickTieBreakQuestion();
+  ok(pickNoQ?.reason === "no-question", "Không truyền câu hỏi → bị chặn");
+  // Chọn câu khi vòng đang chạy/nhận bài (đã chiếu câu) → từ chối.
+  seed();
+  game.beginTieBreak();
+  game.pickTieBreakQuestion(q1);
+  const pickAgain = game.pickTieBreakQuestion(q1);
+  ok(pickAgain?.reason === "already-started", "Chọn lại câu khi câu đã chiếu → bị chặn");
+
+  // ---------- Bước 2: "Bắt đầu tính giờ" sau khi chiếu câu ----------
+  seed();
+  game.beginTieBreak();
+  game.pickTieBreakQuestion({ id: "tb-1", question: "Đội nào vô địch?", answer: "Olympia", options: [], mediaUrl: "", mediaType: "", note: "" });
   game.startTieBreakTimer();
   ok(db.game.tieBreak.phase === "running", "Bấm Bắt đầu tính giờ → phase = running");
   ok(db.game.timer.running === true, "Đồng hồ trả lời chạy");
   ok(db.game.tieBreak.startAt > 0, "Ghi nhận mốc bắt đầu để tính tốc độ");
 
-  // ---------- Bước 2b: tính giờ khi chưa hiện câu → từ chối ----------
+  // ---------- Bước 2b: tính giờ khi chưa chiếu câu → từ chối ----------
   seed();
+  game.beginTieBreak();
   const r3 = game.startTieBreakTimer();
-  ok(r3?.reason === "not-ready", "Chưa hiện câu hỏi thì không bấm giờ được");
+  ok(r3?.reason === "not-ready", "Chưa chiếu câu hỏi thì không bấm giờ được");
 
   // ---------- Bước 3: nộp đáp án khi đang tính giờ (đồng thời + nhiều lần) ----------
   seed();
-  game.showTieBreakQuestion();
+  game.beginTieBreak();
+  game.pickTieBreakQuestion({ id: "tb-1", question: "Đội nào vô địch?", answer: "Olympia", options: [], mediaUrl: "", mediaType: "", note: "" });
   game.startTieBreakTimer();
   const s1 = game.submitTieBreak("a", "Olympia");
   ok(s1?.ok === true, "Đội A nộp được khi đang tính giờ");
@@ -106,7 +136,8 @@ try {
 
   // ---------- Bước 4b: hết giờ (timer loop) cũng tự đóng nhận bài ----------
   seed();
-  game.showTieBreakQuestion();
+  game.beginTieBreak();
+  game.pickTieBreakQuestion({ id: "tb-1", question: "Đội nào vô địch?", answer: "Olympia", options: [], mediaUrl: "", mediaType: "", note: "" });
   game.startTieBreakTimer();
   game.startTimerLoop();
   db.game.timer.endsAt = Date.now() - 1;
@@ -180,19 +211,20 @@ try {
   ok(reveal2?.winner === null, "Không đội nào đúng → chưa có người thắng");
   ok(db.game.tieBreak.phase === "answers", "Vẫn ở phase answers chờ MC xử lý");
 
-  // ---------- Bước 7: sang câu kế ----------
+  // ---------- Bước 7: vòng phụ 1 câu → bấm Câu tiếp sau khi chốt = hết câu (exhausted) ----------
   seed();
-  game.showTieBreakQuestion();
+  game.beginTieBreak();
+  game.pickTieBreakQuestion({ id: "tb-1", question: "Đội nào vô địch?", answer: "Olympia", options: [], mediaUrl: "", mediaType: "", note: "" });
   game.startTieBreakTimer();
   game.closeTieBreak();
   const nx = game.nextTieBreakQuestion();
   ok(nx?.ok === true, "Sau khi chốt xong → bấm được Câu tiếp");
-  ok(db.game.questionIndex === 1, "Chuyển sang câu 2");
-  ok(db.game.tieBreak.phase === "ready", "Câu mới hiện ở phase ready (chờ bấm giờ)");
+  ok(db.game.tieBreak.phase === "exhausted", "Vòng phụ cho 1 câu → Câu tiếp = hết câu (exhausted)");
 
   // Không được sang câu giữa chừng câu đang thi.
   seed();
-  game.showTieBreakQuestion();
+  game.beginTieBreak();
+  game.pickTieBreakQuestion({ id: "tb-1", question: "Đội nào vô địch?", answer: "Olympia", options: [], mediaUrl: "", mediaType: "", note: "" });
   game.startTieBreakTimer();
   const nx2 = game.nextTieBreakQuestion();
   ok(nx2?.reason === "not-closed", "Còn nhận bài → không sang câu được");
@@ -200,7 +232,8 @@ try {
   // ---------- Bước 8: hết câu hỏi → exhausted, MC chọn tay ----------
   seed();
   db.game.tieBreak.questions = [{ id: "tb-1", question: "q?", answer: "a", options: [], mediaUrl: "", mediaType: "", note: "" }];
-  game.showTieBreakQuestion();
+  game.beginTieBreak();
+  game.pickTieBreakQuestion({ id: "tb-1", question: "Đội nào vô địch?", answer: "Olympia", options: [], mediaUrl: "", mediaType: "", note: "" });
   game.startTieBreakTimer();
   game.closeTieBreak();
   const nx3 = game.nextTieBreakQuestion();
