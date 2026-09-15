@@ -207,7 +207,7 @@ export default function Audience() {
     const bg = state.settings?.audienceBg || "dark";
     const bgUrl = state.settings?.audienceBgUrl || "";
     return (
-      <div className="relative min-h-screen flex flex-col overflow-hidden isolate">
+      <div className="relative h-screen flex flex-col overflow-hidden isolate">
         {/* Nền đồng bộ với các vòng khác: navy #070b16 + ảnh blur nếu MC cài màn khán giả */}
         <div className="fixed inset-0 z-0 bg-[#070b16]" />
         {bg === "blur" && bgUrl && (
@@ -221,7 +221,7 @@ export default function Audience() {
         )}
 
         {/* Màn câu hỏi: bố cục thoáng như Vòng 1, không hiện tiêu đề/thông báo phụ. */}
-        <div className="relative z-10 flex-1 flex flex-col items-center justify-center gap-8 px-6 pt-6 min-h-0">
+        <div className="relative z-10 flex-1 flex flex-col items-center justify-center gap-6 px-6 pt-6 min-h-0 overflow-y-auto pb-6">
           {exhausted ? (
             <div className="panel w-full max-w-3xl text-center">
               <p className="text-mist text-[clamp(16px,2.4vw,28px)]">Hết câu hỏi vòng phụ — MC cần chọn đội thắng.</p>
@@ -285,11 +285,11 @@ export default function Audience() {
                 </div>
               )}
               {answersScreen && (
-                <div className="w-full">
+                <div className="w-full max-h-[50vh] overflow-y-auto pr-1">
                   {d.answerRevealed && d.answer && (
-                    <div className="mx-auto mb-5 w-fit rounded-2xl border-2 border-gold/60 bg-[#121b33]/85 px-8 py-4 text-center shadow-[0_0_30px_rgba(255,214,10,0.25)]">
+                    <div className="mx-auto mb-4 w-fit rounded-2xl border-2 border-gold/60 bg-[#121b33]/85 px-8 py-3 text-center shadow-[0_0_30px_rgba(255,214,10,0.25)]">
                       <div className="kicker">ĐÁP ÁN CÂU HỎI</div>
-                      <div className="stage-answer r2-answer-reveal mt-1 text-[clamp(30px,4.2vw,64px)]">{d.answer}</div>
+                      <div className="stage-answer r2-answer-reveal mt-1 text-[clamp(28px,3.8vw,56px)]">{d.answer}</div>
                     </div>
                   )}
                   <R2AnswersTimeline cards={answerCards} big />
@@ -298,9 +298,9 @@ export default function Audience() {
             </>
           )}
           {tb.winner && (
-            <div className="panel w-full max-w-3xl text-center">
+            <div className="panel w-full max-w-2xl text-center shrink-0 py-4">
               <div className="kicker">ĐỘI THẮNG VÒNG PHỤ</div>
-              <p className="font-display font-black text-[clamp(30px,4.5vw,52px)] mt-1" style={{ color: winnerTeam?.color }}>
+              <p className="font-display font-black text-[clamp(28px,3.8vw,44px)] mt-1" style={{ color: winnerTeam?.color }}>
                 {winnerTeam?.name || tb.winner}
               </p>
             </div>
