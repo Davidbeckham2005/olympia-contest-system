@@ -472,6 +472,7 @@ export function Round2QuestionStrip({ state, d, g, children }) {
 export function Round2Question({ state, d, g, strip = true, children }) {
   const p = g.puzzle || {};
   const cnv = state.cnv || {};
+  const questionImage = d.mediaUrl && (d.mediaType === "image" || (g.round === "vuot_cnv" && p.currentRow === 4 && !d.mediaType));
   return (
     <div className="w-full max-w-[1200px] min-h-[60vh] mx-auto text-center flex flex-col items-center">
       <div className="flex-1 w-full flex flex-col items-center justify-center">
@@ -479,7 +480,7 @@ export function Round2Question({ state, d, g, strip = true, children }) {
         <div className="r2-rows mb-6 rounded-2xl border border-[rgba(255,214,10,0.28)] px-6 py-4">
           <CnvRowsFrame state={state} g={g} />
         </div>
-        {d.mediaUrl && d.mediaType === "image" && (
+        {questionImage && (
           <img src={d.mediaUrl} alt="" className="max-h-[30vh] mx-auto rounded-2xl object-contain border border-line shadow-[0_10px_40px_rgba(0,0,0,0.4)]" />
         )}
         {d.mediaUrl && d.mediaType === "video" && (

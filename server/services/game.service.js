@@ -462,7 +462,9 @@ export function showQuestion(opts = {}) {
   game.display.answer = q.answer;
   game.display.answerRevealed = false;
   game.display.mediaUrl = q.mediaUrl || "";
-  game.display.mediaType = q.mediaType || "";
+  // Câu hỏi mảnh ghép trung tâm dùng ảnh minh họa; dữ liệu cũ có thể chỉ lưu URL
+  // mà chưa có mediaType nên mặc định URL của câu số 5 là ảnh.
+  game.display.mediaType = q.mediaType || (game.round === "vuot_cnv" && game.puzzle.currentRow === 4 && q.mediaUrl ? "image" : "");
   game.display.note = q.note || "";
   game.display.title = ROUNDS.find((r) => r.id === game.round)?.name || "";
   if (game.round === "vuot_cnv" && !cnv.cornersResolved()) {
