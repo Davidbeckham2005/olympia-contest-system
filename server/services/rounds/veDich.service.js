@@ -407,7 +407,10 @@ export function parseVeDichXlsx(buffer) {
 
 // Resolve tên đội (đã nhập từ cột Đội) → teamId. Nhận cả mã đội trực tiếp ("a"./"b",...),
 // tên hiển thị ("Đội A", "đội a") hoặc tên đầy đủ do Admin đổi. Bỏ dấu/hoa thường khi so.
-// Trả về undefined nếu không khớp.
+// QUAN TRỌNG (production): đội có thể KHÔNG còn id/tên mặc định "a".."d" mà là id/tên
+// khác. Khi cột Đội ghi "a"/"b"/"c"/"d" mà không khớp id/tên team thật → tự MAP THEO THỨ
+// TỰ danh sách đội hiện có: "a" → đội đầu tiên, "b" → đội kế tiếp, v.v. Giúp file Excel
+// chuẩn (a,b,c,d) vẫn nhập đúng mà không cần đổi tên/id đội. Trả về undefined nếu không khớp.
 function resolveTeamId(raw) {
   const v = String(raw || "").trim();
   if (!v) return undefined;
@@ -421,8 +424,17 @@ function resolveTeamId(raw) {
       .replace(/\s+/g, "")
       .replace(/đội/g, "");
   const nv = norm(v);
-  const team = (getDb().teams || []).find((t) => t.id === nv || norm(t.name) === nv);
-  return team?.id;
+  const teams = getDb().teams || [];
+  const team = teams.find((t) => t.id === nv || norm(t.name) === nv);
+  if (team) return team?.id;
+  // Cột Đội ghi đúng chữ cái "a"/"b"/.../"f" (như file chuẩn) → map theo vị trí đội.
+  const m = /^([a-f])$/.exec(nv);
+  if (m) {
+    const idx = m[1].charCodeAt(0) - 97;
+    const byOrder = teams[idx];
+    if (byOrder) return byOrder.id;
+  }
+  return undefined;
 }
 
 // Import câu hỏi từ tệp (xlsx/xls hoặc CSV) — gán CỐ ĐỊNH theo đội + gói.

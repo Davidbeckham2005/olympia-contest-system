@@ -124,5 +124,41 @@ try {
   console.error("ERROR:", err.message);
 }
 
+// 6) Production: đội KHÔNG còn id/tên mặc định a/b/c/d → cột Đội "a"/"b"/"c"/"d"
+// vẫn map theo THỨ TỰ danh sách đội hiện có ("a" → đội đầu tiên, "b" → đội kế tiếp).
+try {
+  await loadDb();
+  vedich.init({ emit: () => { } });
+
+  const bank3 = getDb().questions.main.veDich;
+  const teamsSnapshot3 = JSON.stringify(getDb().teams);
+  const questionsSnapshot3 = JSON.stringify(bank3);
+  try {
+    // Giả lập production: đội có id/tên khác "a"/"b" (vd id "t1", "t2").
+    getDb().teams = [
+      { id: "t1", name: "Đội Sao Đỏ", memberIds: [], score: 0 },
+      { id: "t2", name: "Đội Sao Vàng", memberIds: [], score: 0 },
+      { id: "t3", name: "Đội Sao Xanh", memberIds: [], score: 0 },
+      { id: "t4", name: "Đội Sao Tím", memberIds: [], score: 0 },
+    ];
+    getDb().questions.main.veDich = [];
+    const csvT = "Đội,Gói,Điểm,Câu hỏi,Đáp án\na,60,10,Câu order a,Đáp 1\nb,60,10,Câu order b,Đáp 1\nc,60,10,Câu order c,Đáp 1\nd,60,10,Câu order d,Đáp 1\n";
+    const r4 = vedich.importVeDichFile(csvBuffer(csvT), "prod.csv");
+    ok(r4.added === 4, "production: import đủ 4 câu với cột Đội a/b/c/d");
+    ok(r4.questions.find((q) => q.question === "Câu order a")?.teamId === "t1", "production: 'a' → đội đầu tiên (t1)");
+    ok(r4.questions.find((q) => q.question === "Câu order b")?.teamId === "t2", "production: 'b' → đội kế tiếp (t2)");
+    ok(r4.questions.find((q) => q.question === "Câu order c")?.teamId === "t3", "production: 'c' → đội thứ 3 (t3)");
+    ok(r4.questions.find((q) => q.question === "Câu order d")?.teamId === "t4", "production: 'd' → đội thứ 4 (t4)");
+  } finally {
+    getDb().teams = JSON.parse(teamsSnapshot3);
+    getDb().questions.main.veDich = JSON.parse(questionsSnapshot3);
+    await saveDbSync();
+    console.log("Đã khôi phục DB khỏi test production.");
+  }
+} catch (err) {
+  fail += 1;
+  console.error("ERROR:", err.message);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
