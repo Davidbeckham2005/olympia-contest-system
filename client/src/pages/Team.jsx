@@ -24,7 +24,7 @@ const CNV_REASON_MSG = {
 }
 
 function isInsertKey(e) {
-  return e.key === "Insert" || e.code === "Insert" || e.code === "NumpadInsert" || e.keyCode === 45;
+  return e.key === "Insert" || e.code === "Insert" || e.code === "NumpadInsert" || e.keyCode === 45 || e.which === 45;
 }
 
 function loadSession() {
@@ -91,8 +91,8 @@ export default function Team() {
       e.stopPropagation();
       buzz("keyword");
     }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
   }, [g.round, g.puzzle?.keywordSolved, g.puzzle?.keywordClaim, g.puzzle?.keywordBlocked, team?.id, buzz]);
 
   // Nhấn phím INSERT để giành quyền trả lời vòng Về đích khi đối thủ sai (chuông mở).
@@ -113,8 +113,8 @@ export default function Team() {
       e.stopPropagation();
       buzz("row");
     }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
   }, [
     g.round,
     g.buzzer?.open,
