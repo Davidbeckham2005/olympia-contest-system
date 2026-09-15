@@ -14,6 +14,8 @@ export const KHOI_DONG_PREP_SECONDS = 3;
 // Thời gian trả lời Vòng phụ — MC/Admin chỉnh được qua Cài đặt (tieBreakAnswerSeconds);
 // đây chỉ là giá trị mặc định khi chưa cấu hình.
 export const TIEBREAK_ANSWER_SECONDS = 10;
+// Vòng phụ: đếm ngược 3-2-1 trên màn hình trước khi mở nhận đáp án (không tính vào thời gian trả lời).
+export const TIE_BREAK_PREP_SECONDS = 3;
 export const getTieBreakAnswerSeconds = () =>
   Math.max(3, Number(getDb().settings?.tieBreakAnswerSeconds) || TIEBREAK_ANSWER_SECONDS);
 
@@ -178,9 +180,15 @@ export function startTimerLoop() {
         }
         // Hết 30s → KHÔNG tự mở chuông. Chỉ pause timer, MC sẽ bấm Đúng/Sai.
       } else if (game.round === "tie_break") {
-        // Hết giờ trả lời Vòng phụ → tự đóng nhận bài, chuyển sang giai đoạn
-        // MC chấm Đúng/Sai từng đội ("chờ chốt đáp án"). Không tự mở câu kế tiếp.
-        if (game.tieBreak?.phase === "running") {
+        if (game.tieBreak?.phase === "countdown") {
+          // Hết đếm ngược 3-2-1 → mở nhận đáp án: chạy đồng hồ trả lời thật
+          // (mốc bắt đầu tính tốc độ đặt ở ĐÂY, không tính 3s chuẩn bị).
+          game.tieBreak.phase = "running";
+          game.tieBreak.startAt = Date.now();
+          setTimer(getTieBreakAnswerSeconds(), true);
+        } else if (game.tieBreak?.phase === "running") {
+          // Hết giờ trả lời Vòng phụ → tự đóng nhận bài, chuyển sang giai đoạn
+          // MC chấm Đúng/Sai từng đội ("chờ chốt đáp án"). Không tự mở câu kế tiếp.
           game.tieBreak.phase = "answers";
           game.questionStatus = "showing";
         }
@@ -1812,16 +1820,16 @@ export function showTieBreakQuestion(force = false) {
   return { ok: true };
 }
 
-// Bước 3 — "Bắt đầu tính giờ": mở cửa sổ trả lời chung cho các đội đã chọn.
+// Bước 3 — "Bắt đầu tính giờ trả lời": đếm ngược 3-2-1 trên màn hình TRƯỚC rồi
+// mới mở cửa sổ trả lời chung cho các đội (timer loop chuyển countdown → running).
 export function startTieBreakTimer() {
   const game = g();
   if (game.round !== "tie_break") return { ignored: true };
   if (game.tieBreak.phase !== "ready" || game.questionStatus !== "showing") {
     return { ignored: true, reason: "not-ready" };
   }
-  game.tieBreak.phase = "running";
-  game.tieBreak.startAt = Date.now();
-  setTimer(getTieBreakAnswerSeconds(), true);
+  game.tieBreak.phase = "countdown";
+  setTimer(TIE_BREAK_PREP_SECONDS, true);
   saveDb();
   emit();
   return { ok: true };
