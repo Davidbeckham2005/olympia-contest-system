@@ -23,6 +23,10 @@ const CNV_REASON_MSG = {
   auth: "Phiên đăng nhập hết hạn — hãy đăng nhập lại.",
 }
 
+function isInsertKey(e) {
+  return e.key === "Insert" || e.code === "Insert" || e.code === "NumpadInsert" || e.keyCode === 45;
+}
+
 function loadSession() {
   try {
     return JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
@@ -81,14 +85,11 @@ export default function Team() {
       !(g.puzzle?.keywordBlocked || []).includes(team?.id);
     function onKey(e) {
       if (!enabled) return;
-      const tag = (e.target && e.target.tagName) || "";
-      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
-      const c = e.code || "";
-      const k = e.key || "";
-      if (c === "Insert" || c === "NumpadInsert" || k === "Insert") {
-        e.preventDefault();
-        buzz("keyword");
-      }
+      if (!isInsertKey(e)) return;
+      // Insert là phím giành quyền toàn cục, kể cả khi ô nhập đáp án đang được focus.
+      e.preventDefault();
+      e.stopPropagation();
+      buzz("keyword");
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -107,14 +108,10 @@ export default function Team() {
       !myTeamEliminated;
     function onKey(e) {
       if (!enabled) return;
-      const tag = (e.target && e.target.tagName) || "";
-      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
-      const c = e.code || "";
-      const k = e.key || "";
-      if (c === "Insert" || c === "NumpadInsert" || k === "Insert") {
-        e.preventDefault();
-        buzz("row");
-      }
+      if (!isInsertKey(e)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      buzz("row");
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
