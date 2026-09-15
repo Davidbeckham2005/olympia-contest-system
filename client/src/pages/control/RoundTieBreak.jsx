@@ -2,6 +2,7 @@ const PHASE_LABEL = {
   setup: "CHỌN ĐỘI",
   selecting: "CHỌN CÂU HỎI",
   ready: "HIỆN CÂU HỎI — CHỜ BẮT ĐẦU GIỜ",
+  countdown: "ĐẾM NGƯỢC 3 · 2 · 1",
   running: "ĐANG NHẬN ĐÁP ÁN",
   answers: "CHỜ CHỐT ĐÁP ÁN",
   done: "ĐÃ CÓ NGƯỜI THẮNG",
@@ -52,6 +53,9 @@ export default function RoundTieBreak({ ctx }) {
         )}
         {phase === "exhausted" && (
           <span className="badge badge-warn">Hết câu — chọn tay công</span>
+        )}
+        {phase === "countdown" && (
+          <span className="badge badge-warn">Bắt đầu sau {formatRemain(remaining)}</span>
         )}
         {isCounting && (
           <span className="badge badge-warn">Giờ trả lời: {formatRemain(remaining)}</span>
@@ -122,6 +126,12 @@ export default function RoundTieBreak({ ctx }) {
           <button type="button" className="btn btn-ok w-full" onClick={() => act("tiebreak.start")}>
             Bắt đầu tính giờ trả lời
           </button>
+        </div>
+      )}
+
+      {phase === "countdown" && (
+        <div className="rounded-lg border border-gold/40 bg-gold/5 px-3 py-2 text-center text-sm text-gold">
+          Đang đếm ngược 3 · 2 · 1 trên màn hình — các đội sẽ vào trả lời ngay sau đó.
         </div>
       )}
 
