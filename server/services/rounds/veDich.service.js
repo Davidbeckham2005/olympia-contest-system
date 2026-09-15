@@ -391,7 +391,7 @@ export function parseVeDichXlsx(buffer) {
     .filter((row) => {
       const first = String(row[0] || "").trim();
       const second = String(row[1] || "").trim();
-      if (/^đội\b/i.test(first) && row.slice(1).every((cell) => !String(cell ?? "").trim())) return false;
+      if (/gói × 4 câu/.test(first) && row.slice(1).every((cell) => !String(cell ?? "").trim())) return false;
       if (/^gói\b/i.test(first) && /cấu trúc/i.test(second)) return false;
       return true;
     })

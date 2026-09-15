@@ -52,7 +52,7 @@ const template = fs.readFileSync(new URL("../../client/public/files/template-cau
 const templateRows = vedich.parseVeDichXlsx(template);
 ok(templateRows.length === 48, "Excel mẫu đọc đủ 48 dòng câu hỏi");
 ok(
-  templateRows[0]?.team === "ĐỘI A" && templateRows[0]?.pkg === 60 && templateRows[0]?.points === 10,
+  templateRows[0]?.team === "angle" && templateRows[0]?.pkg === 60 && templateRows[0]?.points === 10,
   "Excel mẫu nhận đúng Đội/Gói/Điểm từ header thật"
 );
 

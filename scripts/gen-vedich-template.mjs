@@ -23,10 +23,10 @@ const PURPLE   = { fgColor: { rgb: "7030A0" } };
 const LT_PRP   = { fgColor: { rgb: "EAD1DC" } };
 
 const TEAM_THEMES = [
-  { name: "ĐỘI A", bg: MED_BLU,  light: LT_BLUE, dark: DARK_BLU },
-  { name: "ĐỘI B", bg: ORANGE,  light: LT_ORG,  dark: { fgColor: { rgb: "7F3D00" } } },
-  { name: "ĐỘI C", bg: GREEN,   light: LT_GRN,  dark: { fgColor: { rgb: "1E3A0F" } } },
-  { name: "ĐỘI D", bg: PURPLE,  light: LT_PRP,  dark: { fgColor: { rgb: "3D0050" } } },
+  { name: "angle", bg: MED_BLU,  light: LT_BLUE, dark: DARK_BLU },
+  { name: "news",  bg: ORANGE,  light: LT_ORG,  dark: { fgColor: { rgb: "7F3D00" } } },
+  { name: "kop",   bg: GREEN,   light: LT_GRN,  dark: { fgColor: { rgb: "1E3A0F" } } },
+  { name: "pol",   bg: PURPLE,  light: LT_PRP,  dark: { fgColor: { rgb: "3D0050" } } },
 ];
 
 const PACKAGES = {
@@ -146,7 +146,7 @@ wsData["!rows"] = [
   { hpt: 28 },  // row 1 – header cột
 ];
 for (let i = 2; i < DATA.length; i++) {
-  const isHeader = DATA[i][0].v.toString().includes("ĐỘI") || DATA[i][0].v.toString().includes("GÓI");
+  const isHeader = DATA[i][0].v.toString().includes("gói") || DATA[i][0].v.toString().includes("GÓI");
   wsData["!rows"].push({ hpt: isHeader ? 24 : 28 });
 }
 
@@ -162,7 +162,7 @@ const guideRows = [
   ["", "", ""],
   ["CÁCH NHẬP", "", ""],
   ["Bước 1", "Mở sheet 'Câu hỏi Vòng 4'"],
-  ["Bước 2", "Tìm đội cần nhập (A / B / C / D)"],
+  ["Bước 2", "Tìm đội cần nhập (angle / news / kop / pol)"],
   ["Bước 3", "Tìm gói cần nhập (Gói 60 / 80 / 100)"],
   ["Bước 4", "Nhập Câu hỏi + Đáp án vào 2 ô vàng trong mỗi dòng"],
   ["Bước 5", "Lưu file Excel (.xlsx)"],
@@ -178,7 +178,7 @@ const guideRows = [
   ["QUY TẮC", "", ""],
   ["•", "Cột ĐỘI / GÓI / ĐIỂM: KHÔNG sửa — đã điền sẵn"],
   ["•", "Chỉ nhập vào 2 cột: CÂU HỎI và ĐÁP ÁN (ô vàng)"],
-  ["•", "Tên đội: Đội A, Đội B, Đội C, Đội D"],
+  ["•", "Tên đội: angle, news, kop, pol"],
   ["•", "Gói: 60, 80, 100"],
   ["•", "Điểm: 10, 20, 30 (đúng theo cấu trúc gói)"],
   ["", "", ""],
