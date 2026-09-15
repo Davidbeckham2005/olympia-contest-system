@@ -1661,14 +1661,17 @@ export function resetMainRoundState() {
 
 // === TIE-BREAK (Vòng phụ) ===
 // Flow (MC điều khiển từng bước):
-//   setup   → MC chọn đội tham gia + câu hỏi (ngân hàng do Admin quản lý).
-//   ready   → "Hiện câu hỏi": câu hiện lên mọi màn hình, CHƯA tính giờ.
-//   running → "Bắt đầu tính giờ": mở cửa sổ trả lời chung, các đội nộp đáp án
-//             (ghi nhận thời gian nộp chính xác để xét "đúng + nhanh nhất").
-//   answers → Hết giờ (hoặc MC đóng sớm): đóng nhận bài, MC chấm Đúng/Sai từng đội.
-//   done    → Lật đáp án: đội trả lời ĐÚNG và NHANH NHẤT (tieBreak.fastest) thắng vòng phụ.
+//   setup     → MC chọn đội tham gia.
+//   selecting → "Bắt đầu vòng": mở màn LỰA CÂU HỎI, CHƯA chiếu gì lên màn hình. Ngân
+//               hàng câu hỏi do Admin quản lý; MC bấm "Chọn" lên một câu → chiếu ngay.
+//   ready     → Câu hỏi hiện lên mọi màn hình, CHƯA tính giờ.
+//   running   → "Bắt đầu tính giờ": mở cửa sổ trả lời chung, các đội nộp đáp án
+//               (ghi nhận thời gian nộp chính xác để xét "đúng + nhanh nhất").
+//   answers   → Hết giờ (hoặc MC đóng sớm): đóng nhận bài, MC chấm Đúng/Sai từng đội.
+//   done      → Lật đáp án: đội trả lời ĐÚNG và NHANH NHẤT (tieBreak.fastest) thắng vòng phụ.
 //   exhausted → Hết câu hỏi mà chưa có đội thắng → MC tự chọn đội thắng / làm lại.
-// Các đội tham gia trả lời ĐỒNG THỜI trong một cửa sổ giờ chung. Sai không bị trừ điểm.
+// Vòng phụ quyết định bằng 1 câu: các đội tham gia trả lời ĐỒNG THỜI trong một cửa
+// sổ giờ chung, sai không bị trừ điểm.
 export function setTieBreakTeams(teamIds) {
   const game = g();
   if (game.round !== "tie_break") return { ignored: true };
@@ -1676,6 +1679,37 @@ export function setTieBreakTeams(teamIds) {
   game.tieBreak.teams = [...new Set(Array.isArray(teamIds) ? teamIds : [])];
   saveDb();
   emit();
+}
+
+// "Bắt đầu vòng": chỉ mở màn lựa câu hỏi (selecting), CHƯA chiếu câu lên màn hình.
+// Vòng phụ chỉ bắt đầu sau khi MC đã chọn đội tham gia.
+export function beginTieBreak() {
+  const game = g();
+  if (game.round !== "tie_break") return { ignored: true };
+  if (game.tieBreak.phase !== "setup") return { ignored: true, reason: "already-started" };
+  if (!(game.tieBreak?.teams || []).length) return { ignored: true, reason: "no-teams" };
+  game.tieBreak.phase = "selecting";
+  game.tieBreak.questions = [];
+  game.tieBreak.questionIndex = 0;
+  game.questionIndex = 0;
+  saveDb();
+  emit();
+  return { ok: true };
+}
+
+// MC bấm "Chọn" lên một câu hỏi trong ngân hàng → CHIẾU CÂU NGAY (vòng phụ 1 câu
+// quyết định): đưa câu thành câu duy nhất rồi hiện lên màn hình ở phase "ready".
+export function pickTieBreakQuestion(question) {
+  const game = g();
+  if (game.round !== "tie_break") return { ignored: true };
+  if (!(game.tieBreak?.teams || []).length) return { ignored: true, reason: "no-teams" };
+  const ph = game.tieBreak.phase;
+  if (ph !== "setup" && ph !== "selecting") return { ignored: true, reason: "already-started" };
+  if (!question?.id) return { ignored: true, reason: "no-question" };
+  game.tieBreak.questions = [question];
+  game.tieBreak.questionIndex = 0;
+  game.questionIndex = 0;
+  return showTieBreakQuestion();
 }
 
 // Xóa sạch kết quả của câu hỏi đang thi (khi hiện câu mới / bắt đầu lại).
