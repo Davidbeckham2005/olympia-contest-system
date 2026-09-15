@@ -559,7 +559,7 @@ export function Round2Board({ state, g, minimal }) {
               phải hàng ngang thứ 5. Đang thi câu hỏi cuối → mảnh nhấp nháy vàng làm mục
               tiêu. Mở mảnh → lộ ảnh gốc (hoặc hiện vàng nếu vòng không có ảnh); khóa → ô đen. */}
           <div
-            className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(52%+40px)] h-[calc(60%+40px)] rounded-xl border-2 grid place-items-center font-display font-black text-[clamp(26px,3.4vw,52px)] tracking-tight drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)] transition ${solved[4]
+            className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(52%+70px)] h-[calc(60%+70px)] rounded-xl border-2 grid place-items-center font-display font-black text-[clamp(26px,3.4vw,52px)] tracking-tight drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)] transition ${solved[4]
                 ? media?.url && media.type !== "video"
                   ? `border-transparent ${tileOpenAnimated(4) ? "r2-tile-open" : ""}`
                   : `bg-gold text-[#1a1400] border-gold shadow-[0_0_26px_rgba(255,214,10,0.45)] ${tileOpenAnimated(4) ? "r2-tile-open" : ""}`
