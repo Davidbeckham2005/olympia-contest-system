@@ -137,6 +137,7 @@ const actions = {
     return r;
   },
   "tiebreak.winner": (p) => game.setTieBreakWinner(p.teamId),
+  "tiebreak.showAnswer": () => game.showTieBreakAnswer(),
   "tiebreak.reveal": () => game.revealTieBreakAnswer(),
   "tiebreak.eliminate": (p) => game.eliminateTeam(p.teamId),
   "tiebreak.restore": (p) => game.restoreTeam(p.teamId),

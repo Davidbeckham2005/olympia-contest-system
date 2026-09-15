@@ -1875,6 +1875,20 @@ export function setTieBreakWinner(teamId) {
   return { ok: true };
 }
 
+// MC bấm "Hiện đáp án của câu hỏi": chỉ lật đáp án đúng lên màn hình khán giả
+// (to, rõ), CHƯA công bố đội thắng — phase vẫn "answers" để MC còn chấm/xử lý.
+export function showTieBreakAnswer() {
+  const game = g();
+  if (game.round !== "tie_break") return { ignored: true };
+  if (game.tieBreak.phase !== "answers") return { ignored: true, reason: "not-closed" };
+  const q = game.tieBreak.questions[game.questionIndex];
+  game.display.answerRevealed = true;
+  game.display.answer = q?.answer || "";
+  saveDb();
+  emit();
+  return { ok: true };
+}
+
 // "Lật đáp án": công bố đáp án đúng; đội ĐÚNG + NỘP NHANH NHẤT thắng vòng phụ.
 // Nếu có đội thắng → phase "done"; nếu không đội nào đúng → MC bấm "Câu tiếp" (hoặc chọn tay).
 export function revealTieBreakAnswer() {

@@ -181,6 +181,11 @@ export default function RoundTieBreak({ ctx }) {
             );
           })}
           {canReveal && (
+            <button type="button" className="btn btn-ghost text-xs py-1.5! w-full" onClick={() => act("tiebreak.showAnswer")}>
+              Hiện đáp án của câu hỏi
+            </button>
+          )}
+          {canReveal && (
             <button type="button" className="btn btn-ghost text-xs py-1.5! w-full" onClick={() => act("tiebreak.reveal")}>
               Lật đáp án — công bố đội thắng (đúng + nhanh nhất)
             </button>

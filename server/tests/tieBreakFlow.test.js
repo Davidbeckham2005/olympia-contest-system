@@ -151,6 +151,26 @@ try {
   ok(db.game.tieBreak.phase === "done", "Có người thắng → vòng phụ done");
   ok(db.game.display.answerRevealed === true, "Đáp án được lật trên màn hình");
 
+  // ---------- Bước 6a: "Hiện đáp án của câu hỏi" — chỉ lật đáp án, CHƯA công bố đội thắng ----------
+  seed();
+  db.game.tieBreak.phase = "answers";
+  db.game.tieBreak.submissions = {
+    a: { answer: "Olympia", elapsed: 4.0 },
+    b: { answer: "Olympia", elapsed: 1.2 },
+  };
+  db.game.tieBreak.corrections = { a: true, b: true };
+  const showAns = game.showTieBreakAnswer();
+  ok(showAns?.ok === true, "Bấm Hiện đáp án của câu hỏi → ok");
+  ok(db.game.display.answerRevealed === true, "Đáp án câu hỏi hiện ra");
+  ok(db.game.display.answer === "Olympia", "Nội dung đáp án đúng được đưa lên màn hình");
+  ok(db.game.tieBreak.phase === "answers", "Vẫn ở phase answers — chưa công bố đội thắng");
+  ok(db.game.tieBreak.winner === null, "Chưa có đội thắng khi chỉ hiện đáp án");
+
+  seed();
+  db.game.tieBreak.phase = "running";
+  const showAns2 = game.showTieBreakAnswer();
+  ok(showAns2?.reason === "not-closed", "Còn nhận bài thì không hiện đáp án được");
+
   // ---------- Bước 6b: không ai đúng → không có người thắng ----------
   seed();
   db.game.tieBreak.phase = "answers";
