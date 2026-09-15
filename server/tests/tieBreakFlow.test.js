@@ -30,6 +30,14 @@ try {
   snapshot = JSON.stringify({ game: db.game, teams: db.teams });
   game.setBroadcast(() => {});
 
+  const tick = (ms = 400) => new Promise((res) => setTimeout(res, ms));
+  function forceTimerExpired(durationSec = 0) {
+    db.game.timer.duration = durationSec;
+    db.game.timer.remaining = 0;
+    db.game.timer.running = true;
+    db.game.timer.endsAt = Date.now() - 1;
+  }
+
   const seed = () => {
     db.game.round = "tie_break";
     db.game.questionIndex = 0;
@@ -93,13 +101,21 @@ try {
   const pickAgain = game.pickTieBreakQuestion(q1);
   ok(pickAgain?.reason === "already-started", "Chọn lại câu khi câu đã chiếu → bị chặn");
 
-  // ---------- Bước 2: "Bắt đầu tính giờ" sau khi chiếu câu ----------
+  // ---------- Bước 2: "Bắt đầu tính giờ trả lời" → đếm ngược 3·2·1 rồi mới mở nhận đáp án ----------
   seed();
   game.beginTieBreak();
   game.pickTieBreakQuestion({ id: "tb-1", question: "Đội nào vô địch?", answer: "Olympia", options: [], mediaUrl: "", mediaType: "", note: "" });
   game.startTieBreakTimer();
-  ok(db.game.tieBreak.phase === "running", "Bấm Bắt đầu tính giờ → phase = running");
-  ok(db.game.timer.running === true, "Đồng hồ trả lời chạy");
+  ok(db.game.tieBreak.phase === "countdown", "Bấm Bắt đầu tính giờ → đếm ngược 3·2·1 (phase countdown)");
+  ok(db.game.timer.duration === 3, "Đồng hồ chuẩn bị chạy 3 giây");
+  ok(db.game.tieBreak.startAt == null, "Mốc tính tốc độ CHƯA đặt trong lúc đếm");
+  const s0 = game.submitTieBreak("a", "sớm");
+  ok(s0?.reason === "not-open", "Đang đếm 3·2·1 → chưa nộp đáp án được");
+  game.startTimerLoop();
+  forceTimerExpired();
+  await tick();
+  ok(db.game.tieBreak.phase === "running", "Hết đếm 3·2·1 → phase running");
+  ok(db.game.timer.running === true, "Đồng hồ trả lời chạy sau đếm ngược");
   ok(db.game.tieBreak.startAt > 0, "Ghi nhận mốc bắt đầu để tính tốc độ");
 
   // ---------- Bước 2b: tính giờ khi chưa chiếu câu → từ chối ----------
@@ -113,6 +129,10 @@ try {
   game.beginTieBreak();
   game.pickTieBreakQuestion({ id: "tb-1", question: "Đội nào vô địch?", answer: "Olympia", options: [], mediaUrl: "", mediaType: "", note: "" });
   game.startTieBreakTimer();
+  game.startTimerLoop();
+  forceTimerExpired();
+  await tick();
+  ok(db.game.tieBreak.phase === "running", "Hết đếm 3·2·1 → mở nhận đáp án (running)");
   const s1 = game.submitTieBreak("a", "Olympia");
   ok(s1?.ok === true, "Đội A nộp được khi đang tính giờ");
   ok(Number(db.game.tieBreak.submissions.a.elapsed) >= 0, "Bài nộp có ghi thời gian elapsed");
@@ -140,10 +160,13 @@ try {
   game.pickTieBreakQuestion({ id: "tb-1", question: "Đội nào vô địch?", answer: "Olympia", options: [], mediaUrl: "", mediaType: "", note: "" });
   game.startTieBreakTimer();
   game.startTimerLoop();
-  db.game.timer.endsAt = Date.now() - 1;
-  db.game.timer.remaining = 0;
-  db.game.timer.running = true;
-  await new Promise((res) => setTimeout(res, 400));
+  // Hết đếm ngược 3·2·1 → running.
+  forceTimerExpired(3);
+  await tick();
+  ok(db.game.tieBreak.phase === "running", "Đếm ngược xong → mở nhận đáp án (running)");
+  // Hết giờ trả lời thật → tự đóng nhận bài.
+  forceTimerExpired();
+  await tick();
   ok(db.game.tieBreak.phase === "answers", "Hết giờ → tự đóng nhận bài (phase answers)");
   ok(db.game.questionStatus === "showing", "Câu hỏi vẫn hiện để MC chấm");
 
@@ -216,6 +239,9 @@ try {
   game.beginTieBreak();
   game.pickTieBreakQuestion({ id: "tb-1", question: "Đội nào vô địch?", answer: "Olympia", options: [], mediaUrl: "", mediaType: "", note: "" });
   game.startTieBreakTimer();
+  game.startTimerLoop();
+  forceTimerExpired(3);
+  await tick();
   game.closeTieBreak();
   const nx = game.nextTieBreakQuestion();
   ok(nx?.ok === true, "Sau khi chốt xong → bấm được Câu tiếp");
@@ -235,6 +261,9 @@ try {
   game.beginTieBreak();
   game.pickTieBreakQuestion({ id: "tb-1", question: "Đội nào vô địch?", answer: "Olympia", options: [], mediaUrl: "", mediaType: "", note: "" });
   game.startTieBreakTimer();
+  game.startTimerLoop();
+  forceTimerExpired(3);
+  await tick();
   game.closeTieBreak();
   const nx3 = game.nextTieBreakQuestion();
   ok(db.game.tieBreak.phase === "exhausted", "Hết câu hỏi → phase exhausted");
