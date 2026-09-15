@@ -513,10 +513,8 @@ export function importVeDichFile(buf, name = "") {
       added += 1;
     }
   }
-  if (added > 0) {
-    db.questions.main.veDich = normalizeBank([...bank, ...questions]);
-    saveDb();
-  }
+  // CHỈ ĐỌC & XÁC MINH — KHÔNG ghi câu vào ngân hàng. Import không còn tự thêm câu nữa;
+  // câu Về đích chỉ do Admin sửa/xóa hoặc nạp từ nguồn khác. total = số câu hiện tại.
   return { added, skipped, errors, questions, total: db.questions.main.veDich.length, teams: validateTeamPackages() };
 }
 

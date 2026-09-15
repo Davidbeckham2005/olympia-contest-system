@@ -1,7 +1,7 @@
-// Test NHẬP CÂU HỎI Về đích từ file Excel/CSV:
+// Test NHẬP CÂU HỎI Về đích từ file Excel/CSV (từ khi bỏ "tự thêm câu"):
 //   - parse CSV có tiêu đề / không tiêu đề (vị trí 3 cột);
 //   - parseVeDichRows nhận dạng header tiếng Việt/Anh, chuẩn mức điểm;
-//   - importVeDichFile: thêm câu mới, bỏ qua câu trùng nội dung, thống kê đúng;
+//   - importVeDichFile: CHỈ ĐỌC & XÁC MINH, KHÔNG ghi câu vào ngân hàng;
 //   - test tự khôi phục DB về trạng thái trước khi chạy.
 import fs from "fs";
 import { connectDb } from "../config/database.js";
@@ -69,15 +69,15 @@ try {
   const csv = `Điểm,Câu hỏi,Đáp án\n10,${dupQ},Trùng\n10,Câu import mới A,Đáp A\n30,Câu import mới B,Đáp B\n,,\n20,,thiếu câu\n`;
   const r = vedich.importVeDichFile(csvBuffer(csv), "x.csv");
 
-  ok(r.added === 2, `thêm đúng 2 câu mới (thực tế ${r.added})`);
-  ok(r.skipped === 1, `bỏ qua 1 câu trùng nội dung (thực tế ${r.skipped})`);
+  ok(r.added === 2, `nhận diện đúng 2 câu mới (thực tế ${r.added})`);
+  ok(r.skipped === 1, `nhận diện 1 câu trùng nội dung (thực tế ${r.skipped})`);
   ok((r.errors || []).length === 1, "ghi lỗi 1 dòng thiếu câu hỏi");
-  ok(r.total === bank.length + 2, `tổng ngân hàng tăng đúng ${bank.length} → ${r.total}`);
+  ok(r.total === bank.length, `import KHÔNG ghi DB: ngân hàng giữ nguyên ${bank.length} → ${r.total}`);
   ok(r.questions.every((q) => q.id && q.points === 10 || q.points === 30), "câu mới có id + mức điểm hợp lệ");
 
-  // Import lặp lại → toàn bộ trùng (3 câu đã có: câu trùng ban đầu + A + B).
+  // Import lặp lại → kết quả y hệt (không ghi nên không đổi).
   const r2 = vedich.importVeDichFile(csvBuffer(csv), "x.csv");
-  ok(r2.added === 0 && r2.skipped === 3, "import lặp: không thêm trùng, bỏ qua cả 3 câu đã có");
+  ok(r2.added === 2 && r2.skipped === 1, "import lặp: vẫn chỉ đọc, không ghi (added/skipped như cũ)");
 } catch (err) {
   fail += 1;
   console.error("ERROR:", err.message);
@@ -112,7 +112,7 @@ try {
     ok((r3.errors || []).some((e) => String(e).includes("999")), "gói không hợp lệ → dòng lỗi");
     ok(r3.questions.some((q) => q.question === "Câu spare có gói nhưng không đội" && !q.teamId), "không khai đội → câu spare (không gán)");
     const teamAVd = (r3.teams || []).find((t) => t.teamId === "a");
-    ok(teamAVd && Number(teamAVd.packages[60]?.have) >= 6, "import trả về teams: gói 60 của Đội A đếm đủ câu (4 seed + 2 mới = 6)");
+    ok(teamAVd && Number(teamAVd.packages[60]?.have) === 4, "import không ghi: gói 60 của Đội A chỉ đếm 4 câu seed trong ngân hàng");
   } finally {
     const db2 = getDb();
     db2.questions.main.veDich = JSON.parse(snapshot2);

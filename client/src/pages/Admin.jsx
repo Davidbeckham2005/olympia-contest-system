@@ -1200,10 +1200,9 @@ function VeDichEditor({ draft, setDraft, teams = [], setMsg }) {
       const r = await importVeDichQuestionsFile(file);
       const bad = (r.teams || []).filter((t) => !t.ok);
       const msgParts = [
-        `Đã thêm ${r.added} câu Về đích`,
-        r.skipped ? `, bỏ qua ${r.skipped} câu đã có` : "",
+        `File có ${r.added + r.skipped} câu (${r.added} mới, ${r.skipped} trùng) — chưa ghi vào ngân hàng`,
         r.errors?.length ? `, ${r.errors.length} dòng lỗi` : "",
-        ` (tổng: ${r.total})`,
+        ` (ngân hàng: ${r.total} câu)`,
       ];
       if (bad.length) {
         const detail = bad.map((t) => {
@@ -1282,7 +1281,7 @@ function VeDichEditor({ draft, setDraft, teams = [], setMsg }) {
           <button
             type="button"
             disabled={importing}
-            title="Cột: Đội • Gói (60/80/100) • Điểm (10/20/30) • Câu hỏi • Đáp án. Tệp không có tiêu đề = 3 cột đúng thứ tự (Điểm, Câu hỏi, Đáp án) → thành câu dự trữ."
+            title="Đọc file để xác minh (KHÔNG ghi câu vào ngân hàng). Cột: Đội • Gói (60/80/100) • Điểm (10/20/30) • Câu hỏi • Đáp án. Tệp không có tiêu đề = 3 cột đúng thứ tự (Điểm, Câu hỏi, Đáp án) → thành câu dự trữ."
             className="btn btn-ok text-xs py-1!"
             onClick={() => fileRef.current?.click()}
           >
